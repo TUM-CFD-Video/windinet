@@ -25,11 +25,14 @@
 # NUM_ROLLOUT_SAMPLES/EPOCHS combination times out.
 #
 # Usage:
-#   sbatch jobs/lundquist/finetune_decoder_on_rollout.sbatch <PREPROCESSED_DATA_ROOT> <DIT_CHECKPOINT> <VAE_CHECKPOINT> [NUM_ROLLOUT_SAMPLES] [EPOCHS]
+#   sbatch jobs/lundquist/finetune_decoder_on_rollout.sbatch <PREPROCESSED_DATA_ROOT> <DIT_CHECKPOINT> <VAE_CHECKPOINT> [NUM_ROLLOUT_SAMPLES] [EPOCHS] [NUM_EVAL_SAMPLES]
 #
 # Same PREPROCESSED_DATA_ROOT/DIT_CHECKPOINT/VAE_CHECKPOINT conventions as
 # jobs/lundquist/eval_dit_vrmse.sbatch. NUM_ROLLOUT_SAMPLES defaults to 300,
-# EPOCHS to 15.
+# EPOCHS to 15, NUM_EVAL_SAMPLES to 20 (script's own default -- bump to 675
+# for the full val split, same convention as eval_dit_vrmse.sbatch's own
+# NUM_SAMPLES=675 usage; remember to also scale --time, since eval rollouts
+# cost the same per-sample as training rollouts).
 #
 # Example:
 #   sbatch jobs/lundquist/finetune_decoder_on_rollout.sbatch \
@@ -46,7 +49,7 @@ export HF_HUB_CACHE="${PWD}/pretrained/hub"
 
 if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ -z "${3:-}" ]; then
     echo "error: PREPROCESSED_DATA_ROOT, DIT_CHECKPOINT, and VAE_CHECKPOINT are all required" >&2
-    echo "  usage: sbatch jobs/lundquist/finetune_decoder_on_rollout.sbatch <PREPROCESSED_DATA_ROOT> <DIT_CHECKPOINT> <VAE_CHECKPOINT> [NUM_ROLLOUT_SAMPLES] [EPOCHS]" >&2
+    echo "  usage: sbatch jobs/lundquist/finetune_decoder_on_rollout.sbatch <PREPROCESSED_DATA_ROOT> <DIT_CHECKPOINT> <VAE_CHECKPOINT> [NUM_ROLLOUT_SAMPLES] [EPOCHS] [NUM_EVAL_SAMPLES]" >&2
     exit 1
 fi
 PREPROCESSED_DATA_ROOT=$1
@@ -54,6 +57,7 @@ DIT_CHECKPOINT=$2
 VAE_CHECKPOINT=$3
 NUM_ROLLOUT_SAMPLES=${4:-300}
 EPOCHS=${5:-15}
+NUM_EVAL_SAMPLES=${6:-20}
 
 NORMALIZATION=$(dirname "$(dirname "${VAE_CHECKPOINT}")")/training_config.yaml
 OUT_DIR="logs/lundquist/finetune_decoder_on_rollout/${SLURM_JOB_ID}"
@@ -67,6 +71,7 @@ echo "VAE_CHECKPOINT: ${VAE_CHECKPOINT}"
 echo "NORMALIZATION: ${NORMALIZATION}"
 echo "NUM_ROLLOUT_SAMPLES: ${NUM_ROLLOUT_SAMPLES}"
 echo "EPOCHS: ${EPOCHS}"
+echo "NUM_EVAL_SAMPLES: ${NUM_EVAL_SAMPLES}"
 echo "OUT_DIR: ${OUT_DIR}"
 
 "${PYTHON}" scripts/finetune_decoder_on_rollout.py configs/dit/inference_dit.yaml \
@@ -77,4 +82,5 @@ echo "OUT_DIR: ${OUT_DIR}"
     --normalization "${NORMALIZATION}" \
     --num_rollout_samples "${NUM_ROLLOUT_SAMPLES}" \
     --epochs "${EPOCHS}" \
+    --num_eval_samples "${NUM_EVAL_SAMPLES}" \
     --out_dir "${OUT_DIR}"
