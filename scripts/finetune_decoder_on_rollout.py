@@ -199,26 +199,44 @@ def rollout_dit(pipe, scalar_emb, scalar_cfg, sample, stats, device, num_frames,
     return out.frames.float()
 
 
-def build_dataset(dataset, ids, pipe, scalar_emb, scalar_cfg, stats, device, cfg, seed_base, label):
-    """Roll out the frozen DiT once per id, cache (pred_latent, gt_pixels) on CPU."""
+def build_dataset(dataset, ids, pipe, scalar_emb, scalar_cfg, stats, device, cfg, seed_base, label, cache_dir):
+    """Roll out the frozen DiT once per id, cache (pred_latent, gt_pixels) on CPU.
+
+    Each id's pair is ALSO persisted to <cache_dir>/<label>/<sid>.pt as soon as
+    it's computed, and loaded from there instead of re-rolled-out on a rerun
+    (e.g. after a SLURM time-limit kill) -- with thousands of samples this
+    rollout phase alone can span multiple job submissions, so per-id caching
+    is what makes resuming actually resume instead of starting over.
+    """
+    label_dir = cache_dir / label
+    label_dir.mkdir(parents=True, exist_ok=True)
     pairs = []
+    n_from_cache = 0
     for i, sid in enumerate(ids):
-        idx = dataset.ids.index(sid)
-        sample = dataset[idx]
-        orig_F = sample["density"].shape[0]
-        gt_video = build_shockwave_video(
-            sample, device=device, channel_mean=stats["channel_mean"],
-            channel_std=stats["channel_std"], normalization_clip=stats["normalization_clip"],
-        )
-        target = gt_video[:, :, :orig_F].float().cpu()
-        pred_latent = rollout_dit(
-            pipe, scalar_emb, scalar_cfg, sample, stats, device,
-            cfg.get("num_frames", 105), cfg.get("num_inference_steps", 2), cfg.get("guidance_scale", 1.0),
-            cfg.get("image_cond_noise_scale", 0.0), seed_base + i,
-        ).cpu()
+        cpath = label_dir / f"{sid}.pt"
+        if cpath.is_file():
+            pred_latent, target = torch.load(cpath, map_location="cpu")
+            n_from_cache += 1
+        else:
+            idx = dataset.ids.index(sid)
+            sample = dataset[idx]
+            orig_F = sample["density"].shape[0]
+            gt_video = build_shockwave_video(
+                sample, device=device, channel_mean=stats["channel_mean"],
+                channel_std=stats["channel_std"], normalization_clip=stats["normalization_clip"],
+            )
+            target = gt_video[:, :, :orig_F].float().cpu()
+            pred_latent = rollout_dit(
+                pipe, scalar_emb, scalar_cfg, sample, stats, device,
+                cfg.get("num_frames", 105), cfg.get("num_inference_steps", 2), cfg.get("guidance_scale", 1.0),
+                cfg.get("image_cond_noise_scale", 0.0), seed_base + i,
+            ).cpu()
+            tmp = cpath.with_suffix(".pt.tmp")
+            torch.save((pred_latent, target), tmp)
+            tmp.rename(cpath)
         pairs.append((pred_latent, target))
         if (i + 1) % 25 == 0 or i == len(ids) - 1:
-            print(f"[{label}] rolled out {i+1}/{len(ids)}")
+            print(f"[{label}] rolled out {i+1}/{len(ids)} ({n_from_cache} loaded from cache)")
         if device.type == "cuda":
             torch.cuda.empty_cache()
     return pairs
@@ -259,6 +277,17 @@ def parse_args():
     ap.add_argument("--ssim_weight", type=float, default=0.15)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out_dir", type=Path, default=Path("decoder_ft_out"))
+    ap.add_argument("--cache_dir", type=Path, default=None,
+                     help="Where to persist per-id DiT rollouts (defaults to <out_dir>/rollout_cache). "
+                          "Rerunning with the SAME out_dir/cache_dir resumes: cached ids are loaded from "
+                          "disk instead of re-rolled-out, and decoder training continues from the last "
+                          "completed epoch (see training_state.pt).")
+    ap.add_argument("--cache_only", action="store_true",
+                     help="Do Phase 1 (roll out + cache train/val pairs) and exit -- no decoder loaded, "
+                          "no training. Lets the (expensive, DiT-forward-heavy) rollout phase run as its "
+                          "own job/job-chain, separate from the (cheap, decoder-only) training phase; a "
+                          "later run against the same --out_dir/--cache_dir without this flag picks up "
+                          "the finished cache and goes straight to training.")
     return ap.parse_args()
 
 
@@ -275,6 +304,17 @@ def load_config(args):
 
 def main():
     args = parse_args()
+    cache_dir = args.cache_dir if args.cache_dir is not None else args.out_dir / "rollout_cache"
+    state_path = args.out_dir / "training_state.pt"
+    final_ckpt = args.out_dir / "vae_shockwave_decoder_ft.safetensors"
+    final_summary = args.out_dir / "finetune_summary.json"
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    if final_ckpt.is_file() and final_summary.is_file():
+        print(f"Already complete: {final_summary} and {final_ckpt} exist -- nothing to do. "
+              "Delete them (and training_state.pt) to force a full rerun.")
+        return
+
     cfg = load_config(args)
     device = get_default_device()
     random.seed(args.seed)
@@ -311,8 +351,13 @@ def main():
     scalar_emb = load_scalar_embedding(scalar_checkpoint, scalar_cfg, device)
 
     # --- Phase 1: cache DiT rollouts (frozen, no_grad, one-time cost) ---
+    # Resumable: each id's (pred_latent, target) pair is persisted under
+    # cache_dir/<label>/<sid>.pt as soon as it's computed (see build_dataset),
+    # so a rerun against the same out_dir/cache_dir only rolls out ids not
+    # already on disk -- this phase alone can span multiple SLURM job
+    # submissions for a large sample count.
     train_pairs = build_dataset(dataset, train_ids, pipe, scalar_emb, scalar_cfg, stats, device, cfg,
-                                 seed_base=cfg.get("seed", 42), label="train")
+                                 seed_base=cfg.get("seed", 42), label="train", cache_dir=cache_dir)
     # Same seed_base convention as eval_dit_vrmse.py's own val rollout (seed + i,
     # no offset) -- val_ids here are that script's own first --num_eval_samples,
     # so this reproduces (up to sampling floating-point nondeterminism) the
@@ -321,7 +366,13 @@ def main():
     # same-sample-count slice of the established eval_dit_vrmse.py results
     # instead of using an unrelated noise draw.
     val_pairs = build_dataset(dataset, val_ids, pipe, scalar_emb, scalar_cfg, stats, device, cfg,
-                               seed_base=cfg.get("seed", 42), label="val")
+                               seed_base=cfg.get("seed", 42), label="val", cache_dir=cache_dir)
+
+    if args.cache_only:
+        print(f"\n--cache_only: cached {len(train_pairs)} train + {len(val_pairs)} val pair(s) under "
+              f"{cache_dir}. Exiting without loading/training the decoder -- rerun this script (same "
+              f"--out_dir/--cache_dir, WITHOUT --cache_only) to train against this cache.")
+        return
 
     # --- Decoder to fp32 for stable small-scale finetuning (rollout above
     # stays bf16/frozen; only the decoder we're about to train switches). ---
@@ -331,20 +382,39 @@ def main():
     decoder.train()
     print(f"Decoder trainable params: {sum(p.numel() for p in decoder.parameters()):,}")
 
-    pixel_vrmse_before = eval_pixel_vrmse(pipe.vae, val_pairs, args.default_temb)
-    print(f"\nBEFORE decoder finetune: val pixel vrmse = {pixel_vrmse_before:.5f} (n={len(val_pairs)})\n")
-
     ssim_module = SSIMLoss(channels=4, window_size=11, sigma=1.5).to(device)
     optimizer = torch.optim.AdamW(decoder.parameters(), lr=args.learning_rate)
 
-    args.out_dir.mkdir(parents=True, exist_ok=True)
-    history = []
-    best_val_vrmse = pixel_vrmse_before
-    best_epoch = 0
-    best_decoder_sd = {k: v.detach().cpu().clone() for k, v in decoder.state_dict().items()}
-    print(f"Epoch 0 (pre-finetune) is the initial best (val pixel vrmse = {best_val_vrmse:.5f})")
+    if state_path.is_file():
+        # Resuming a training run a prior job submission didn't finish --
+        # everything needed to continue exactly where it left off (decoder/
+        # optimizer weights, the running history, best-epoch tracking, and
+        # even the shuffle RNG stream) was saved after the last completed
+        # epoch. Phase 1's cache made rollouts resumable; this makes the
+        # decoder-training loop resumable too.
+        state = torch.load(state_path, map_location="cpu")
+        decoder.load_state_dict(state["decoder_state_dict"])
+        optimizer.load_state_dict(state["optimizer_state_dict"])
+        history = state["history"]
+        best_val_vrmse = state["best_val_vrmse"]
+        best_epoch = state["best_epoch"]
+        best_decoder_sd = state["best_decoder_sd"]
+        pixel_vrmse_before = state["pixel_vrmse_before"]
+        random.setstate(state["random_state"])
+        epoch_start = state["epoch"] + 1
+        print(f"\nResumed from {state_path}: last completed epoch {state['epoch']}/{args.epochs} "
+              f"(best so far: epoch {best_epoch}, val pixel vrmse = {best_val_vrmse:.5f})\n")
+    else:
+        pixel_vrmse_before = eval_pixel_vrmse(pipe.vae, val_pairs, args.default_temb)
+        print(f"\nBEFORE decoder finetune: val pixel vrmse = {pixel_vrmse_before:.5f} (n={len(val_pairs)})\n")
+        history = []
+        best_val_vrmse = pixel_vrmse_before
+        best_epoch = 0
+        best_decoder_sd = {k: v.detach().cpu().clone() for k, v in decoder.state_dict().items()}
+        epoch_start = 1
+        print(f"Epoch 0 (pre-finetune) is the initial best (val pixel vrmse = {best_val_vrmse:.5f})")
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(epoch_start, args.epochs + 1):
         random.shuffle(train_pairs)
         epoch_losses = {"rmse": 0.0, "h1": 0.0, "ssim": 0.0, "vrms": 0.0, "total": 0.0}
         n_batches = 0
@@ -409,6 +479,24 @@ def main():
               f"rmse={epoch_losses['rmse']:.5f}  h1={epoch_losses['h1']:.5f}  "
               f"ssim={epoch_losses['ssim']:.5f}  train_vrms={epoch_losses['vrms']:.5f}  "
               f"val_pixel_vrmse={val_vrmse_epoch:.5f}{'  <- best so far' if improved else ''}")
+
+        # Persist after EVERY epoch (not just improvements) so a SLURM
+        # time-limit kill loses at most one epoch of work, not the whole
+        # run -- write-then-rename so a kill mid-write can't leave a
+        # truncated file that a resume would then fail to load.
+        tmp_state = state_path.with_suffix(".pt.tmp")
+        torch.save({
+            "epoch": epoch,
+            "decoder_state_dict": decoder.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "history": history,
+            "best_val_vrmse": best_val_vrmse,
+            "best_epoch": best_epoch,
+            "best_decoder_sd": best_decoder_sd,
+            "pixel_vrmse_before": pixel_vrmse_before,
+            "random_state": random.getstate(),
+        }, tmp_state)
+        tmp_state.rename(state_path)
 
     # Restore the best-val-epoch weights (possibly epoch 0 / pre-finetune, if
     # no epoch ever beat the starting point) rather than blindly keeping

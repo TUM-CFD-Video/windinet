@@ -117,3 +117,19 @@ one.
 Each job appends a row to `logs/lundquist/INDEX.tsv` mapping job
 id -> config -> output_dir. See `../../EXPERIMENTS.md` for results and
 rationale.
+
+**`cache_dit_rollout.sbatch` + `finetune_decoder_on_rollout.sbatch` (2026-09-15):**
+split the decoder-on-rollout-latents finetune (`scripts/finetune_decoder_on_rollout.py`)
+into two jobs -- the first (`cache_dit_rollout.sbatch`, `--cache_only`) just
+rolls out the frozen DiT and caches (pred_latent, target) pairs to disk, the
+second (`finetune_decoder_on_rollout.sbatch`) trains the decoder against that
+cache. Both derive the same `OUT_DIR`/`CACHE_DIR` from a stable `RUN_NAME`
+(default: the VAE arm's own directory name, NOT `${SLURM_JOB_ID}`), and both
+are resumable at a finer grain than "rerun the whole job": rollout caching
+resumes per-sample-id, decoder training resumes per-epoch (`training_state.pt`
+in `OUT_DIR`). This matters because a full-dataset run's rollout phase alone
+(~4500 samples at ~10.7s/sample, per `eval_dit_vrmse.sbatch`'s own estimate)
+is already past this cluster's 12h debug-partition hard cap -- chain multiple
+`cache_dit_rollout.sbatch` submissions with `--dependency=afterany:<prev_jobid>`
+(same `RUN_NAME`) rather than assuming one job finishes it. See either
+script's header for the full usage/chaining example.
