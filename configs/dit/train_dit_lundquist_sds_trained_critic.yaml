@@ -1,0 +1,104 @@
+# ShockWaveNet (DiT) training config -- 128res/lundquist DiT arm paired with
+# the TRAINED-critic SDS VAE arm
+# (finetune_vae_whole_structure_baseline_ep20_sds_trained_critic, VAE
+# finetune config configs/finetune_vae/finetune_vae_whole_structure_baseline_ep20_sds.yaml).
+# Sibling to train_dit_lundquist_sds_untrained.yaml (and the
+# cosine_kl0/kl1e7 arms) in the same lundquist/128res sweep -- SINGLE
+# VARIABLE vs sds_untrained is the VAE checkpoint this is preprocessed from
+# (SDS distilled against dit_sds_untrained, an ACTUALLY-TRAINED critic,
+# instead of that arm's own randomly-initialized one), everything else
+# (steps, LR, schedule, batch_size/accum, scalar conditioning) UNCHANGED for
+# direct comparability.
+#
+# WHAT THIS TESTS: dit_sds_w1 (the strongest untrained-critic SDS weight)
+# has the best latent_vrmse in the whole sweep (0.037, confirmed via
+# diagnose_latent_scale.py NOT to be a collapse artifact -- target_std_mean
+# is actually LARGER than the no-regularization kl0 baseline) but a WORSE
+# pixel_vrmse (0.547) than the milder dit_sds_untrained (w=0.1, pixel_vrmse
+# 0.394) -- i.e. a real, unexplained latent-accuracy-vs-decode-quality
+# tradeoff. This arm asks whether feeding an ACTUALLY-TRAINED DiT's learned
+# denoising preferences back into a fresh VAE finetune (rather than an
+# untrained/random critic, which every sds_w*.yaml sibling deliberately used
+# to avoid circularity) produces a latent space that's easier for a NEW DiT
+# to both predict AND decode well -- closing some of that gap. Mirrors how
+# the ORIGINAL sng_pvc SDS win (job 535840/536316, beat ep20_baseline) was
+# set up: that one also used an already-trained critic, just a different
+# arm/cluster/resolution than this lundquist sweep.
+#
+# steps=8000, LR=1e-5, cosine schedule, batch_size=4/accum=4 (effective
+# batch 32): identical to every other arm's settings and rationale (see
+# train_dit_lundquist_cosine_kl0.yaml's header for the batch_size=4 OOM
+# history and the GOTCHA about lundquist's single-host/no-GPU-isolation
+# concurrent-submission failure mode -- check `squeue` before submitting
+# this alongside another lundquist 2-GPU job, or chain with
+# `--dependency=afterany:<other-jobid>`).
+#
+# Launched by jobs/lundquist/train_dit_2gpu.sbatch, which substitutes
+# __PREPROCESSED_ROOT__ for dit_preprocessed/<PREPROCESSED_NAME>:
+#   sbatch --time=12:00:00 jobs/lundquist/train_dit_2gpu.sbatch \
+#       finetune_vae_whole_structure_baseline_ep20_sds_trained_critic \
+#       configs/dit/train_dit_lundquist_sds_trained_critic.yaml
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+  load_checkpoint: null
+
+conditioning:
+  first_frame_conditioning_p: 1.0
+
+scalar_conditioning:
+  enabled: true
+  scalar_names:
+    - "gamma"
+  scalar_ranges:
+    gamma: [1.0, 2.0]
+  embedding_dim: 4096
+  num_tokens_per_scalar: 4
+  fourier_features: 64
+  mlp_hidden_dim: 256
+  dropout: 0.1
+
+optimization:
+  learning_rate: 1e-5
+  steps: 8000
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "cosine"
+  scheduler_params:
+    eta_min: 1.0e-8
+  enable_gradient_checkpointing: true
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+data:
+  preprocessed_data_root: "__PREPROCESSED_ROOT__"
+  num_dataloader_workers: 4
+
+validation:
+  data_root: "__PREPROCESSED_ROOT__/val"
+  interval: 600
+  max_samples: 0
+
+checkpoints:
+  interval: 120
+  keep_last_n: 2
+
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  enabled: true
+  interval: 2000
+
+wandb:
+  enabled: false
+  project: "shockwavenet"
+  tags: ["cfd", "full", "2b", "scalar-only", "lundquist", "128res", "sds-vae", "sds-trained-critic"]
+
+seed: 42
+output_dir: "dit_outputs/lundquist/dit_sds_trained_critic"
