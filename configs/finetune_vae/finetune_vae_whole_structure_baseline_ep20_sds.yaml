@@ -13,25 +13,23 @@
 # so sds is kept cosine too rather than importing wsd from its sng_pvc
 # namesake.
 #
-# ################################################################
-# # BLOCKER -- DO NOT SUBMIT until this is fixed:
-# ################################################################
-# sds.dit_checkpoint below is a PLACEHOLDER PATH, not a file that exists yet.
-# lundquist has no real trained DiT checkpoint of its own -- every DiT run
-# in logs/lundquist/INDEX.tsv (job 22380 and the bs_sweep jobs 22507-22514)
-# used configs/dit/train_dit_lundquist_smoketest.yaml, a 10-step regression
-# test (steps: 10), not a converged model. SDS distillation against that
-# checkpoint would just be noise, not a real signal.
-#
-# You need to COPY a real DiT checkpoint from sng_pvc to lundquist's local
-# disk before this config will run, e.g.:
-#   scp <sng_pvc-login-node>:/hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ep20_baseline/checkpoints/model_weights_step_09360.safetensors \
-#       hramachandran@<lundquist-host>:/local/disk/hramachandran/work/wh_work/windinet/dit_checkpoints/
-# (shockwave_dit_ep20_baseline @ step 9360 is still the best real DiT result
-# in the project as of 2026-09-10 -- see project_dit_stage2_multicluster
-# memory / EXPERIMENTS.md. ~2B params bf16 -> expect several GB, check it
-# actually lands before submitting.) Update sds.dit_checkpoint below to
-# wherever it actually ends up if this path doesn't match.
+# RESOLVED (2026-09-15): this config used to be blocked on lundquist having
+# no real trained DiT checkpoint of its own -- it does now. sds.dit_checkpoint
+# below points at dit_sds_untrained (the w=0.1, UNTRAINED-critic arm from
+# this same sweep family, job chain finished at step 8033), lundquist's best
+# real DiT result so far (see project_dit_stage2_multicluster memory:
+# ep20_baseline-beating on latent_vrmse, and the only lundquist SDS arm
+# confirmed via diagnose_latent_scale.py NOT to be a latent-collapse
+# artifact). Using an ACTUALLY-TRAINED critic here (instead of the random-init
+# one every sds_w*.yaml sibling deliberately used, to avoid circularity) is
+# the direct test of whether a trained critic's learned denoising preferences
+# -- fed back into a fresh VAE finetune -- close some of the gap between
+# this arm's good latent_vrmse (0.037) and its worse-than-w0.1 pixel_vrmse
+# (0.547 vs 0.394) once a NEW DiT is trained against the resulting VAE.
+# Mirrors how the ORIGINAL sng_pvc SDS win (job 535840/536316, beat
+# ep20_baseline) was set up -- that one also used an already-trained critic,
+# just a different arm/cluster/resolution than lundquist's untrained-critic
+# sweep.
 #
 # WEIGHT (sds: 0.1 below) is an UNTUNED FIRST GUESS carried over from the
 # sng_pvc SDS config, not a swept value -- see that file's own header for the
@@ -45,9 +43,17 @@
 # wall-clock than the kl0/kl1e7 siblings; not yet measured on lundquist's
 # A6000s (only measured, informally, on sng_pvc's XPUs so far).
 #
-# Usage (once the checkpoint above is actually in place):
+# Usage:
 #   sbatch jobs/lundquist/finetune_vae_2gpu.sbatch \
 #       configs/finetune_vae/finetune_vae_whole_structure_baseline_ep20_sds.yaml
+#
+# Once this finishes, the resulting VAE checkpoint needs its OWN new DiT
+# trained from scratch before it can be evaluated -- this finetune changes
+# the encoder, hence the latent space, so no existing DiT checkpoint (this
+# one's own critic included) is valid against it. Full chain: preprocess
+# (jobs/lundquist/preprocess_dit_data.sbatch against this run's
+# vae_shockwave_best.safetensors) -> train (jobs/lundquist/train_dit_2gpu.sbatch)
+# -> eval (jobs/lundquist/eval_dit_vrmse.sbatch), same as every other arm.
 
 model:
   model_source: "LTXV_2B_0.9.6_DEV"
@@ -109,11 +115,11 @@ loss:
 sds:
   enabled: true
   model_source: "LTXV_2B_0.9.6_DEV"
-  # PLACEHOLDER -- see the BLOCKER comment at the top of this file. Does not
-  # exist on lundquist yet; must be copied over from sng_pvc before this
-  # config will run. This field does not expand env vars (unlike output_dir),
-  # same convention as every DiT resume config's model.load_checkpoint.
-  dit_checkpoint: "/local/disk/hramachandran/work/wh_work/windinet/dit_checkpoints/shockwave_dit_ep20_baseline_step_09360.safetensors"
+  # dit_sds_untrained: lundquist's own trained w=0.1/untrained-critic arm
+  # (see the RESOLVED note at the top of this file). This field does not
+  # expand env vars (unlike output_dir), same convention as every DiT resume
+  # config's model.load_checkpoint -- must stay an absolute path.
+  dit_checkpoint: "/local/disk/hramachandran/work/wh_work/windinet/dit_outputs/lundquist/dit_sds_untrained/checkpoints/model_weights_step_08033.safetensors"
   scalar_conditioning:
     enabled: true
     scalar_names: ["gamma"]
@@ -148,8 +154,8 @@ checkpoints:
 wandb:
   enabled: false
   project: "windinet"
-  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "lr1x", "shockwave-cfd", "whole-structure-baseline", "128res", "kl-sds-sweep", "sds"]
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "lr1x", "shockwave-cfd", "whole-structure-baseline", "128res", "kl-sds-sweep", "sds", "trained-critic"]
 
 seed: 42
-output_dir: "finetune_vae_whole_structure_baseline_ep20_sds"
+output_dir: "finetune_vae_whole_structure_baseline_ep20_sds_trained_critic"
 clean_output_dir: true
