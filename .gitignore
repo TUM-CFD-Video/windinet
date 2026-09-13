@@ -253,6 +253,17 @@ logs/**/*.png
 # script against those two checkpoints if ever needed again.
 logs/latent_shift_comparison.csv
 
+# scripts/finetune_decoder_on_rollout.py writes its output VAE checkpoint
+# under logs/lundquist/finetune_decoder_on_rollout/<job>/ alongside that
+# job's small metrics/logs (2026-09-13) -- the checkpoints/ rule above
+# doesn't catch it (no checkpoints/ path segment here), and a full VAE
+# safetensors is large enough that committing it (as opposed to every
+# other checkpoint in this project, always gitignored) noticeably slows
+# add/commit/push. Same regenerable-by-rerunning reasoning as every other
+# checkpoint exclusion -- the finetune_summary.json next to it is the
+# durable record and stays tracked.
+logs/**/*.safetensors
+
 # In-repo HuggingFace cache for the LTX-Video base weights (~8.4 GB).
 # The weights themselves stay out of git; pretrained/README.md explains how to
 # get them (rsync from another checkout, or let the loader re-download).
