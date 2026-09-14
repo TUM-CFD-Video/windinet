@@ -53,6 +53,10 @@ cd /dss/dsshome1/0D/go76fuz2/windinet
 
 echo "START TIME: $(date)"
 echo "job=${SLURM_JOB_ID} node=$(hostname)"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"' EXIT
+trap 'exit 143' TERM
 
 H5_PATH=${1:-"${SCRATCH}/windinet/euler_mq_dataset/128x128_ds/train.h5"}
 COMPARE_TO=${2:-configs/finetune_vae/euler_mq_128_only_train.yaml}

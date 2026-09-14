@@ -69,7 +69,6 @@ export HF_HUB_CACHE="${PWD}/pretrained/hub"
 # section for the full readout.
 BASE_CONFIG=${1:-configs/finetune_vae/finetune_vae_whole_structure_baseline_ep30.yaml}
 RUN_CONFIG=$(mktemp /tmp/finetune_vae_2gpu_XXXX.yaml)
-trap 'rm -f "${RUN_CONFIG}"' EXIT
 
 "${PYTHON}" - "${BASE_CONFIG}" "${RUN_CONFIG}" <<'PY'
 import sys, yaml
@@ -83,6 +82,10 @@ print(f"2 GPUs x batch_size {cfg['optimization']['batch_size']} x accum {cfg['op
 PY
 
 echo "job=${SLURM_JOB_ID} node=$(hostname) gpus=${CUDA_VISIBLE_DEVICES}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${RUN_CONFIG}"' EXIT
+trap 'exit 143' TERM
 
 # Make logs/lundquist/ self-describing: one row per job mapping
 # the log file to the config it ran and the output_dir it wrote. Without this,

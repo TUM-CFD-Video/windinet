@@ -51,6 +51,10 @@ OUT_DIR="logs/lundquist/diagnose_frame_drift/${SLURM_JOB_ID}"
 SCALAR_CHECKPOINT=${DIT_CHECKPOINT/model_weights_/scalar_embedding_}
 
 echo "job=${SLURM_JOB_ID} node=$(hostname) gpus=${CUDA_VISIBLE_DEVICES}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"' EXIT
+trap 'exit 143' TERM
 echo "PREPROCESSED_DATA_ROOT: ${PREPROCESSED_DATA_ROOT}"
 echo "DIT_CHECKPOINT: ${DIT_CHECKPOINT}"
 echo "SCALAR_CHECKPOINT: ${SCALAR_CHECKPOINT}"

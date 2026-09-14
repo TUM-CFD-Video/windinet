@@ -46,6 +46,9 @@
 # checkpoint/validation cadence) all live there, not in this script.
 
 echo "Directory where err and out file are logged: ${SLURM_SUBMIT_DIR}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'exit 143' TERM
 
 if [ -z "${1:-}" ]; then
     echo "error: PREPROCESSED_NAME is required -- the <name> jobs/lrz_ai/preprocess_dit_data.job wrote to" >&2
@@ -74,7 +77,7 @@ echo "MASTER_PORT: $MASTER_PORT"
 echo "SLURM_GPUS_PER_NODE: $SLURM_GPUS_ON_NODE"
 
 INNER_SCRIPT="${HOME}/.windinet_lrz_ai_dit_${SLURM_JOB_ID}.sh"
-trap 'rm -f "${INNER_SCRIPT}"' EXIT
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${INNER_SCRIPT}"' EXIT
 cat > "${INNER_SCRIPT}" <<'INNER'
 set -eo pipefail
 eval "$(conda shell.bash hook)"
@@ -116,16 +119,9 @@ rsync -a --exclude='checkpoints/' "${OUT_DIR}/" "${LOCAL_DIR}/"
 echo "Mirrored (excl. checkpoints/) to ${LOCAL_DIR}"
 INNER
 
-start_time=$(date +%s)
-echo "Job started at: $(date)"
-
 srun \
   --container-image="/dss/dsshome1/09/ge26qux3/windinet1.sqsh" \
   --container-mounts=$HOME:$HOME,$RESULT_DIR:/mnt/result \
   --container-workdir="$HOME/work_wh/windinet" \
   --export=ALL,MASTER_PORT,MASTER_ADDR,BASE_CONFIG,PREPROCESSED_NAME \
   bash "${INNER_SCRIPT}"
-
-end_time=$(date +%s)
-echo "Job finished at: $(date)"
-echo "Total runtime: $((end_time - start_time)) seconds"

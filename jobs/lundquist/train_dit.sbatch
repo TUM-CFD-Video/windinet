@@ -33,6 +33,10 @@ cd /local/disk/hramachandran/work/wh_work/windinet
 export HF_HUB_CACHE="${PWD}/pretrained/hub"
 
 echo "job=${SLURM_JOB_ID} node=$(hostname) gpus=${CUDA_VISIBLE_DEVICES}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"' EXIT
+trap 'exit 143' TERM
 
 # See the note in jobs/lundquist/finetune_vae_4gpu.sbatch -- keeps logs/lundquist/ self-describing.
 printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Is)" "${SLURM_JOB_ID}" "${SLURM_JOB_NAME}" \

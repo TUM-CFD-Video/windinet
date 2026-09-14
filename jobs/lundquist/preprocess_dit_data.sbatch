@@ -64,6 +64,10 @@ SPLIT_SEED=${SPLIT_SEED:-42}
 OUT_DIR="dit_preprocessed/${OUTPUT_NAME}"
 
 echo "job=${SLURM_JOB_ID} node=$(hostname) gpus=${CUDA_VISIBLE_DEVICES}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"' EXIT
+trap 'exit 143' TERM
 echo "VAE_CHECKPOINT: ${VAE_CHECKPOINT}"
 echo "DATA_ROOT: ${DATA_ROOT}"
 echo "OUTPUT_NAME: ${OUTPUT_NAME} -> ${OUT_DIR}"

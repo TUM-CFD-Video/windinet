@@ -47,6 +47,9 @@
 #   was encoded from.
 
 echo "Directory where err and out file are logged: ${SLURM_SUBMIT_DIR}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'exit 143' TERM
 
 if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ -z "${3:-}" ]; then
     echo "error: PREPROCESSED_NAME, DIT_CHECKPOINT, and VAE_CHECKPOINT are all required" >&2
@@ -74,7 +77,7 @@ echo "VAE_CHECKPOINT: ${VAE_CHECKPOINT}"
 echo "NUM_SAMPLES: ${NUM_SAMPLES}"
 
 INNER_SCRIPT="${HOME}/.windinet_lrz_ai_inference_${SLURM_JOB_ID}.sh"
-trap 'rm -f "${INNER_SCRIPT}"' EXIT
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${INNER_SCRIPT}"' EXIT
 cat > "${INNER_SCRIPT}" <<'INNER'
 set -eo pipefail
 eval "$(conda shell.bash hook)"
@@ -121,16 +124,9 @@ rsync -a "${OUT_DIR}/videos/" "${LOCAL_DIR}/videos/"
 echo "Mirrored videos to ${LOCAL_DIR}/videos/"
 INNER
 
-start_time=$(date +%s)
-echo "Job started at: $(date)"
-
 srun \
   --container-image="/dss/dsshome1/09/ge26qux3/windinet1.sqsh" \
   --container-mounts=$HOME:$HOME,$RESULT_DIR:/mnt/result,$DATA_DIR:/mnt/data \
   --container-workdir="$HOME/work_wh/windinet" \
   --export=ALL,PREPROCESSED_NAME,DIT_CHECKPOINT,SCALAR_CHECKPOINT,VAE_CHECKPOINT,NUM_SAMPLES,BASE_CONFIG \
   bash "${INNER_SCRIPT}"
-
-end_time=$(date +%s)
-echo "Job finished at: $(date)"
-echo "Total runtime: $((end_time - start_time)) seconds"

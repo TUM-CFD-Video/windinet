@@ -52,6 +52,10 @@ cd /dss/dsshome1/0D/go76fuz2/windinet
 
 echo "START TIME: $(date)"
 echo "job=${SLURM_JOB_ID} node=$(hostname)"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${RUN_CONFIG}"' EXIT
+trap 'exit 143' TERM
 xpu-smi discovery || true
 
 export ZE_FLAT_DEVICE_HIERARCHY=FLAT
@@ -72,7 +76,6 @@ OUTPUT_JSON="logs/sng_pvc/${SLURM_JOB_ID}-latent_stats.json"
 # applies for training runs -- patch a temp copy via patch_config_for_cluster
 # rather than editing the checked-in config.
 RUN_CONFIG=$(mktemp /tmp/latent_stats_sng_pvc_XXXX.yaml)
-trap 'rm -f "${RUN_CONFIG}"' EXIT
 python - "${CONFIG}" "${RUN_CONFIG}" <<'PY'
 import sys
 

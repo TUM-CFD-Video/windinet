@@ -54,9 +54,12 @@ fi
 PREPROCESSED_NAME=$1
 BASE_CONFIG=${2:-configs/dit/train_dit_lundquist_smoketest.yaml}
 RUN_CONFIG=$(mktemp /tmp/dit_train_2gpu_XXXX.yaml)
-trap 'rm -f "${RUN_CONFIG}"' EXIT
 
 echo "job=${SLURM_JOB_ID} node=$(hostname) gpus=${CUDA_VISIBLE_DEVICES}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${RUN_CONFIG}"' EXIT
+trap 'exit 143' TERM
 echo "PREPROCESSED_NAME: ${PREPROCESSED_NAME}"
 echo "BASE_CONFIG: ${BASE_CONFIG}"
 

@@ -46,6 +46,10 @@ cd /dss/dsshome1/0D/go76fuz2/windinet
 
 echo "START TIME: $(date)"
 echo "job=${SLURM_JOB_ID} node=$(hostname)"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${RUN_CONFIG}"' EXIT
+trap 'exit 143' TERM
 
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
@@ -63,7 +67,6 @@ OUTPUT_JSON="logs/sng_pvc/${SLURM_JOB_ID}-latent_shift_metrics.json"
 # output_suffix="" -- this isn't a training launch, only data.data_root and
 # data.num_dataloader_workers matter to latent_shift_metrics.py.
 RUN_CONFIG=$(mktemp /tmp/latent_shift_sng_pvc_XXXX.yaml)
-trap 'rm -f "${RUN_CONFIG}"' EXIT
 python - "${CONFIG}" "${RUN_CONFIG}" <<'PY'
 import sys
 

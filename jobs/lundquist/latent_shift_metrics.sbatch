@@ -72,6 +72,10 @@ NUM_SAMPLES=${4:-64}
 OUTPUT_JSON="logs/lundquist/${SLURM_JOB_ID}-latent_shift_metrics.json"
 
 echo "job=${SLURM_JOB_ID} node=$(hostname) gpus=${CUDA_VISIBLE_DEVICES}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"' EXIT
+trap 'exit 143' TERM
 echo "config=${CONFIG} checkpoint=${CHECKPOINT} test_h5=${TEST_H5} num_samples=${NUM_SAMPLES} output=${OUTPUT_JSON}"
 
 "${PYTHON}" scripts/latent_shift_metrics.py "${CONFIG}" \

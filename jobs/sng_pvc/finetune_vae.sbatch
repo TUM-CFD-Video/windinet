@@ -54,6 +54,10 @@ cd /dss/dsshome1/0D/go76fuz2/windinet
 
 echo "START TIME: $(date)"
 echo "job=${SLURM_JOB_ID} node=$(hostname)"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${RUN_CONFIG}"' EXIT
+trap 'exit 143' TERM
 xpu-smi discovery || true
 
 # Rendezvous settings (only exercised once --nodes/--ntasks-per-node above are
@@ -119,7 +123,6 @@ export HDF5_USE_FILE_LOCKING=FALSE
 BASE_CONFIG=${1:-configs/finetune_vae/finetune_vae_whole_structure_baseline_ep30.yaml}
 DATA_ROOT_OVERRIDE=${2:-}
 RUN_CONFIG=$(mktemp /tmp/finetune_vae_sng_pvc_XXXX.yaml)
-trap 'rm -f "${RUN_CONFIG}"' EXIT
 
 python - "${BASE_CONFIG}" "${RUN_CONFIG}" "$((NUM_XPUS * SLURM_JOB_NUM_NODES))" "${DATA_ROOT_OVERRIDE}" <<'PY'
 import sys

@@ -65,6 +65,10 @@ export TRANSFORMERS_OFFLINE=1
 
 echo "START TIME: $(date)"
 echo "job=${SLURM_JOB_ID} node=$(hostname)"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"' EXIT
+trap 'exit 143' TERM
 xpu-smi discovery || true
 
 if [[ -z "${VAE_CHECKPOINT:-}" ]]; then

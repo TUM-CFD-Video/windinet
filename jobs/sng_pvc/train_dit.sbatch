@@ -77,6 +77,10 @@ cd /dss/dsshome1/0D/go76fuz2/windinet
 
 echo "START TIME: $(date)"
 echo "job=${SLURM_JOB_ID} node=$(hostname)"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${RUN_CONFIG}"' EXIT
+trap 'exit 143' TERM
 xpu-smi discovery || true
 
 if [[ -z "${1:-}" ]]; then
@@ -88,7 +92,6 @@ PREPROCESSED_NAME=$1
 BASE_CONFIG=${2:-configs/dit/train_dit_sng_pvc_baseline.yaml}
 STEPS=${STEPS:-}
 RUN_CONFIG=$(mktemp /tmp/dit_train_sng_pvc_XXXX.yaml)
-trap 'rm -f "${RUN_CONFIG}"' EXIT
 
 echo "PREPROCESSED_NAME: ${PREPROCESSED_NAME}"
 echo "BASE_CONFIG: ${BASE_CONFIG}"

@@ -54,6 +54,9 @@
 # VAE_CHECKPOINT is not in that <run>/checkpoints/<file>.safetensors layout.
 
 echo "Directory where err and out file are logged: ${SLURM_SUBMIT_DIR}"
+JOB_START_EPOCH=$(date +%s)
+echo "start_time=$(date -Is)"
+trap 'exit 143' TERM
 
 if [ -z "${VAE_CHECKPOINT:-}" ]; then
     echo "error: VAE_CHECKPOINT is required -- point it at the winning VAE run's checkpoint" >&2
@@ -74,7 +77,7 @@ echo "DATA_DIR: ${DATA_DIR}"
 echo "OUTPUT_NAME: ${OUTPUT_NAME}"
 
 INNER_SCRIPT="${HOME}/.windinet_lrz_ai_preprocess_${SLURM_JOB_ID}.sh"
-trap 'rm -f "${INNER_SCRIPT}"' EXIT
+trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${INNER_SCRIPT}"' EXIT
 cat > "${INNER_SCRIPT}" <<'INNER'
 set -eo pipefail
 eval "$(conda shell.bash hook)"
@@ -103,16 +106,9 @@ cp "${OUT_DIR}/normalization.json" "${LOCAL_DIR}/"
 echo "Mirrored manifests to ${LOCAL_DIR}"
 INNER
 
-start_time=$(date +%s)
-echo "Job started at: $(date)"
-
 srun \
   --container-image="/dss/dsshome1/09/ge26qux3/windinet1.sqsh" \
   --container-mounts=$HOME:$HOME,$RESULT_DIR:/mnt/result,$DATA_DIR:/mnt/data \
   --container-workdir="$HOME/work_wh/windinet" \
   --export=ALL,VAE_CHECKPOINT,OUTPUT_NAME \
   bash "${INNER_SCRIPT}"
-
-end_time=$(date +%s)
-echo "Job finished at: $(date)"
-echo "Total runtime: $((end_time - start_time)) seconds"
