@@ -3,7 +3,7 @@
 #SBATCH --partition=debug
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=6
-#SBATCH --time=04:00:00
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/lundquist/%x_%j.log
 #SBATCH --error=logs/lundquist/%x_%j.log
 
@@ -18,11 +18,20 @@
 # same encoder/adapter weights, same latent-space fingerprint) -- no
 # re-encoding or DiT retraining needed to use it.
 #
-# --time=04:00:00 is an UNCALIBRATED GUESS: 300 rollout samples (~similar
-# cost per-sample to eval_dit_vrmse.py, which does ~10.7s/sample on
-# sng_pvc) plus 20 eval rollouts plus 15 decoder-only epochs (cheap, no
-# DiT forward pass) over the cached set. Bump --time if a larger
-# NUM_ROLLOUT_SAMPLES/EPOCHS combination times out.
+# --time=12:00:00: the original 04:00:00 guess (300 rollout samples at
+# ~10.7s/sample per eval_dit_vrmse.py's sng_pvc rate, plus 20 eval rollouts
+# plus 15 "cheap" decoder-only epochs) badly undersized a large
+# NUM_ROLLOUT_SAMPLES run in practice -- job 22791 (3825 train + 675 val,
+# reusing an already-complete phase-1 cache) spent the ENTIRE 4h just
+# reloading the 3825 cached train pairs from disk (torch.load in a tight
+# loop) and was SLURM-killed before starting the val load or a single
+# training epoch. Root cause was likely an unconditional
+# torch.cuda.empty_cache() call on every loop iteration in build_dataset()
+# (fixed in scripts/finetune_decoder_on_rollout.py -- it now only runs
+# after an actual GPU rollout, not on a cache hit), which forced a CUDA
+# sync 4500 times for pure disk reads. 12h leaves real headroom for the
+# reload plus the 15 training epochs; shrink back down for small
+# NUM_ROLLOUT_SAMPLES runs if 12h is wasteful queue time.
 #
 # RESUMABLE (scripts/finetune_decoder_on_rollout.py): DiT rollouts are cached
 # to disk per-sample-id, and the decoder-training loop checkpoints after

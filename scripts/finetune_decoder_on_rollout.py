@@ -234,11 +234,11 @@ def build_dataset(dataset, ids, pipe, scalar_emb, scalar_cfg, stats, device, cfg
             tmp = cpath.with_suffix(".pt.tmp")
             torch.save((pred_latent, target), tmp)
             tmp.rename(cpath)
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
         pairs.append((pred_latent, target))
         if (i + 1) % 25 == 0 or i == len(ids) - 1:
             print(f"[{label}] rolled out {i+1}/{len(ids)} ({n_from_cache} loaded from cache)")
-        if device.type == "cuda":
-            torch.cuda.empty_cache()
     return pairs
 
 
