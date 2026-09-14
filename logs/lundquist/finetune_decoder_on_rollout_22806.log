@@ -1,0 +1,204 @@
+job=22806 node=lundquist gpus=0
+start_time=2026-09-14T14:27:17+02:00
+PREPROCESSED_DATA_ROOT: dit_preprocessed/finetune_vae_whole_structure_baseline_ep20_sds_untrained
+DIT_CHECKPOINT: dit_outputs/lundquist/dit_sds_untrained/checkpoints/model_weights_step_08033.safetensors
+SCALAR_CHECKPOINT: dit_outputs/lundquist/dit_sds_untrained/checkpoints/scalar_embedding_step_08033.safetensors
+VAE_CHECKPOINT: finetune_vae_outputs/lundquist/finetune_vae_whole_structure_baseline_ep20_sds_untrained/checkpoints/vae_shockwave_best.safetensors
+NORMALIZATION: finetune_vae_outputs/lundquist/finetune_vae_whole_structure_baseline_ep20_sds_untrained/training_config.yaml
+NUM_ROLLOUT_SAMPLES: 3825
+EPOCHS: 15
+NUM_EVAL_SAMPLES: 675
+RUN_NAME: finetune_vae_whole_structure_baseline_ep20_sds_untrained
+OUT_DIR: logs/lundquist/finetune_decoder_on_rollout/finetune_vae_whole_structure_baseline_ep20_sds_untrained
+/local/disk/hramachandran/miniconda/envs/windinet/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Finetuning on 3825 TRAIN-split sim(s), checking on 675 disjoint VAL-split sim(s), from /local/disk/hramachandran/work/wh_work/windinet/euler_mq_dataset/128x128_ds/train.h5
+Latent space verified: fingerprint 6fade32db7d8f184 matches the DiT's training latents
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/Lightricks/LTX-Video-0.9.5/resol                
+         ve/main/vae/config.json "HTTP/1.1 307 Temporary                        
+         Redirect"                                                              
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/api/resolve-cache/models/Lightri                
+         cks/LTX-Video-0.9.5/e58e28c39631af4d1468ee57a853764e11c                
+         1d37e/vae%2Fconfig.json "HTTP/1.1 200 OK"                              
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/Lightricks/LTX-Video-0.9.5/resol                
+         ve/e58e28c39631af4d1468ee57a853764e11c1d37e/vae/diffusi                
+         on_pytorch_model.safetensors.index.json "HTTP/1.1 404                  
+         Not Found"                                                             
+[windinet] loaded inflated VAE checkpoint: /local/disk/hramachandran/work/wh_work/windinet/finetune_vae_outputs/lundquist/finetune_vae_whole_structure_baseline_ep20_sds_untrained/checkpoints/vae_shockwave_best.safetensors (epoch=19, step=2261)
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/Lightricks/LTX-Video-0.9.5/resol                
+         ve/main/scheduler/scheduler_config.json "HTTP/1.1 307                  
+         Temporary Redirect"                                                    
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/api/resolve-cache/models/Lightri                
+         cks/LTX-Video-0.9.5/e58e28c39631af4d1468ee57a853764e11c                
+         1d37e/scheduler%2Fscheduler_config.json "HTTP/1.1 200                  
+         OK"                                                                    
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/Lightricks/LTX-Video/resolve/mai                
+         n/ltxv-2b-0.9.6-dev-04-25.safetensors "HTTP/1.1 302                    
+         Found"                                                                 
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/Lightricks/LTX-Video-0.9.5/resol                
+         ve/main/transformer/config.json "HTTP/1.1 307 Temporary                
+         Redirect"                                                              
+INFO     HTTP Request: HEAD                                      _client.py:1025
+         https://huggingface.co/api/resolve-cache/models/Lightri                
+         cks/LTX-Video-0.9.5/e58e28c39631af4d1468ee57a853764e11c                
+         1d37e/transformer%2Fconfig.json "HTTP/1.1 200 OK"                      
+[train] rolled out 25/3825 (25 loaded from cache)
+[train] rolled out 50/3825 (50 loaded from cache)
+[train] rolled out 75/3825 (75 loaded from cache)
+[train] rolled out 100/3825 (100 loaded from cache)
+[train] rolled out 125/3825 (125 loaded from cache)
+[train] rolled out 150/3825 (150 loaded from cache)
+[train] rolled out 175/3825 (175 loaded from cache)
+[train] rolled out 200/3825 (200 loaded from cache)
+[train] rolled out 225/3825 (225 loaded from cache)
+[train] rolled out 250/3825 (250 loaded from cache)
+[train] rolled out 275/3825 (275 loaded from cache)
+[train] rolled out 300/3825 (300 loaded from cache)
+[train] rolled out 325/3825 (325 loaded from cache)
+[train] rolled out 350/3825 (350 loaded from cache)
+[train] rolled out 375/3825 (375 loaded from cache)
+[train] rolled out 400/3825 (400 loaded from cache)
+[train] rolled out 425/3825 (425 loaded from cache)
+[train] rolled out 450/3825 (450 loaded from cache)
+[train] rolled out 475/3825 (475 loaded from cache)
+[train] rolled out 500/3825 (500 loaded from cache)
+[train] rolled out 525/3825 (525 loaded from cache)
+[train] rolled out 550/3825 (550 loaded from cache)
+[train] rolled out 575/3825 (575 loaded from cache)
+[train] rolled out 600/3825 (600 loaded from cache)
+[train] rolled out 625/3825 (625 loaded from cache)
+[train] rolled out 650/3825 (650 loaded from cache)
+[train] rolled out 675/3825 (675 loaded from cache)
+[train] rolled out 700/3825 (700 loaded from cache)
+[train] rolled out 725/3825 (725 loaded from cache)
+[train] rolled out 750/3825 (750 loaded from cache)
+[train] rolled out 775/3825 (775 loaded from cache)
+[train] rolled out 800/3825 (800 loaded from cache)
+[train] rolled out 825/3825 (825 loaded from cache)
+[train] rolled out 850/3825 (850 loaded from cache)
+[train] rolled out 875/3825 (875 loaded from cache)
+[train] rolled out 900/3825 (900 loaded from cache)
+[train] rolled out 925/3825 (925 loaded from cache)
+[train] rolled out 950/3825 (950 loaded from cache)
+[train] rolled out 975/3825 (975 loaded from cache)
+[train] rolled out 1000/3825 (1000 loaded from cache)
+[train] rolled out 1025/3825 (1025 loaded from cache)
+[train] rolled out 1050/3825 (1050 loaded from cache)
+[train] rolled out 1075/3825 (1075 loaded from cache)
+[train] rolled out 1100/3825 (1100 loaded from cache)
+[train] rolled out 1125/3825 (1125 loaded from cache)
+[train] rolled out 1150/3825 (1150 loaded from cache)
+[train] rolled out 1175/3825 (1175 loaded from cache)
+[train] rolled out 1200/3825 (1200 loaded from cache)
+[train] rolled out 1225/3825 (1225 loaded from cache)
+[train] rolled out 1250/3825 (1250 loaded from cache)
+[train] rolled out 1275/3825 (1275 loaded from cache)
+[train] rolled out 1300/3825 (1300 loaded from cache)
+[train] rolled out 1325/3825 (1325 loaded from cache)
+[train] rolled out 1350/3825 (1350 loaded from cache)
+[train] rolled out 1375/3825 (1375 loaded from cache)
+[train] rolled out 1400/3825 (1400 loaded from cache)
+[train] rolled out 1425/3825 (1425 loaded from cache)
+[train] rolled out 1450/3825 (1450 loaded from cache)
+[train] rolled out 1475/3825 (1475 loaded from cache)
+[train] rolled out 1500/3825 (1500 loaded from cache)
+[train] rolled out 1525/3825 (1525 loaded from cache)
+[train] rolled out 1550/3825 (1550 loaded from cache)
+[train] rolled out 1575/3825 (1575 loaded from cache)
+[train] rolled out 1600/3825 (1600 loaded from cache)
+[train] rolled out 1625/3825 (1625 loaded from cache)
+[train] rolled out 1650/3825 (1650 loaded from cache)
+[train] rolled out 1675/3825 (1675 loaded from cache)
+[train] rolled out 1700/3825 (1700 loaded from cache)
+[train] rolled out 1725/3825 (1725 loaded from cache)
+[train] rolled out 1750/3825 (1750 loaded from cache)
+[train] rolled out 1775/3825 (1775 loaded from cache)
+[train] rolled out 1800/3825 (1800 loaded from cache)
+[train] rolled out 1825/3825 (1825 loaded from cache)
+[train] rolled out 1850/3825 (1850 loaded from cache)
+[train] rolled out 1875/3825 (1875 loaded from cache)
+[train] rolled out 1900/3825 (1900 loaded from cache)
+[train] rolled out 1925/3825 (1925 loaded from cache)
+[train] rolled out 1950/3825 (1950 loaded from cache)
+[train] rolled out 1975/3825 (1975 loaded from cache)
+[train] rolled out 2000/3825 (2000 loaded from cache)
+[train] rolled out 2025/3825 (2025 loaded from cache)
+[train] rolled out 2050/3825 (2050 loaded from cache)
+[train] rolled out 2075/3825 (2075 loaded from cache)
+[train] rolled out 2100/3825 (2100 loaded from cache)
+[train] rolled out 2125/3825 (2125 loaded from cache)
+[train] rolled out 2150/3825 (2150 loaded from cache)
+[train] rolled out 2175/3825 (2175 loaded from cache)
+[train] rolled out 2200/3825 (2200 loaded from cache)
+[train] rolled out 2225/3825 (2225 loaded from cache)
+[train] rolled out 2250/3825 (2250 loaded from cache)
+[train] rolled out 2275/3825 (2275 loaded from cache)
+[train] rolled out 2300/3825 (2300 loaded from cache)
+[train] rolled out 2325/3825 (2325 loaded from cache)
+[train] rolled out 2350/3825 (2350 loaded from cache)
+[train] rolled out 2375/3825 (2375 loaded from cache)
+[train] rolled out 2400/3825 (2400 loaded from cache)
+[train] rolled out 2425/3825 (2425 loaded from cache)
+[train] rolled out 2450/3825 (2450 loaded from cache)
+[train] rolled out 2475/3825 (2475 loaded from cache)
+[train] rolled out 2500/3825 (2500 loaded from cache)
+[train] rolled out 2525/3825 (2525 loaded from cache)
+[train] rolled out 2550/3825 (2550 loaded from cache)
+[train] rolled out 2575/3825 (2575 loaded from cache)
+[train] rolled out 2600/3825 (2600 loaded from cache)
+[train] rolled out 2625/3825 (2625 loaded from cache)
+[train] rolled out 2650/3825 (2650 loaded from cache)
+[train] rolled out 2675/3825 (2675 loaded from cache)
+[train] rolled out 2700/3825 (2700 loaded from cache)
+[train] rolled out 2725/3825 (2725 loaded from cache)
+[train] rolled out 2750/3825 (2750 loaded from cache)
+[train] rolled out 2775/3825 (2775 loaded from cache)
+[train] rolled out 2800/3825 (2800 loaded from cache)
+[train] rolled out 2825/3825 (2825 loaded from cache)
+[train] rolled out 2850/3825 (2850 loaded from cache)
+[train] rolled out 2875/3825 (2875 loaded from cache)
+[train] rolled out 2900/3825 (2900 loaded from cache)
+[train] rolled out 2925/3825 (2925 loaded from cache)
+[train] rolled out 2950/3825 (2950 loaded from cache)
+[train] rolled out 2975/3825 (2975 loaded from cache)
+[train] rolled out 3000/3825 (3000 loaded from cache)
+[train] rolled out 3025/3825 (3025 loaded from cache)
+[train] rolled out 3050/3825 (3050 loaded from cache)
+[train] rolled out 3075/3825 (3075 loaded from cache)
+[train] rolled out 3100/3825 (3100 loaded from cache)
+[train] rolled out 3125/3825 (3125 loaded from cache)
+[train] rolled out 3150/3825 (3150 loaded from cache)
+[train] rolled out 3175/3825 (3175 loaded from cache)
+[train] rolled out 3200/3825 (3200 loaded from cache)
+[train] rolled out 3225/3825 (3225 loaded from cache)
+[train] rolled out 3250/3825 (3250 loaded from cache)
+[train] rolled out 3275/3825 (3275 loaded from cache)
+[train] rolled out 3300/3825 (3300 loaded from cache)
+[train] rolled out 3325/3825 (3325 loaded from cache)
+[train] rolled out 3350/3825 (3350 loaded from cache)
+[train] rolled out 3375/3825 (3375 loaded from cache)
+[train] rolled out 3400/3825 (3400 loaded from cache)
+[train] rolled out 3425/3825 (3425 loaded from cache)
+[train] rolled out 3450/3825 (3450 loaded from cache)
+[train] rolled out 3475/3825 (3475 loaded from cache)
+[train] rolled out 3500/3825 (3500 loaded from cache)
+[train] rolled out 3525/3825 (3525 loaded from cache)
+[train] rolled out 3550/3825 (3550 loaded from cache)
+[train] rolled out 3575/3825 (3575 loaded from cache)
+[train] rolled out 3600/3825 (3600 loaded from cache)
+[train] rolled out 3625/3825 (3625 loaded from cache)
+[train] rolled out 3650/3825 (3650 loaded from cache)
+[train] rolled out 3675/3825 (3675 loaded from cache)
+[train] rolled out 3700/3825 (3700 loaded from cache)
+[train] rolled out 3725/3825 (3725 loaded from cache)
+[train] rolled out 3750/3825 (3750 loaded from cache)
+[train] rolled out 3775/3825 (3775 loaded from cache)
+[train] rolled out 3800/3825 (3800 loaded from cache)
+[train] rolled out 3825/3825 (3825 loaded from cache)
