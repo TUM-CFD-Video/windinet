@@ -61,6 +61,7 @@ Usage: same checkpoint/config args as eval_dit_vrmse.py / diagnose_latent_scale.
 
 import argparse
 import json
+import math
 import random
 from copy import deepcopy
 from pathlib import Path
@@ -242,15 +243,22 @@ def build_dataset(dataset, ids, pipe, scalar_emb, scalar_cfg, stats, device, cfg
     return pairs
 
 
-def eval_pixel_vrmse(vae, pairs, default_temb) -> float:
-    """Decode every cached pred_latent with the CURRENT decoder, average pixel vrmse."""
+def eval_pixel_vrmse(vae, pairs, default_temb, label="eval") -> float:
+    """Decode every cached pred_latent with the CURRENT decoder, average pixel vrmse.
+
+    Prints progress every 25 samples (or the last one) -- this loop runs a real
+    GPU decode per sample (unlike build_dataset's cache-hit path), so on a large
+    val set it can take a while with nothing else on screen to show it's alive.
+    """
     total = 0.0
     with torch.no_grad():
-        for pred_latent, target in pairs:
+        for i, (pred_latent, target) in enumerate(pairs):
             pred_latent, target = pred_latent.to(next(vae.parameters()).device), target.to(next(vae.parameters()).device)
             dit_pred = decode_latents(vae, pred_latent.to(next(vae.parameters()).dtype), default_temb).float()
             dit_pred, target_cmp = trim_frames(dit_pred, target)
             total += float(vrms_loss(dit_pred, target_cmp).item())
+            if (i + 1) % 25 == 0 or i == len(pairs) - 1:
+                print(f"[{label}] decoded {i + 1}/{len(pairs)}")
     return total / len(pairs)
 
 
@@ -405,7 +413,7 @@ def main():
         print(f"\nResumed from {state_path}: last completed epoch {state['epoch']}/{args.epochs} "
               f"(best so far: epoch {best_epoch}, val pixel vrmse = {best_val_vrmse:.5f})\n")
     else:
-        pixel_vrmse_before = eval_pixel_vrmse(pipe.vae, val_pairs, args.default_temb)
+        pixel_vrmse_before = eval_pixel_vrmse(pipe.vae, val_pairs, args.default_temb, label="eval:pre")
         print(f"\nBEFORE decoder finetune: val pixel vrmse = {pixel_vrmse_before:.5f} (n={len(val_pairs)})\n")
         history = []
         best_val_vrmse = pixel_vrmse_before
@@ -418,6 +426,7 @@ def main():
         random.shuffle(train_pairs)
         epoch_losses = {"rmse": 0.0, "h1": 0.0, "ssim": 0.0, "vrms": 0.0, "total": 0.0}
         n_batches = 0
+        total_batches = math.ceil(len(train_pairs) / args.batch_size)
         for start in range(0, len(train_pairs), args.batch_size):
             batch = train_pairs[start: start + args.batch_size]
             optimizer.zero_grad()
@@ -454,10 +463,13 @@ def main():
                 batch_totals["vrms"] += float(v.item())
                 batch_totals["total"] += float(sample_loss.item())
             optimizer.step()
+            n_batches += 1
+            if n_batches % 200 == 0 or n_batches == total_batches:
+                print(f"[train] epoch {epoch}/{args.epochs}  batch {n_batches}/{total_batches}  "
+                      f"running total_loss={batch_totals['total']:.5f}")
 
             for k in epoch_losses:
                 epoch_losses[k] += batch_totals[k] / len(batch)
-            n_batches += 1
             if device.type == "cuda":
                 torch.cuda.empty_cache()
 
@@ -467,7 +479,7 @@ def main():
         # Per-epoch validation -- val_pairs are NEVER used for a gradient
         # update, only for this check, so this stays a true held-out signal.
         decoder.eval()
-        val_vrmse_epoch = eval_pixel_vrmse(pipe.vae, val_pairs, args.default_temb)
+        val_vrmse_epoch = eval_pixel_vrmse(pipe.vae, val_pairs, args.default_temb, label=f"eval:epoch{epoch}")
         decoder.train()
         improved = val_vrmse_epoch < best_val_vrmse
         if improved:
