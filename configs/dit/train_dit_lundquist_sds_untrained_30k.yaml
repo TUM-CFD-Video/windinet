@@ -1,0 +1,101 @@
+# ShockWaveNet (DiT) training config -- 30k-step extended run of the
+# untrained-critic SDS VAE arm (w=0.1), sibling to
+# train_dit_lundquist_sds_untrained.yaml (steps=8000, already completed,
+# job 22770, 2026-09-12) the same way train_dit_lundquist_cosine_kl0_15k.yaml
+# is a 15k-step sibling of train_dit_lundquist_cosine_kl0.yaml -- a fresh run
+# from step 0 with the cosine schedule stretched over 30000 steps, not a
+# resume-and-extend of the finished 8000-step run (resuming would carry over
+# optimizer/scheduler state built for a schedule with T_max=8000, so its LR
+# would already be decayed to eta_min at step 8000 instead of following a
+# schedule that actually spans 30000).
+#
+# SINGLE VARIABLE vs train_dit_lundquist_sds_untrained.yaml is
+# optimization.steps (8000 -> 30000); everything else (LR, schedule type,
+# batch_size/accum, scalar conditioning) UNCHANGED for direct comparability.
+# Data is already preprocessed at dit_preprocessed/
+# finetune_vae_whole_structure_baseline_ep20_sds_untrained (job 22768,
+# 4500/4500 samples encoded) -- no need to re-run preprocess_dit_data.sbatch.
+#
+# Expect this to get killed by the debug partition's 12h time limit partway
+# through (per train_dit_lundquist_cosine_kl0_15k's own history: ~0.36
+# steps/s at this batch_size/accum on lundquist -> ~15500 steps in 12h) --
+# when that happens, use the sibling _30k_resume.yaml (same output_dir,
+# model.load_checkpoint pointing at the checkpoints/ directory so
+# dit_trainer.py's _find_checkpoint() picks whatever's actually newest on
+# disk) to continue from wherever it left off. See that file's header for
+# the resume mechanics.
+#
+# GOTCHA: check `squeue` before submitting -- lundquist is single-host with
+# no GPU isolation between concurrent submissions (see
+# train_dit_lundquist_cosine_kl0.yaml's header), or chain with
+# `--dependency=afterany:<other-jobid>`.
+#
+# Launched by jobs/lundquist/train_dit_2gpu.sbatch, which substitutes
+# __PREPROCESSED_ROOT__ for dit_preprocessed/<PREPROCESSED_NAME>:
+#   sbatch --time=12:00:00 jobs/lundquist/train_dit_2gpu.sbatch \
+#       finetune_vae_whole_structure_baseline_ep20_sds_untrained \
+#       configs/dit/train_dit_lundquist_sds_untrained_30k.yaml
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+  load_checkpoint: null
+
+conditioning:
+  first_frame_conditioning_p: 1.0
+
+scalar_conditioning:
+  enabled: true
+  scalar_names:
+    - "gamma"
+  scalar_ranges:
+    gamma: [1.0, 2.0]
+  embedding_dim: 4096
+  num_tokens_per_scalar: 4
+  fourier_features: 64
+  mlp_hidden_dim: 256
+  dropout: 0.1
+
+optimization:
+  learning_rate: 1e-5
+  steps: 30000
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "cosine"
+  scheduler_params:
+    eta_min: 1.0e-8
+  enable_gradient_checkpointing: true
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+data:
+  preprocessed_data_root: "__PREPROCESSED_ROOT__"
+  num_dataloader_workers: 4
+
+validation:
+  data_root: "__PREPROCESSED_ROOT__/val"
+  interval: 600
+  max_samples: 0
+
+checkpoints:
+  interval: 120
+  keep_last_n: 2
+
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  enabled: true
+  interval: 2000
+
+wandb:
+  enabled: false
+  project: "shockwavenet"
+  tags: ["cfd", "full", "2b", "scalar-only", "lundquist", "128res", "sds-vae", "sds-untrained-critic", "sds-w0p1", "30k-steps"]
+
+seed: 42
+output_dir: "dit_outputs/lundquist/dit_sds_untrained_30k"
