@@ -612,6 +612,50 @@ the same direction. Extending the sweep to more weights on a third
 resolution would need a strong reason to expect a different qualitative
 result, and there isn't one.
 
+**sng_pvc 256res SDS weight sweep -- all four VAE points now trained
+(2026-09-21/22), DiT stage not yet started for the three new arms.**
+Mirrors the lundquist 128res SDS weight sweep above, but on the original
+sng_pvc/256res arm that produced the project's best DiT result so far
+(`shockwave_dit_sds`, 5.9x, see the headline result above). `val_vrmse`
+for all four weight points (jobs 539633/539634/539635 for the three new
+arms; the original `..._sds` arm, weight 0.1, already existed from job
+535151/535182):
+
+| Arm | SDS weight | val_vrmse |
+|---|---|---|
+| `sds_w0p0001` | 0.0001 | **0.05489 -- best VAE reconstruction of the four** |
+| `sds_w0p01` | 0.01 | 0.05843 |
+| `sds` (original, untuned first guess) | 0.1 | 0.06205 |
+| `sds_w1` | 1.0 | 0.08028 |
+
+Monotonic: weaker SDS weight gives monotonically better VAE reconstruction
+at 256res, same qualitative direction as every other regularizer tried in
+this project (KL, SDS) at any resolution -- consistent with, not yet proof
+of, the same pixel/latent dose-response trade-off found on lundquist (SDS
+weight sweep write-up above): heavier distillation pressure costs pixel
+reconstruction even though it (at least on lundquist) buys latent-tracking
+accuracy. Unlike the lundquist sweep's `val_vrmse` band (0.086-0.100, "not
+strongly sensitive"), this 256res sweep's band is wider (0.055-0.080,
+~46% relative spread top to bottom) -- the weight-sensitivity conclusion
+from lundquist does not obviously transfer to 256res and shouldn't be
+assumed without the DiT-side numbers.
+
+**None of the three new arms (`sds_w0p0001`/`sds_w0p01`/`sds_w1`) have been
+preprocessed or DiT-trained yet** -- only VAE-level `val_vrmse` exists so
+far. Given the repeated finding elsewhere in this ledger that VAE-level
+reconstruction quality does not predict DiT-rollout quality (SDS w=0.1's
+own `vae_only_vrmse` is roughly tied with the plain baseline's, yet its
+DiT ratio-to-floor is the best in the project), **the VAE numbers above are
+not sufficient to rank these arms** -- the real question (does weaker/
+stronger SDS weight help or hurt the actual DiT rollout, on the 256res arm
+that currently holds the project's best result) is still open. Next step:
+`jobs/sng_pvc/preprocess_dit_data.sbatch` (env `VAE_CHECKPOINT=...`) then
+`jobs/sng_pvc/train_dit.sbatch <output_name> configs/dit/
+train_dit_sng_pvc_sds_w0p0001.yaml` (and the `_w0p01`/`_w1` siblings) for
+each of the three new checkpoints, then `eval_dit_vrmse` for a real
+floor-ratio comparison against the existing 5.9x SDS(w=0.1) result -- same
+pattern as the lundquist sweep, just not yet run on this cluster/resolution.
+
 **Still-open bookkeeping questions**, carried over from 2026-08-29,
 unresolved:
 1. **Is "ep20 plain baseline" (sng_pvc) a real arm or a leftover control?**
