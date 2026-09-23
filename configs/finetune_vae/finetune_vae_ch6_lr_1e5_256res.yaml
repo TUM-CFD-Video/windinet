@@ -1,0 +1,114 @@
+# Chapter 6, Group 3 (LR sensitivity) -- "1e-5" arm (low end of the sweep).
+#
+# Fixed across all of Group 3: Group 1's winner (full-structure FT) +
+# Group 2's winner (assumed, pending that group's results: RMSE+H1+SSIM,
+# the project's long-standing default combo -- if Group 2 finds a different
+# combo wins, re-fork this arm from that combo instead of from
+# finetune_vae_ch6_full_ft_256res.yaml). Same AdamW, same effective batch
+# (32), same cosine schedule TYPE (2026-09-23: switched from wsd for the
+# whole Chapter 6 campaign), same 20 epochs, same eval_sims=500, same
+# seed=42 -- per the 2026-09-23 planning discussion, deliberately NOT
+# scanning LR x loss x batch_size jointly (explosion of arms, hard to
+# interpret) -- LR is the only variable here.
+#
+# THIS ARM vs finetune_vae_ch6_full_ft_256res.yaml:
+#   optimization.learning_rate: 5e-5 -> 1e-5
+# min_learning_rate stays 1e-6 (NOT scaled with peak LR) -- matches this
+# project's only precedent for an LR sweep (the cosine-schedule
+# lr5e5/lr1e4/lr1e5 sub-sweep, finetune_vae_whole_structure_baseline_
+# ep20_256res_cosine_lr*.yaml): only optimization.learning_rate changes,
+# min_learning_rate is held fixed across all arms in every prior sweep here.
+#
+# 3-point sweep: 1e-5 (this file) / 5e-5 (reuse
+# finetune_vae_ch6_full_ft_256res.yaml, no rerun needed) / 1e-4
+# (finetune_vae_ch6_lr_1e4_256res.yaml).
+#
+# Read-out: compare val/test VRMSE across the 3 LR points. If the learning
+# curves show clear convergence well before epoch 20 for all three, no
+# epoch-count follow-up (15/30/45ep) is needed -- only add that if the
+# winning LR's curve is still improving at epoch 20.
+#
+# Launch (sng_pvc):
+#   sbatch jobs/sng_pvc/finetune_vae.sbatch \
+#       configs/finetune_vae/finetune_vae_ch6_lr_1e5_256res.yaml \
+#       "${SCRATCH}/windinet/euler_mq_dataset/256x256_ds/train.h5"
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: null
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  # THE variable: 5e-5 -> 1e-5.
+  learning_rate: 1e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.15
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  interval_epochs: 4
+  num_samples: 3
+  frame_numbers: [25, 50, 75, 100]
+  dpi: 150
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "lr0.2x", "shockwave-cfd", "chapter6", "lr-sweep", "256res", "eval500"]
+
+seed: 42
+output_dir: "finetune_vae_ch6_lr_1e5_256res"
+clean_output_dir: true

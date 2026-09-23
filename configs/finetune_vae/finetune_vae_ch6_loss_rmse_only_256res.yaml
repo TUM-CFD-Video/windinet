@@ -56,8 +56,7 @@ data:
 optimization:
   learning_rate: 5e-5
   min_learning_rate: 1e-6
-  scheduler_type: "wsd"
-  stable_fraction: 0.7
+  scheduler_type: "cosine"
   epochs: 20
   batch_size: 1
   gradient_accumulation_steps: 16
@@ -103,7 +102,7 @@ checkpoints:
 wandb:
   enabled: false
   project: "windinet"
-  tags: ["vae", "inflate", "zeros-init", "wsd", "20ep", "shockwave-cfd", "chapter6", "loss-ablation", "rmse-only", "256res", "eval500"]
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "chapter6", "loss-ablation", "rmse-only", "256res", "eval500"]
 
 seed: 42
 output_dir: "finetune_vae_ch6_loss_rmse_only_256res"
