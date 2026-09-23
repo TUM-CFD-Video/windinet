@@ -1,0 +1,98 @@
+# Chapter 6, Group 2 (VAE Loss Ablation) -- "RMSE + H1" arm.
+#
+# Fixed across all of Group 2: the Group 1 winner (full-structure FT), same
+# 256res data, eval_sims=500, epochs=20, LR/schedule/seed -- see
+# finetune_vae_ch6_loss_rmse_only_256res.yaml's header for the full
+# rationale of this ablation.
+#
+# THIS ARM vs finetune_vae_ch6_full_ft_256res.yaml (arm 4/4, RMSE+H1+SSIM):
+#   loss_weighting.weights.ssim: 0.15 -> 0.0
+# (h1 stays 50.0, the project's long-standing weight for this term.)
+#
+# Isolates H1's own contribution: compare this arm's H1 error (and VRMSE)
+# against the RMSE-only floor and against the full RMSE+H1+SSIM arm.
+#
+# Launch (sng_pvc):
+#   sbatch jobs/sng_pvc/finetune_vae.sbatch \
+#       configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml \
+#       "${SCRATCH}/windinet/euler_mq_dataset/256x256_ds/train.h5"
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: null
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "wsd"
+  stable_fraction: 0.7
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  interval_epochs: 4
+  num_samples: 3
+  frame_numbers: [25, 50, 75, 100]
+  dpi: 150
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "wsd", "20ep", "shockwave-cfd", "chapter6", "loss-ablation", "rmse-h1", "256res", "eval500"]
+
+seed: 42
+output_dir: "finetune_vae_ch6_loss_rmse_h1_256res"
+clean_output_dir: true
