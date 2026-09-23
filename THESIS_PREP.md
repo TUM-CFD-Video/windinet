@@ -2,22 +2,29 @@
 
 Compiled from `EXPERIMENTS.md`, `EXPERIMENTS_archive.md`, `infra.md`,
 `latent_space_shift_measure.md`, `README.md`, and configs in this repo, as of
-2026-09-12. This is raw material/outline for drafting, not finished prose —
-hand this to ChatGPT with the instruction to expand each section into full
-academic writing, and flag anywhere a number needs re-confirming against the
-live `EXPERIMENTS.md` before the thesis is finalized (DiT stage is still
-actively changing).
+2026-09-22 (updated from an earlier 2026-09-12 snapshot — see the "Updates
+since 2026-09-12" note under Section 5.3 for exactly what changed). This is
+raw material/outline for drafting, not finished prose — hand this to ChatGPT
+with the instruction to expand each section into full academic writing, and
+flag anywhere a number needs re-confirming against the live `EXPERIMENTS.md`
+before the thesis is finalized (DiT stage is still actively changing).
 
 **Status flag for the writer:** VAE stage (Stage 1) is mature/largely closed
 out — dozens of controlled ablations, an established noise floor, a settled
 baseline. DiT stage (Stage 2) is *actively in progress* — real eval numbers
-exist (best: SDS arm, 5.9x the VAE-only reconstruction floor) but no
-"final" DiT baseline has been chosen yet, and the leading open problem
-(latent-space shift under KL regularization) is diagnosed but not fully
-solved. Frame the thesis's Results/Conclusion honestly around this: VAE-stage
-findings are presented as settled results, DiT-stage findings are presented
-as "promising preliminary results establishing a clear best-known recipe and
-an open research question," not as a finished pipeline.
+exist (best **logged-in-the-ledger** result: SDS arm on sng_pvc, 5.9x the
+VAE-only reconstruction floor; a second, independently-run diagnostic found
+an even larger apparent gain — a decoder-on-rollout fine-tune reaching
+~3.7x-to-floor on lundquist — but that number lives only in raw job logs,
+not yet written up in `EXPERIMENTS.md`, so treat it as promising-but-
+unconfirmed rather than the new headline until it's reconciled into the
+ledger) but no "final" DiT baseline has been chosen yet, and the leading
+open problem (latent-space shift under KL regularization) is diagnosed but
+not fully solved. Frame the thesis's Results/Conclusion honestly around
+this: VAE-stage findings are presented as settled results, DiT-stage
+findings are presented as "promising preliminary results establishing a
+clear best-known recipe and an open research question," not as a finished
+pipeline.
 
 ---
 
@@ -501,6 +508,97 @@ Key findings to narrate:
    strength-dependent, difficulty in specific latent dimensions — flagged
    as future work, not yet resolved.
 
+### Updates since 2026-09-12 (added 2026-09-22)
+
+**1. The "untrained-critic" SDS variant was run and confirmed real —
+resolves a Results caveat that was previously open (see old §5.4, now
+corrected below).** To rule out circularity (does the SDS win depend on
+distilling from a critic already tuned to this project's own latents?),
+a second SDS variant distills from the *stock, never-fine-tuned* pretrained
+transformer instead. Run 2026-09-13 on lundquist/128res, full 675-sample
+eval, replicating the sng_pvc/256res KL-vs-SDS pattern on a second cluster
+and resolution:
+
+| Arm | vae_only vrmse (floor) | vae+dit vrmse | ratio to floor |
+|---|---|---|---|
+| **sds_untrained** (stock-critic distillation) | 0.0894 | **0.3934** | **4.40x — best on lundquist** |
+| kl0 (no regularizer, plain baseline) | 0.0864 | 0.4216 | 4.88x |
+| kl1e7 (weakest KL weight tested anywhere in the project) | 0.0865 | 1.0879 | 12.58x |
+
+Same qualitative pattern as the sng_pvc/256res headline table (SDS beats
+plain baseline; KL always hurts, even at its weakest tested weight) — now
+confirmed on a second cluster/resolution *and* with a task-independent
+critic, addressing the circularity concern directly. A follow-up check
+(`diagnose_latent_scale.py`) confirmed the ~10x latent-space accuracy gain
+of `sds_untrained` over `kl0` is real, not a normalization artifact — but
+that ~10x latent win only translates into a ~7% pixel-space win, an
+unresolved puzzle addressed by finding 2 below.
+
+**2. A frame-drift diagnostic pointed at decoder saturation, motivating a
+real fix that was then run and shows a large, currently-unlogged
+improvement.** The latent-vs-pixel disconnect in finding 1 was traced (via
+`diagnose_frame_drift.py`) to a sharply sublinear/saturating
+decode(latent_error)→pixel_error mapping, consistent with an exposure-bias-
+style mismatch: the decoder has only ever been trained to decode the
+encoder's own clean posterior-mean latents, never the DiT's actual
+(imperfect) rollout latents at inference time. The proposed fix —
+fine-tuning the VAE decoder directly against the DiT's own rollout latents
+(`scripts/finetune_decoder_on_rollout.py`) — was run on lundquist against
+the `sds_untrained` checkpoint (job 22811, 2026-09-14, 15 epochs, full
+675-sim eval, best checkpoint restored by val pixel vrmse):
+
+| | val pixel vrmse (n=675) |
+|---|---|
+| Before decoder fine-tune | 0.39314 |
+| After decoder fine-tune (epoch 9, restored) | **0.33226** |
+| Relative change | **−15.5%** |
+
+Dividing by `sds_untrained`'s own reconstruction floor (0.0894) gives an
+implied **~3.7x ratio-to-floor** — better than every number in either
+headline table above, including the sng_pvc SDS result. **Caveat this
+strongly in the thesis**: this run is not yet written into `EXPERIMENTS.md`
+(it exists only in `logs/lundquist/finetune_decoder_on_rollout_22811.log`
+and the accompanying `finetune_summary.json`), so it has not been through
+the project's usual documented-verdict process, and — per the project's own
+open question — has **not yet been repeated on the `kl0` (no-regularizer)
+arm for comparison**, so it isn't yet known whether this ~15.5% gain is
+specific to SDS-shaped latents or would apply just as well to any arm
+(which would make it a general decoder-training fix rather than a
+consequence of anything specific to SDS). Recommended framing until
+confirmed: "a promising, but not yet fully validated, follow-on result,"
+not a new headline number — see Appendix A for the exact verification
+needed before it can be cited as a finding.
+
+**3. The sng_pvc 256res SDS-weight sweep (mirroring the lundquist SDS-weight
+sweep, but on the cluster/resolution that produced the project's best
+*logged* DiT result) has all four VAE arms trained, and DiT-preprocessing
+for the three new arms completed 2026-09-22 — DiT training not yet
+started.** VAE-level `val_vrmse` for the four weight points:
+
+| Arm | SDS weight | val_vrmse |
+|---|---|---|
+| `sds_w0p0001` | 0.0001 | **0.05489 — best VAE reconstruction of the four** |
+| `sds_w0p01` | 0.01 | 0.05843 |
+| `sds` (original arm behind the 5.9x headline result) | 0.1 | 0.06205 |
+| `sds_w1` | 1.0 | 0.08028 |
+
+Monotonic (weaker SDS weight → better VAE reconstruction), same direction
+as every other regularizer-strength sweep in the project — but, per the
+project's own repeated finding that VAE-level reconstruction quality does
+not predict DiT-rollout quality, **these numbers do not yet rank the arms
+for DiT purposes**; that requires the DiT-side eval, which has not run yet.
+DiT training configs already exist (`configs/dit/train_dit_sng_pvc_sds_
+w0p0001.yaml` and `_w0p01`/`_w1` siblings); once trained and evaluated,
+this gives a real 3-value SDS-weight dose-response curve on the *cluster
+that currently holds the project's best confirmed DiT result*, directly
+comparable to finding 1's lundquist dose-response data.
+
+**4. lrz_ai (third cluster, collaborator-run) and the 512x512 resolution
+arm are unchanged from the prior snapshot** — still stalled since
+2026-08-28 (no post-fix resubmission of any lrz_ai DiT arm) and still
+unconfirmed (no 512res resume job or output directory exists in this
+checkout) respectively. See §5.4 below, still accurate as written.
+
 ### 5.4 What to explicitly caveat as "not yet final" in Results
 - No clean, single-variable, current-baseline confirmation of the
   256x256-vs-128x128 resolution gain exists yet (the only complete 256res
@@ -513,12 +611,25 @@ Key findings to narrate:
 - The lrz_ai (third-cluster) DiT arms have not yet had a real post-bugfix
   training attempt — the sng_pvc results above are the only confirmed DiT
   numbers as of this material's compilation.
-- A second SDS variant (distilling from the *stock*, never-fine-tuned
+- ~~A second SDS variant (distilling from the *stock*, never-fine-tuned
   pretrained transformer rather than this project's own trained DiT, to
-  rule out circularity) is implemented but has not been run yet — flag as
-  a planned/future experiment, and note this could go either in Results
-  ("in progress") or Future Work depending on whether it completes before
-  the thesis is finalized.
+  rule out circularity) is implemented but has not been run yet~~ —
+  **superseded, now run and confirmed** (2026-09-13, lundquist/128res,
+  4.40x-to-floor, beats both the plain baseline and every KL arm on that
+  cluster — see "Updates since 2026-09-12," finding 1, above).
+- **New as of this update**: a decoder-on-rollout fine-tuning follow-on
+  (motivated by a frame-drift diagnostic run against the SDS finding above)
+  shows a large pixel-vrmse improvement (−15.5%, implied ~3.7x-to-floor) on
+  lundquist's `sds_untrained` arm, but is not yet written into
+  `EXPERIMENTS.md` and has not been repeated on a non-SDS arm for
+  comparison — treat as an unconfirmed, promising lead, not a citable
+  result, until both gaps are closed (see "Updates since 2026-09-12,"
+  finding 2, and Appendix A).
+- The sng_pvc 256res SDS-weight sweep (three new weight points beyond the
+  original arm behind the 5.9x headline) has VAE-level numbers for all
+  four points and just finished DiT-preprocessing (2026-09-22) but has no
+  DiT training or eval yet — report as in-progress, not complete, in
+  Results (see "Updates since 2026-09-12," finding 3).
 
 ## 6. Conclusion (recommended structure)
 1. Restate the hypothesis (pretrained video-diffusion priors transfer to
@@ -547,8 +658,14 @@ Key findings to narrate:
    limitation if the thesis doesn't have that comparison — it's currently
    about relative ablation quality, not absolute speedup claims).
 5. Future work: complete the lrz_ai DiT arms and the resolution-isolated
-   256res/512res comparisons; run the untrained-DiT SDS variant to test
-   circularity; investigate the structurally-hard latent channels
+   256res/512res comparisons; ~~run the untrained-DiT SDS variant to test
+   circularity~~ (done, see §5.3 updates — now confirmed); train/evaluate
+   the sng_pvc 256res SDS-weight sweep's three new DiT arms for a
+   same-cluster dose-response curve; repeat the decoder-on-rollout
+   fine-tune on a non-SDS (e.g. `kl0`) arm to determine whether its large
+   apparent gain is SDS-specific or a general decoder-training fix, and
+   formally write the result into `EXPERIMENTS.md` before treating it as a
+   citable finding; investigate the structurally-hard latent channels
    identified in the KL sweep; extend beyond a single PDE family/
    parameter; a wall-clock/throughput comparison against a classical CFD
    solver to substantiate the "fast surrogate" motivation quantitatively.
@@ -559,7 +676,20 @@ Key findings to narrate:
 guess these; check the live repo state)
 - The exact current contents of `EXPERIMENTS.md`'s baseline/results
   section (it changes frequently — this document is a snapshot as of
-  2026-09-12; DiT-stage rows especially will likely have moved).
+  2026-09-22; DiT-stage rows especially will likely have moved again).
+- **The decoder-on-rollout fine-tuning result (−15.5% pixel vrmse,
+  `logs/lundquist/finetune_decoder_on_rollout_22811.log`, job 22811,
+  2026-09-14) is not yet in `EXPERIMENTS.md` at all** — before citing it in
+  the thesis, confirm (a) it has since been written up/verdict-recorded in
+  the ledger, and (b) whether it was ever repeated on a non-SDS arm
+  (`kl0`) to check if the gain is SDS-specific. If neither has happened by
+  thesis-writing time, cite it only as a preliminary/unconfirmed
+  observation, not a result.
+- Whether the sng_pvc 256res SDS-weight sweep's three new arms
+  (`sds_w0p0001`/`sds_w0p01`/`sds_w1`, DiT-preprocessing jobs 541001-541003
+  completed 2026-09-22) have since been DiT-trained and evaluated — if so,
+  pull the real `eval_dit_vrmse` numbers into the Results table instead of
+  the "in progress" framing used in this document.
 - The arXiv ID (`2603.21210`) cited in this repo's `README.md` for the
   upstream WinDiNet urban-wind-flow paper — this looks anomalous (arXiv
   IDs don't currently reach 2603.xxxxx) and should be independently
@@ -592,3 +722,7 @@ guess these; check the live repo state)
 - `configs/finetune_vae/`, `configs/dit/` — exact hyperparameters for
   every named experiment, if the thesis wants to cite specific config
   values verbatim.
+- `scripts/finetune_decoder_on_rollout.py`, `scripts/diagnose_frame_drift.py`,
+  `scripts/diagnose_latent_scale.py` — the decoder-on-rollout fine-tune and
+  its two motivating diagnostics (§5.3 "Updates since 2026-09-12"); useful
+  for a Methodology write-up of this fix if it's confirmed and adopted.
