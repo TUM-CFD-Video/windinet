@@ -1,0 +1,144 @@
+# SMOKE TEST for Chapter 6's Color Adapter arm (adapter.mode="adapter"),
+# NOT a real training run -- same "overfit a handful of sims, few epochs,
+# single tile" pattern as finetune_vae_overfit_1sim_wholestruct.yaml /
+# finetune_vae_overfit_lr5e5_wsd_wholestruct.yaml (Open Question 12's
+# capacity diagnostics), reused here purely to get a fast, self-contained
+# pass/fail signal on a code path (adapter.mode == "adapter", i.e.
+# InAdapter/OutAdapter + a frozen-encoder base VAE) that has NEVER been
+# exercised anywhere in this project's logged history -- see
+# finetune_vae_ch6_color_adapter_256res.yaml's own header for why this
+# needs checking before the real 30-epoch/8-tile run is submitted.
+#
+# What this checks: does windinet/vae_adapter.py's load_adapted_vae/
+# InAdapter/OutAdapter path (a) load without error, (b) run a forward +
+# backward pass without shape mismatches or NaN/inf, (c) actually drive
+# train_loss down as it overfits 2 sims, and (d) save a checkpoint at the
+# end (train()'s unconditional final save) -- i.e. does the whole loop
+# survive start to finish, not whether the reconstruction is any good.
+#
+# overfit_sims: 2, overfit_repeat: 20 -> 40 optimizer steps/epoch (matches
+# this project's established overfit-diagnostic convention of ~40 steps/
+# epoch, e.g. the 8-sim/repeat-5 and 1-sim/repeat-40 diagnostics).
+# epochs: 5 (not 50) -- this run only needs to demonstrate the loss trends
+# down and nothing crashes, not reach a capacity floor; do not read
+# anything into the specific val_vrmse this lands on.
+# eval_sims: ignored while overfit_sims is set (kept at 500 only for
+# on-disk consistency with the rest of the Chapter 6 campaign's configs).
+#
+# checkpoints.interval: null / save_last_state: false -- same as the other
+# overfit diagnostics, these weights are not meant to be used for anything.
+#
+# Usage (single XPU tile, effective_batch=1 -- MUST go through the debug
+# launcher, not finetune_vae.sbatch, for the same reason the overfit
+# diagnostics require it: the 8-tile launcher would silently retarget
+# gradient_accumulation_steps to hit effective_batch=32 and break the
+# "one optimizer step per repeat" design):
+#   sbatch jobs/sng_pvc/finetune_vae_debug.sbatch \
+#       configs/finetune_vae/finetune_vae_ch6_color_adapter_overfit_smoketest.yaml
+# Watch with:
+#   tail -f logs/sng_pvc/<jobid>-wh_debug_vae.out
+#
+# PASS criteria to look for in the log:
+#   1. A line like "VAE adapters enabled: channels=[...], hidden_channels=32,
+#      activation=gelu" near startup (confirms the adapter-mode branch in
+#      vae_trainer.py's _load_vae actually ran, not silently fell through).
+#   2. No traceback / no NaN or inf in train_loss.
+#   3. train_loss trending down across the 5 epochs (overfitting 2 sims
+#      should show this quickly and clearly).
+#   4. Job completes (or is killed cleanly at the 03:00:00 time limit --
+#      either is fine; 5 epochs x 40 steps on 1 tile should finish well
+#      inside that window, but if it's still running happily when the time
+#      limit hits, that is not a failure).
+# If all four hold, the code path is confirmed sound and
+# finetune_vae_ch6_color_adapter_256res.yaml can be submitted for real via
+# jobs/sng_pvc/finetune_vae.sbatch.
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "adapter"
+  hidden_channels: 32
+  identity_init: true
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: null
+  # THE variables that make this a fast smoke test instead of a real run.
+  overfit_sims: 2
+  overfit_repeat: 20
+  eval_sims: 500          # ignored while overfit_sims is set
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "wsd"
+  stable_fraction: 0.7
+  epochs: 5
+  batch_size: 1
+  # 1, not the cluster default -- one optimizer step per repeat. MUST be
+  # launched through jobs/sng_pvc/finetune_vae_debug.sbatch, which pins
+  # effective_batch=1 and so leaves this value alone.
+  gradient_accumulation_steps: 1
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 20
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.15
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  interval_epochs: 1
+  num_samples: 1
+  frame_numbers: [25, 50, 75, 100]
+  dpi: 150
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  # null = never save mid-run -- only train()'s unconditional final save at
+  # the end matters here (confirms the save path also works for AdaptedVAE).
+  interval: null
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: false
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "adapter", "diagnostic", "smoketest", "chapter6", "color-adapter", "256res"]
+
+seed: 42
+output_dir: "finetune_vae_ch6_color_adapter_overfit_smoketest"
+clean_output_dir: true
