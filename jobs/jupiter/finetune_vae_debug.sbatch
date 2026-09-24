@@ -24,15 +24,20 @@
 # (windinet/cluster_config.py's CLUSTER_DEFAULTS["jupiter"]).
 #
 # Before submission:           mkdir -p logs/jupiter
-# Submit from the repo root:   sbatch jobs/jupiter/finetune_vae_debug.sbatch <config.yaml>
+# Submit from the repo root, windinet env active (sbatch inherits it):
+#                              sbatch jobs/jupiter/finetune_vae_debug.sbatch <config.yaml>
 # Watch with:                  tail -f logs/jupiter/wh_finetune_vae_4gpu_<jobid>.log
 
 set -euo pipefail
 
 cd "${SLURM_SUBMIT_DIR}"
-set +eu  # modules.sh has a failing "module load mpi4py" and unset vars
-source sc_venv_template/activate.sh
-set -eu
+# Uses the caller's environment (e.g. `conda activate windinet`); the
+# sc_venv_template venv is only sourced if a checkout actually has one.
+if [[ -f sc_venv_template/activate.sh ]]; then
+    set +eu  # modules.sh has a failing "module load mpi4py" and unset vars
+    source sc_venv_template/activate.sh
+    set -eu
+fi
 PYTHON=python
 
 export SCRATCH="${SCRATCH_e_dev_2026d09_262}"

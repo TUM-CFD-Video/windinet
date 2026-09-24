@@ -16,7 +16,7 @@ Needs outbound internet access to huggingface.co -- run this from a login
 node, not inside a job (compute nodes have no internet, and
 jobs/jupiter/*.sbatch set HF_HUB_OFFLINE=1).
 
-Usage (run from the repo root after `source sc_venv_template/activate.sh`):
+Usage (run from the repo root with the windinet env active):
     python euler_mq_dataset/jupiter/download_from_hf.py                 # 256x256_ds (default)
     python euler_mq_dataset/jupiter/download_from_hf.py 128x128_ds
     python euler_mq_dataset/jupiter/download_from_hf.py 512x512_orig
