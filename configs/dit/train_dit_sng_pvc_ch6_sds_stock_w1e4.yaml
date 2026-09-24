@@ -1,11 +1,6 @@
-# REPLACED (2026-09-25) by the stock-teacher weight sweep
-# sds_stock_w1e4 / sds_stock_w1e2 / sds_stock_w1. Weight 0.1 is not run in
-# Chapter 6, and jobs/sng_pvc/ch6_submit.sh's g5 set no longer includes it.
-# Kept as the template those three were forked from.
-#
 # ShockWaveNet (DiT) training config -- Chapter 6, Groups 4/5.
-# VAE: finetune_vae_ch6_sds_stock_256res
-#   Group 5 SDS arm with the stock (untrained) LTXV teacher, weight 0.1.
+# VAE: finetune_vae_ch6_sds_stock_w1e4_256res
+#   Group 5 SDS arm with the stock (untrained) LTXV teacher, weight 1.0e-4.
 #
 # DiT recipe is IDENTICAL across every Chapter 6 DiT arm and to the existing
 # sng_pvc DiT configs (e.g. train_dit_sng_pvc_sds_w1.yaml): steps=8000,
@@ -17,11 +12,11 @@
 # .sbatch's 675 default) so the DiT val split is the same 500 held-out sims
 # as the VAE's own Chapter 6 val split. jobs/sng_pvc/ch6_submit.sh does this.
 #
-# Usage (preferred): bash jobs/sng_pvc/ch6_submit.sh dit sds_stock
+# Usage (preferred): bash jobs/sng_pvc/ch6_submit.sh dit sds_stock_w1e4
 # Manual equivalent:
-#   EVAL_SIMS=500 VAE_CHECKPOINT=${SCRATCH}/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_sds_stock_256res/checkpoints/vae_shockwave_best.safetensors \
+#   EVAL_SIMS=500 VAE_CHECKPOINT=${SCRATCH}/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_sds_stock_w1e4_256res/checkpoints/vae_shockwave_best.safetensors \
 #     sbatch jobs/sng_pvc/preprocess_dit_data.sbatch
-#   sbatch jobs/sng_pvc/train_dit.sbatch finetune_vae_ch6_sds_stock_256res configs/dit/train_dit_sng_pvc_ch6_sds_stock.yaml
+#   sbatch jobs/sng_pvc/train_dit.sbatch finetune_vae_ch6_sds_stock_w1e4_256res configs/dit/train_dit_sng_pvc_ch6_sds_stock_w1e4.yaml
 
 model:
   model_source: "LTXV_2B_0.9.6_DEV"
@@ -86,7 +81,7 @@ visualization:
 wandb:
   enabled: false
   project: "shockwavenet"
-  tags: ["cfd", "full", "2b", "scalar-only", "sng_pvc", "256res", "chapter6", "eval500", "sds-stock"]
+  tags: ["cfd", "full", "2b", "scalar-only", "sng_pvc", "256res", "chapter6", "eval500", "sds-stock", "sds-w1e4"]
 
 seed: 42
-output_dir: "$SCRATCH/windinet/outputs/shockwave_dit_ch6_sds_stock"
+output_dir: "$SCRATCH/windinet/outputs/shockwave_dit_ch6_sds_stock_w1e4"
