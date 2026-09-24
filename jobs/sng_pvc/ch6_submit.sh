@@ -20,8 +20,9 @@
 #   vae_only  = decoder_only_nossim lr_1e4_nossim lr_1e5_nossim
 #               color_adapter_nossim loss_rmse_h1_ssimfix
 #   g4_ready  = loss_rmse_h1 unfinetuned   (VAE already trained)
-#   g5        = kl_1e7 kl_1e6 kl_1e5 sds_stock
-#               (sds_cfd dropped 2026-09-25: Group 5 uses the stock teacher only)
+#   g5        = kl_1e7 kl_1e6 kl_1e5 sds_stock_w1e4 sds_stock_w1e2 sds_stock_w1
+#               (stock SDS teacher only, weights 1e-4/1e-2/1; sds_cfd dropped
+#               and the single weight-0.1 sds_stock arm replaced, 2026-09-25)
 #
 # Typical order:
 #   bash jobs/sng_pvc/ch6_submit.sh vae vae_only
@@ -57,7 +58,7 @@ expand_arms() {
         case "$a" in
             vae_only) echo decoder_only_nossim lr_1e4_nossim lr_1e5_nossim color_adapter_nossim loss_rmse_h1_ssimfix ;;
             g4_ready) echo loss_rmse_h1 unfinetuned ;;
-            g5)       echo kl_1e7 kl_1e6 kl_1e5 sds_stock ;;
+            g5)       echo kl_1e7 kl_1e6 kl_1e5 sds_stock_w1e4 sds_stock_w1e2 sds_stock_w1 ;;
             *)        echo "$a" ;;
         esac
     done

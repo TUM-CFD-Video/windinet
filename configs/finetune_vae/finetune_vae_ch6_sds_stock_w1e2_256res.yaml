@@ -1,7 +1,15 @@
-# REPLACED (2026-09-25) by the stock-teacher weight sweep
-# sds_stock_w1e4 / sds_stock_w1e2 / sds_stock_w1. Weight 0.1 is not run in
-# Chapter 6, and jobs/sng_pvc/ch6_submit.sh's g5 set no longer includes it.
-# Kept as the template those three were forked from.
+# Chapter 6, Group 5 -- SDS (stock teacher) weight sweep, weight 1.0e-2.
+# Sweep: sds_stock_w1e4 / sds_stock_w1e2 / sds_stock_w1 (2026-09-25), same
+# three weights as the pre-Chapter-6 256res SDS sweep. That sweep used the
+# CFD-finetuned teacher; this one uses the STOCK teacher, and SDS is the only
+# change vs the no-SDS baseline finetune_vae_ch6_loss_rmse_h1_256res.yaml.
+# SINGLE VARIABLE vs finetune_vae_ch6_sds_stock_256res.yaml (weight 0.1):
+#   loss_weighting.weights.sds: 0.1 -> 1.0e-2
+#   output_dir / wandb tags
+# The original header below still describes the arm; its "WEIGHT: 0.1" /
+# "not a weight sweep" paragraph is superseded by this sweep.
+#
+# Launch: bash jobs/sng_pvc/ch6_submit.sh pipeline sds_stock_w1e2
 #
 # 2026-09-25: this is Group 5's ONLY SDS arm. The SDS_CFD sibling was
 # dropped, so the header's "stock vs CFD teacher comparison" framing no
@@ -101,8 +109,7 @@ loss_weighting:
     ssim: 0.0  # SSIM dropped from the Chapter 6 baseline (2026-09-25)
     mlw: 0.0
     # THE variable vs finetune_vae_ch6_loss_rmse_h1_256res.yaml.
-    sds: 0.1
-
+    sds: 1.0e-2
 loss:
   wavelet: "db2"
   spatial_level: 2
@@ -148,8 +155,8 @@ checkpoints:
 wandb:
   enabled: false
   project: "windinet"
-  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "chapter6", "sds", "sds-stock", "256res", "eval500"]
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "chapter6", "sds", "sds-stock", "sds-w1e2", "256res", "eval500"]
 
 seed: 42
-output_dir: "finetune_vae_ch6_sds_stock_256res"
+output_dir: "finetune_vae_ch6_sds_stock_w1e2_256res"
 clean_output_dir: true
