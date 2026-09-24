@@ -1,0 +1,242 @@
+START TIME: Wed 23 Sep 2026 12:53:14 PM CEST
+job=543402 node=i20r08c04s06
+start_time=2026-09-23T12:53:14+02:00
++-----------+--------------------------------------------------------------------------------------+
+| Device ID | Device Information                                                                   |
++-----------+--------------------------------------------------------------------------------------+
+| 0         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-003a-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:3a:00.0                                                        |
+|           | DRM Device: /dev/dri/card0                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 1         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-004b-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:4b:00.0                                                        |
+|           | DRM Device: /dev/dri/card1                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 2         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00ca-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:ca:00.0                                                        |
+|           | DRM Device: /dev/dri/card2                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 3         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00da-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:da:00.0                                                        |
+|           | DRM Device: /dev/dri/card3                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+MASTER_ADDR: i20r08c04s06  MASTER_PORT: 45767
+1 XPU tile x accum 1 -> effective batch 1; output_dir /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_color_adapter_overfit_smoketest
+INFO     Failed to extract font properties from             font_manager.py:1107
+         /usr/share/fonts/truetype/Cantarell-VF.otf: Can                        
+         not load face (SFNT font table missing; error code                     
+         0x8e)                                                                  
+INFO     generated new fontManager                          font_manager.py:1639
+                          VAE Finetuning Configuration                          
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                             ┃ Value                                ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ model.model_source                    │ LTXV_2B_0.9.6_DEV                    │
+│ model.load_checkpoint                 │ None                                 │
+│ adapter.enabled                       │ True                                 │
+│ adapter.checkpoint                    │ None                                 │
+│ adapter.channels                      │ ['density', 'momentum_x',            │
+│                                       │ 'momentum_y', 'pressure']            │
+│ adapter.mode                          │ adapter                              │
+│ adapter.inflate_init                  │ zeros                                │
+│ adapter.inflate_copy_channel          │ None                                 │
+│ adapter.freeze_conv_in                │ False                                │
+│ adapter.unfreeze_encoder_trunk        │ True                                 │
+│ adapter.hidden_channels               │ 32                                   │
+│ adapter.activation                    │ gelu                                 │
+│ adapter.identity_init                 │ True                                 │
+│ adapter.default_temb                  │ 0.0                                  │
+│ data.data_root                        │ /hppfs/scratch/0D/go76fuz2/windinet… │
+│ data.eval_sims                        │ 500                                  │
+│ data.num_dataloader_workers           │ 4                                    │
+│ data.num_sim_frames                   │ None                                 │
+│ data.overfit_sims                     │ 2                                    │
+│ data.overfit_repeat                   │ 20                                   │
+│ data.channel_mean                     │ [0.9050976477108856,                 │
+│                                       │ 0.004045365949982484,                │
+│                                       │ -0.0019089379638760548, 0.9          │
+│ data.channel_std                      │ [0.6618199912434938,                 │
+│                                       │ 0.5335233432828087,                  │
+│                                       │ 0.5268940723644505, 0.8053303        │
+│ data.normalization_stats_file         │ None                                 │
+│ data.normalization_clip               │ 5.0                                  │
+│ data.channel_order                    │ ['density', 'momentum_x',            │
+│                                       │ 'momentum_y', 'pressure']            │
+│ data.log_transform_channels           │ []                                   │
+│ optimization.learning_rate            │ 5e-05                                │
+│ optimization.min_learning_rate        │ 1e-06                                │
+│ optimization.scheduler_type           │ wsd                                  │
+│ optimization.stable_fraction          │ 0.7                                  │
+│ optimization.stable_end_epoch         │ None                                 │
+│ optimization.plateau_factor           │ 0.5                                  │
+│ optimization.plateau_patience         │ 3                                    │
+│ optimization.plateau_threshold        │ 0.0001                               │
+│ optimization.epochs                   │ 5                                    │
+│ optimization.batch_size               │ 1                                    │
+│ optimization.gradient_accumulation_s… │ 1                                    │
+│ optimization.max_grad_norm            │ 5.0                                  │
+│ optimization.weight_decay             │ 0.0                                  │
+│ optimization.warmup_steps             │ 20                                   │
+│ optimization.warmup_start_factor      │ 0.01                                 │
+│ optimization.enable_gradient_checkpo… │ True                                 │
+│ loss.wavelet                          │ db2                                  │
+│ loss.spatial_level                    │ 2                                    │
+│ loss.temporal_level                   │ 2                                    │
+│ loss.mlw_beta                         │ 10.0                                 │
+│ loss.mlw_eps                          │ 1e-06                                │
+│ loss_weighting.strategy               │ fixed                                │
+│ loss_weighting.weights                │ {'rmse': 1.0, 'h1': 50.0, 'ssim':    │
+│                                       │ 0.15, 'mlw': 0.0}                    │
+│ loss_weighting.loss_names             │ ['rmse', 'h1', 'ssim', 'mlw']        │
+│ loss_weighting.alpha                  │ 1.5                                  │
+│ loss_weighting.weight_lr              │ 0.025                                │
+│ loss_weighting.temperature            │ 0.1                                  │
+│ sds.enabled                           │ False                                │
+│ sds.model_source                      │ LTXV_13B_097_DEV                     │
+│ sds.dit_checkpoint                    │ None                                 │
+│ sds.untrained_dit                     │ False                                │
+│ sds.scalar_conditioning.enabled       │ True                                 │
+│ sds.scalar_conditioning.scalar_names  │ ['gamma']                            │
+│ sds.scalar_conditioning.scalar_ranges │ {'gamma': (1.0, 2.0)}                │
+│ sds.scalar_conditioning.embedding_dim │ 4096                                 │
+│ sds.scalar_conditioning.num_tokens_p… │ 4                                    │
+│ sds.scalar_conditioning.fourier_feat… │ 64                                   │
+│ sds.scalar_conditioning.mlp_hidden_d… │ 256                                  │
+│ sds.scalar_conditioning.dropout       │ 0.1                                  │
+│ sds.timestep_sampling_mode            │ shifted_logit_normal                 │
+│ sds.timestep_sampling_params          │ {}                                   │
+│ visualization.enabled                 │ True                                 │
+│ visualization.interval_epochs         │ 1                                    │
+│ visualization.num_samples             │ 1                                    │
+│ visualization.frame_numbers           │ [25, 50, 75, 100]                    │
+│ visualization.dpi                     │ 150                                  │
+│ acceleration.mixed_precision_mode     │ bf16                                 │
+│ acceleration.compile_with_inductor    │ False                                │
+│ acceleration.compilation_mode         │ reduce-overhead                      │
+│ checkpoints.interval                  │ None                                 │
+│ checkpoints.keep_last_n               │ 1                                    │
+│ checkpoints.save_best_only            │ True                                 │
+│ checkpoints.best_metric               │ val_vrmse                            │
+│ checkpoints.save_last_state           │ False                                │
+│ checkpoints.save_epochs               │ []                                   │
+│ wandb.enabled                         │ False                                │
+│ wandb.project                         │ windinet                             │
+│ wandb.entity                          │ None                                 │
+│ wandb.tags                            │ ['vae', 'adapter', 'diagnostic',     │
+│                                       │ 'smoketest', 'chapter6',             │
+│                                       │ 'color-adapt                         │
+│ seed                                  │ 42                                   │
+│ output_dir                            │ /hppfs/scratch/0D/go76fuz2/windinet… │
+│ clean_output_dir                      │ True                                 │
+│ resume_from                           │ None                                 │
+│ resume_weights_only                   │ False                                │
+└───────────────────────────────────────┴──────────────────────────────────────┘
+[windinet] channels=['density', 'momentum_x', 'momentum_y', 'pressure'], n=4, k=32, activation=gelu
+INFO     VAE adapters enabled: channels=['density',           vae_trainer.py:190
+         'momentum_x', 'momentum_y', 'pressure'],                               
+         hidden_channels=32, activation=gelu                                    
+INFO     Encoder extra modules (down_blocks/tail) FROZEN      vae_trainer.py:269
+         (mode='adapter')                                                       
+INFO     VAE gradient checkpointing enabled                   vae_trainer.py:274
+INFO     VAE loaded. Decoder params: 552,814,641              vae_trainer.py:280
+INFO     Trainable parameters: encoder_conv_in=0,             vae_trainer.py:351
+         encoder_extra=0, decoder=552,814,641,                                  
+         in_adapter=259, out_adapter=260                                        
+WARNING  OVERFIT DIAGNOSTIC: training and evaluating on the   vae_trainer.py:558
+         same 2 sims (repeated 20x per epoch). val_vrmse                        
+         measures memorization, not generalization.                             
+INFO     Dataset: 2 train, 2 eval samples                     vae_trainer.py:615
+INFO     adapter LR = 5.00e-05 (== decoder LR)                vae_trainer.py:639
+INFO     LR schedule 'wsd': 200 steps (20 warmup, 126 stable, vae_trainer.py:741
+         54 anneal), peak 5.00e-05 -> floor 1.00e-06                            
+INFO     Config saved:                                       vae_trainer.py:1507
+         /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_ou                    
+         tputs_sng_pvc/finetune_vae_ch6_color_adapter_overfi                    
+         t_smoketest/training_config.yaml                                       
+INFO     Starting VAE decoder finetuning...                   vae_trainer.py:795
+epoch 1 step 10  loss=0.100078  lr=2.53e-05  [rmse=0.0431 h1=0.0001 ssim=0.3105 mlw=0.0000]
+epoch 1 step 20  loss=0.103662  lr=5.00e-05  [rmse=0.0668 h1=0.0002 ssim=0.3308 mlw=0.0000]
+epoch 1 step 30  loss=0.103887  lr=5.00e-05  [rmse=0.0447 h1=0.0001 ssim=0.3171 mlw=0.0000]
+epoch 1 step 40  loss=0.105169  lr=5.00e-05  [rmse=0.0656 h1=0.0001 ssim=0.3060 mlw=0.0000]
+INFO     Loss weights: rmse=1.0000, h1=50.0000, ssim=0.1500,  vae_trainer.py:975
+         mlw=0.0000                                                             
+INFO     Epoch 1: train_loss=0.105169  val_loss=0.101049     vae_trainer.py:1014
+         val_VRMSE=0.442757  lr=5.00e-05                                        
+INFO     Metrics updated: metrics/metrics.csv,               vae_trainer.py:1040
+         metrics/loss_curves.png                                                
+INFO     Saved 4 validation reconstruction PNGs for epoch 1  vae_trainer.py:1254
+INFO     Epoch 1 timing: train=91.1s eval=1.1s viz=4.3s      vae_trainer.py:1074
+         ckpt=0.0s total=98.1s                                                  
+epoch 2 step 50  loss=0.094632  lr=5.00e-05  [rmse=0.0602 h1=0.0002 ssim=0.2510 mlw=0.0000]
+epoch 2 step 60  loss=0.094656  lr=5.00e-05  [rmse=0.0579 h1=0.0001 ssim=0.2327 mlw=0.0000]
+epoch 2 step 70  loss=0.095234  lr=5.00e-05  [rmse=0.0377 h1=0.0001 ssim=0.2153 mlw=0.0000]
+epoch 2 step 80  loss=0.092760  lr=5.00e-05  [rmse=0.0553 h1=0.0001 ssim=0.2135 mlw=0.0000]
+INFO     Loss weights: rmse=1.0000, h1=50.0000, ssim=0.1500,  vae_trainer.py:975
+         mlw=0.0000                                                             
+INFO     Epoch 2: train_loss=0.092760  val_loss=0.081338     vae_trainer.py:1014
+         val_VRMSE=0.386775  lr=5.00e-05                                        
+INFO     Metrics updated: metrics/metrics.csv,               vae_trainer.py:1040
+         metrics/loss_curves.png                                                
+INFO     Saved 4 validation reconstruction PNGs for epoch 2  vae_trainer.py:1254
+INFO     Epoch 2 timing: train=49.6s eval=1.0s viz=4.1s      vae_trainer.py:1074
+         ckpt=0.0s total=55.2s                                                  
+epoch 3 step 90  loss=0.083362  lr=5.00e-05  [rmse=0.0355 h1=0.0001 ssim=0.1862 mlw=0.0000]
+epoch 3 step 100  loss=0.077812  lr=5.00e-05  [rmse=0.0350 h1=0.0001 ssim=0.1762 mlw=0.0000]
+epoch 3 step 110  loss=0.076999  lr=5.00e-05  [rmse=0.0341 h1=0.0001 ssim=0.1588 mlw=0.0000]
+epoch 3 step 120  loss=0.077007  lr=5.00e-05  [rmse=0.0339 h1=0.0001 ssim=0.1683 mlw=0.0000]
+INFO     Loss weights: rmse=1.0000, h1=50.0000, ssim=0.1500,  vae_trainer.py:975
+         mlw=0.0000                                                             
+INFO     Epoch 3: train_loss=0.077007  val_loss=0.075247     vae_trainer.py:1014
+         val_VRMSE=0.354619  lr=5.00e-05                                        
+INFO     Metrics updated: metrics/metrics.csv,               vae_trainer.py:1040
+         metrics/loss_curves.png                                                
+INFO     Saved 4 validation reconstruction PNGs for epoch 3  vae_trainer.py:1254
+INFO     Epoch 3 timing: train=49.7s eval=1.0s viz=4.1s      vae_trainer.py:1074
+         ckpt=0.0s total=55.4s                                                  
+epoch 4 step 130  loss=0.072554  lr=5.00e-05  [rmse=0.0500 h1=0.0001 ssim=0.1911 mlw=0.0000]
+epoch 4 step 140  loss=0.073178  lr=5.00e-05  [rmse=0.0487 h1=0.0001 ssim=0.1756 mlw=0.0000]
+epoch 4 step 150  loss=0.071612  lr=4.93e-05  [rmse=0.0308 h1=0.0001 ssim=0.1151 mlw=0.0000]
+epoch 4 step 160  loss=0.067637  lr=4.23e-05  [rmse=0.0468 h1=0.0001 ssim=0.1596 mlw=0.0000]
+INFO     Loss weights: rmse=1.0000, h1=50.0000, ssim=0.1500,  vae_trainer.py:975
+         mlw=0.0000                                                             
+INFO     Epoch 4: train_loss=0.067637  val_loss=0.062589     vae_trainer.py:1014
+         val_VRMSE=0.322913  lr=4.23e-05                                        
+INFO     Metrics updated: metrics/metrics.csv,               vae_trainer.py:1040
+         metrics/loss_curves.png                                                
+INFO     Saved 4 validation reconstruction PNGs for epoch 4  vae_trainer.py:1254
+INFO     Epoch 4 timing: train=49.5s eval=1.0s viz=4.0s      vae_trainer.py:1074
+         ckpt=0.0s total=55.1s                                                  
+epoch 5 step 170  loss=0.062468  lr=2.98e-05  [rmse=0.0303 h1=0.0001 ssim=0.1114 mlw=0.0000]
+epoch 5 step 180  loss=0.061772  lr=1.58e-05  [rmse=0.0454 h1=0.0001 ssim=0.1440 mlw=0.0000]
+epoch 5 step 190  loss=0.063151  lr=5.03e-06  [rmse=0.0451 h1=0.0001 ssim=0.1360 mlw=0.0000]
+epoch 5 step 200  loss=0.060151  lr=1.00e-06  [rmse=0.0294 h1=0.0001 ssim=0.0949 mlw=0.0000]
+INFO     Loss weights: rmse=1.0000, h1=50.0000, ssim=0.1500,  vae_trainer.py:975
+         mlw=0.0000                                                             
+INFO     Epoch 5: train_loss=0.060151  val_loss=0.057821     vae_trainer.py:1014
+         val_VRMSE=0.310754  lr=1.00e-06                                        
+INFO     Metrics updated: metrics/metrics.csv,               vae_trainer.py:1040
+         metrics/loss_curves.png                                                
+INFO     Saved 4 validation reconstruction PNGs for epoch 5  vae_trainer.py:1254
+INFO     Epoch 5 timing: train=49.5s eval=1.0s viz=3.9s      vae_trainer.py:1074
+         ckpt=0.0s total=55.2s                                                  
+╭──────────────────────────────────────────────────────────────────────────────╮
+╰──────────────────────────────────────────────────────────────────────────────╯INFO     Best epoch: 5 (val_vrmse=0.310754)                  vae_trainer.py:1092
+
+Training complete. Checkpoint: 
+/hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch
+6_color_adapter_overfit_smoketest/checkpoints/vae_shockwave_last.safetensors
+Mirrored (excl. checkpoints/) to finetune_vae_outputs/sng_pvc/finetune_vae_ch6_color_adapter_overfit_smoketest
+END TIME: Wed 23 Sep 2026 01:11:54 PM CEST
+end_time=2026-09-23T13:11:54+02:00 elapsed=1120s

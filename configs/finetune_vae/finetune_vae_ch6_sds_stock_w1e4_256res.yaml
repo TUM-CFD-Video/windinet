@@ -1,0 +1,162 @@
+# Chapter 6, Group 5 -- SDS (stock teacher) weight sweep, weight 1.0e-4.
+# Sweep: sds_stock_w1e4 / sds_stock_w1e2 / sds_stock_w1 (2026-09-25), same
+# three weights as the pre-Chapter-6 256res SDS sweep. That sweep used the
+# CFD-finetuned teacher; this one uses the STOCK teacher, and SDS is the only
+# change vs the no-SDS baseline finetune_vae_ch6_loss_rmse_h1_256res.yaml.
+# SINGLE VARIABLE vs finetune_vae_ch6_sds_stock_256res.yaml (weight 0.1):
+#   loss_weighting.weights.sds: 0.1 -> 1.0e-4
+#   output_dir / wandb tags
+# The original header below still describes the arm; its "WEIGHT: 0.1" /
+# "not a weight sweep" paragraph is superseded by this sweep.
+#
+# Launch: bash jobs/sng_pvc/ch6_submit.sh pipeline sds_stock_w1e4
+#
+# 2026-09-25: this is Group 5's ONLY SDS arm. The SDS_CFD sibling was
+# dropped, so the header's "stock vs CFD teacher comparison" framing no
+# longer applies: Group 5 asks whether SDS from the stock teacher (weight
+# 0.1) improves VAE-DiT compatibility vs the no-SDS baseline
+# (finetune_vae_ch6_loss_rmse_h1_256res.yaml). This arm is also Group 4's
+# SDS-finetuned VAE.
+#
+# Chapter 6, Group 5 (KL/SDS Compatibility Mitigation) -- "SDS_stock" arm.
+#
+# Fixed across all of Group 5: Group 1-3's winner (full-structure FT,
+# assumed RMSE+H1 @ 5e-5, cosine) -- see finetune_vae_ch6_kl_1e7_256res
+# .yaml for the full group rationale. Same 256res data, eval_sims=500,
+# epochs=20, seed=42.
+#
+# THIS ARM vs finetune_vae_ch6_loss_rmse_h1_256res.yaml: adds the "sds" loss
+# term (windinet.training.sds_loss.SdsDistillationLoss -- see
+# windinet/config.py's SdsLossConfig docstring for the full formula) with
+# `sds.untrained_dit: true`.
+#
+# "STOCK" MEANS, PRECISELY (this distinction must be stated exactly, see
+# the 2026-09-23 Chapter 4 fact-check discussion): the frozen teacher is
+# the RAW pretrained LTX-Video 2B transformer straight from Lightricks
+# (config.model_source, "LTXV_2B_0.9.6_DEV"), with ZERO CFD/shockwave
+# fine-tuning applied -- NOT a randomly-initialized transformer. The
+# transformer's own weights are the real, meaningful video-pretrained
+# ones; only the accompanying ScalarEmbedding (gamma-conditioning MLP) is
+# freshly random-initialized, because stock LTX-Video has no pretrained
+# notion of gamma conditioning to load. This tests a task-independent
+# prior -- does distilling from a generic "is this a plausible video"
+# critic (with no notion of this project's own CFD dynamics) still improve
+# VAE-DiT compatibility, avoiding the circularity of distilling from a DiT
+# that was itself trained to denoise a specific VAE's own latents (that
+# circularity is what the sibling SDS_CFD arm risks, deliberately, as the
+# other half of this comparison).
+#
+# WEIGHT: 0.1, the project's original untuned "same order of magnitude as
+# rmse" first guess (matches the 128res sds_untrained arm's own weight,
+# finetune_vae_whole_structure_baseline_ep20_sds_untrained.yaml) -- Group 5
+# is a teacher-identity comparison (stock vs CFD-finetuned critic) at a
+# FIXED weight, not a weight sweep (that already happened pre-Chapter-6,
+# see the sds_w0p0001/w0p01/w1 family) -- keeping weight fixed here isolates
+# the one variable Group 5 actually cares about.
+#
+# EXPECTED COST: loads a second frozen 2B-parameter transformer into memory
+# for the whole run and runs an extra full transformer forward pass every
+# train/eval step -- expect materially higher memory and wall-clock than
+# the non-SDS Group 5 arms (KL, or the plain full-FT baseline).
+#
+# Launch (sng_pvc):
+#   sbatch jobs/sng_pvc/finetune_vae.sbatch \
+#       configs/finetune_vae/finetune_vae_ch6_sds_stock_256res.yaml \
+#       "${SCRATCH}/windinet/euler_mq_dataset/256x256_ds/train.h5"
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: null
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0  # SSIM dropped from the Chapter 6 baseline (2026-09-25)
+    mlw: 0.0
+    # THE variable vs finetune_vae_ch6_loss_rmse_h1_256res.yaml.
+    sds: 1.0e-4
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+sds:
+  enabled: true
+  untrained_dit: true
+  model_source: "LTXV_2B_0.9.6_DEV"
+  scalar_conditioning:
+    enabled: true
+    scalar_names: ["gamma"]
+    scalar_ranges:
+      gamma: [1.0, 2.0]
+    embedding_dim: 4096
+    num_tokens_per_scalar: 4
+    fourier_features: 64
+    mlp_hidden_dim: 256
+    dropout: 0.1
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  enabled: true
+  interval_epochs: 4
+  num_samples: 3
+  frame_numbers: [25, 50, 75, 100]
+  dpi: 150
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "chapter6", "sds", "sds-stock", "sds-w1e4", "256res", "eval500"]
+
+seed: 42
+output_dir: "finetune_vae_ch6_sds_stock_w1e4_256res"
+clean_output_dir: true

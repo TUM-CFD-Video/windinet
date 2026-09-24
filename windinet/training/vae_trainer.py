@@ -1014,7 +1014,8 @@ class VaeTrainer:
                     logger.info(
                         f"Epoch {epoch}: train_loss={avg_loss:.6f}  "
                         f"val_loss={val_metrics['total_loss']:.6f}  "
-                        f"val_VRMSE={val_metrics['vrmse']:.6f}  lr={lr:.2e}"
+                        f"val_VRMSE={val_metrics['vrmse']:.6f}  "
+                        f"val_VRMSE_chmean={val_metrics['vrmse_chmean']:.6f}  lr={lr:.2e}"
                     )
 
                     metrics_row = {
@@ -1047,6 +1048,7 @@ class VaeTrainer:
                         "epoch/train_loss": avg_loss,
                         "epoch/val_loss": val_metrics["total_loss"],
                         "epoch/eval_vrmse": val_metrics["vrmse"],
+                        "epoch/eval_vrmse_chmean": val_metrics["vrmse_chmean"],
                         "epoch/learning_rate": lr,
                     })
 
@@ -1179,6 +1181,13 @@ class VaeTrainer:
             per_channel_vrmse = vrmse_per_channel(recon, target)
             for name, value in zip(self._config.data.channel_order, per_channel_vrmse.tolist()):
                 sums[f"vrmse_{name}"] += value
+            # Mean of the per-channel VRMSEs (The Well's convention). The
+            # pooled "vrmse" above normalizes by one variance over all
+            # channels, which also counts the between-channel spread of the
+            # means and so reads lower than every single channel. Kept
+            # alongside rather than replacing it so historical val_vrmse and
+            # best-checkpoint selection stay comparable.
+            sums["vrmse_chmean"] += float(per_channel_vrmse.mean().item())
             for name, value in losses.items():
                 sums[name] += float(value.item())
             count += 1

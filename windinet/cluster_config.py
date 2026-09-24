@@ -56,6 +56,15 @@ CLUSTER_DEFAULTS = {
         "num_dataloader_workers": 4,
         "effective_batch": 32,
     },
+    "jupiter": {
+        # Dataset on project storage (not purged), populated by
+        # euler_mq_dataset/jupiter/download_from_hf.py; 256x256_ds is this
+        # cluster's default resolution. Checkpoints go to scratch.
+        "data_root": "/e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/256x256_ds/train.h5",
+        "output_root": "/e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs",
+        "num_dataloader_workers": 4,
+        "effective_batch": 32,
+    },
 }
 
 
