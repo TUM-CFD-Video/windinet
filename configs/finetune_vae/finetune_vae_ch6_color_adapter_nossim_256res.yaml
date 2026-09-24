@@ -1,0 +1,153 @@
+# ---------------------------------------------------------------------------
+# NO-SSIM RERUN (2026-09-25). Identical to finetune_vae_ch6_color_adapter_256res.yaml except:
+#   loss_weighting.weights.ssim: 0.15 -> 0.0
+#   output_dir / wandb tags (new name so clean_output_dir cannot wipe the
+#   original run's scratch dir)
+# Why: the original run trained with the pre-fix SSIM loss (commit dd5302c
+# fixed its luminance term on signed [-1,1] fields), and Chapter 6 dropped
+# SSIM from the baseline. The baseline loss is now rmse 1.0 + h1 50.0, i.e.
+# finetune_vae_ch6_loss_rmse_h1_256res.yaml, which is this arm's reference.
+# The original header below is kept as-is for the arm's rationale; wherever
+# it says "full_ft" / RMSE+H1+SSIM, read loss_rmse_h1 / RMSE+H1.
+#
+# Launch (sng_pvc):
+#   sbatch jobs/sng_pvc/finetune_vae.sbatch \
+#       configs/finetune_vae/finetune_vae_ch6_color_adapter_nossim_256res.yaml
+# ---------------------------------------------------------------------------
+# Chapter 6, Group 1 (VAE Adaptation Strategy) -- "Color Adapter" arm.
+#
+# Forked from finetune_vae_ch6_full_ft_256res.yaml. THE variable:
+#   adapter.mode: "inflate" -> "adapter"
+#
+# What this actually trains, per windinet/vae_adapter.py (InAdapter/
+# OutAdapter) and vae_trainer.py's _load_vae: the base pretrained VAE (both
+# encoder AND its conv_in) stays completely untouched at its original
+# 3-channel weights -- no channel growing happens at all in this mode. A
+# small InAdapter (1x1 Conv3d, n=4 -> k=32 -> 3) sits in front of the
+# encoder, mapping the 4 physical channels down to 3 "RGB-like" channels;
+# a mirror OutAdapter (3 -> k=32 -> n=4) sits after the decoder. Only the
+# decoder (always trainable regardless of mode, same as every other Group 1
+# arm) + InAdapter + OutAdapter receive gradients -- the encoder trunk is
+# 100% frozen, and unlike "Decoder-only" it never even sees a native 4th
+# input channel: everything the encoder receives has already been squeezed
+# through the 4->3 adapter.
+#
+# identity_init: true (recommended by the field's own docstring for
+# training from scratch) -- avoids the tanh dead zone described in
+# InAdapter/OutAdapter's docstrings: at init, InAdapter passes through the
+# first 3 channels + a zero residual, OutAdapter does the mirror, so real
+# spatial structure reaches the encoder/leaves the decoder from step 0
+# instead of through a saturated tanh.
+#
+# hidden_channels: 32 -- the field's own default, matching this project's
+# only precedent for an adapter hidden width (never otherwise tuned here).
+#
+# CAUTION, run this FIRST and alone before the other 3 Group 1 arms: this
+# code path (adapter.mode == "adapter") has NOT been exercised anywhere in
+# this project's logged history (no archived config anywhere uses
+# mode: "adapter" -- every existing "adapter" config, e.g.
+# archive/done/finetune_vae_whole_structure_baseline_adapterlr0p3x.yaml,
+# is actually mode: "inflate" with an adapter_lr_multiplier sweep on
+# conv_in, a different feature). Smoke-test this config for a handful of
+# steps (e.g. optimization.epochs: 1 on a truncated dataset, or watch the
+# first few minutes of a real run's log) before trusting it not to crash or
+# silently misbehave, the same caution this project applies to any
+# first-time code path (see EXPERIMENTS.md's own "confirm before trusting"
+# convention for untested cluster/config combinations).
+#
+# fields inflate_init/freeze_conv_in/unfreeze_encoder_trunk below are
+# inert under mode="adapter" (VaeAdapterConfig's own docstring: "Ignored
+# under mode='adapter'") -- left at the file's inherited values only
+# because ConfigBaseModel requires them to be valid Literal members, not
+# because they do anything here.
+#
+# Everything else (loss weights, LR, schedule, epochs, eval_sims=500, seed)
+# UNCHANGED vs the full-FT arm.
+#
+# Launch (sng_pvc), smoke-test first:
+#   sbatch jobs/sng_pvc/finetune_vae_debug.sbatch \
+#       configs/finetune_vae/finetune_vae_ch6_color_adapter_256res.yaml
+# then, once confirmed stable:
+#   sbatch jobs/sng_pvc/finetune_vae.sbatch \
+#       configs/finetune_vae/finetune_vae_ch6_color_adapter_256res.yaml
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "adapter"
+  hidden_channels: 32
+  identity_init: true
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: null
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0  # dropped from the Chapter 6 baseline, see header
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  interval_epochs: 4
+  num_samples: 3
+  frame_numbers: [25, 50, 75, 100]
+  dpi: 150
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "adapter", "identity-init", "cosine", "20ep", "shockwave-cfd", "chapter6", "color-adapter", "256res", "eval500", "no-ssim"]
+
+seed: 42
+output_dir: "finetune_vae_ch6_color_adapter_nossim_256res"
+clean_output_dir: true

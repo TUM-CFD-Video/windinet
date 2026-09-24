@@ -1,0 +1,87 @@
+# ShockWaveNet (DiT) training config -- Chapter 6, Groups 4/5.
+# VAE: finetune_vae_ch6_sds_cfd_256res
+#   Group 5 SDS arm with the CFD-finetuned DiT teacher, weight 0.1.
+#
+# DiT recipe is IDENTICAL across every Chapter 6 DiT arm and to the existing
+# sng_pvc DiT configs (e.g. train_dit_sng_pvc_sds_w1.yaml): steps=8000,
+# LR=1e-5 cosine, effective_batch=32, seed=42. Only the VAE that produced
+# the latents (preprocessed_data_root, substituted at launch) and output_dir
+# differ, so arms differ only in which VAE they sit on.
+#
+# The latents MUST be encoded with EVAL_SIMS=500 (not preprocess_dit_data
+# .sbatch's 675 default) so the DiT val split is the same 500 held-out sims
+# as the VAE's own Chapter 6 val split. jobs/sng_pvc/ch6_submit.sh does this.
+#
+# Usage (preferred): bash jobs/sng_pvc/ch6_submit.sh dit sds_cfd
+# Manual equivalent:
+#   EVAL_SIMS=500 VAE_CHECKPOINT=${SCRATCH}/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_sds_cfd_256res/checkpoints/vae_shockwave_best.safetensors \
+#     sbatch jobs/sng_pvc/preprocess_dit_data.sbatch
+#   sbatch jobs/sng_pvc/train_dit.sbatch finetune_vae_ch6_sds_cfd_256res configs/dit/train_dit_sng_pvc_ch6_sds_cfd.yaml
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+  load_checkpoint: null
+
+conditioning:
+  first_frame_conditioning_p: 1.0
+
+scalar_conditioning:
+  enabled: true
+  scalar_names:
+    - "gamma"
+  scalar_ranges:
+    gamma: [1.0, 2.0]
+  embedding_dim: 4096
+  num_tokens_per_scalar: 4
+  fourier_features: 64
+  mlp_hidden_dim: 256
+  dropout: 0.1
+
+optimization:
+  learning_rate: 1e-5
+  steps: 8000
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "cosine"
+  scheduler_params:
+    eta_min: 1.0e-8
+  enable_gradient_checkpointing: true
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+data:
+  preprocessed_data_root: "__PREPROCESSED_ROOT__"
+  num_dataloader_workers: 4
+
+validation:
+  data_root: "__PREPROCESSED_ROOT__/val"
+  interval: 600
+  max_samples: 0
+
+checkpoints:
+  interval: 120
+  keep_last_n: 2
+
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  enabled: false  # disabled, same reasoning as every sng_pvc DiT config since
+  # 2026-09-07 (job 534853/534884: UR_RESULT_ERROR_OUT_OF_RESOURCES on ranks
+  # 2-7 one step after the first visualization trigger). Re-enable once
+  # root-caused; backfill PNG panels/VRMSE curve post-hoc against saved
+  # checkpoints in the meantime.
+  interval: 2000
+
+wandb:
+  enabled: false
+  project: "shockwavenet"
+  tags: ["cfd", "full", "2b", "scalar-only", "sng_pvc", "256res", "chapter6", "eval500", "sds-cfd"]
+
+seed: 42
+output_dir: "$SCRATCH/windinet/outputs/shockwave_dit_ch6_sds_cfd"
