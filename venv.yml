@@ -1,0 +1,29 @@
+name: windinet
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/rocm6.2.4
+      - torch==2.7.1+rocm6.2.4  # exact pin: unpinned, pip takes the newer CUDA wheel from PyPI
+      - accelerate
+      - bitsandbytes
+      - diffusers>=0.32.1
+      - h5py
+      - huggingface_hub
+      - imageio[ffmpeg]
+      - matplotlib
+      - numpy
+      - peft
+      - pillow
+      - ptwt
+      - pydantic>=2.10.4
+      - rich
+      - safetensors>=0.5.0
+      - sentencepiece>=0.2.0
+      - transformers
+      - typer
+      - pyyaml
+      - tqdm
+      - wandb

@@ -65,6 +65,14 @@ CLUSTER_DEFAULTS = {
         "num_dataloader_workers": 4,
         "effective_batch": 32,
     },
+    "lumi": {
+        # Everything on project scratch not purged on lumi
+        # by euler_mq_dataset/lumi/download_from_hf.py.
+        "data_root": "/scratch/project_465003416/pretrained_video_datasets/euler_mq/256x256_ds/train.h5",
+        "output_root": "/scratch/project_465003416/lc_work/finetune_vae_outputs",
+        "num_dataloader_workers": 4,
+        "effective_batch": 32,
+    },
 }
 
 
