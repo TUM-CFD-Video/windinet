@@ -29,4 +29,6 @@ unset HF_HUB_OFFLINE
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 
 python -c "import windinet; from windinet.inference.model_loader import load_ltxv_components; load_ltxv_components('LTXV_2B_0.9.6_DEV')"
-du -sh "${LTX_CACHE}"/models--*
+# Newer huggingface_hub keeps blobs in ${LTX_CACHE}/blobs/, not per-repo, so
+# size the whole cache (~8.4GB expected), not the models--* dirs.
+du -sh "${LTX_CACHE}"
