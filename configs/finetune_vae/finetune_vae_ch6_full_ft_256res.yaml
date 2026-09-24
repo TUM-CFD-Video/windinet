@@ -1,0 +1,146 @@
+# Chapter 6 controlled experiment campaign -- "Full-structure FT" arm,
+# 256x256 resolution. This is both (a) the Group 1 (VAE Adaptation Strategy)
+# full-fine-tuning candidate, and (b) the shared base config every later
+# Chapter 6 group (Loss ablation, LR sweep, Compatibility, KL/SDS,
+# Resolution) forks from with a single-variable change, following the
+# project's own "one config = one isolated variable" convention.
+#
+# Forked from finetune_vae_whole_structure_baseline_ep30_256res.yaml
+# (the pre-Chapter-6 production baseline). TWO VARIABLES vs that file:
+#   data.eval_sims: 675 -> 500
+#   optimization.epochs: 30 -> 20 (2026-09-23 decision: Chapter 6's whole
+#   campaign runs at the 20-epoch budget, matching
+#   finetune_vae_whole_structure_baseline_ep20_256res.yaml -- the only
+#   difference between that file and its ep30 sibling is this same single
+#   epochs value, confirmed by diff; warmup_steps=200 and every other
+#   schedule parameter are unchanged between the two, so this is a clean
+#   single-variable change, not a re-derivation of the schedule.
+#   TIME BUDGET: 20ep/256res was previously measured at ~16h on this
+#   cluster (see jobs/sng_pvc/finetune_vae.sbatch's own header comment,
+#   "256res/20ep needs ~16h") -- fits inside that script's 18h default
+#   with reasonable margin, no --time override needed.
+#
+# UPDATE (2026-09-23): optimization.scheduler_type switched "wsd" -> "cosine"
+# (stable_fraction dropped -- unused by the cosine branch in
+# windinet/training/vae_trainer.py, which sets stable_steps=0 for cosine:
+# it decays immediately after warmup, never holding a plateau). This is a
+# campaign-wide decision, applied identically to every Chapter 6 config
+# forked from this one -- peak LR (5e-5), min_learning_rate (1e-6), and
+# warmup (200 steps / warmup_start_factor 0.01) are all unchanged. Note
+# this project's own prior history is mixed on wsd-vs-cosine: cosine lost
+# decisively at 128res/ep30 (+3.64% val_vrmse, a real regression), but a
+# LATER same-peak-LR rerun at 256res/ep20 (closer to Chapter 6's own
+# setting) found cosine winning by ~4.8% -- see EXPERIMENTS.md's
+# "Experiment 4/5" notes. Chapter 6 is re-deriving its own numbers under a
+# controlled split regardless, so this switch will get a fresh, directly
+# comparable verdict rather than relying on either prior result.
+#
+# Rationale (2026-09-23 planning discussion): Chapter 6 fixes the held-out
+# split to train=4000 / val=500 (drawn from train.h5's 4500 sims via the
+# existing seed=42 torch.randperm-tail-slice mechanism, same as every prior
+# arm -- just a shorter tail) / test=500 (the STANDALONE test.h5 file,
+# sibling of train.h5, e.g. euler_mq_dataset/256x256_ds/test.h5 -- already
+# verified via HF repo listing to contain exactly 500 sims, and already
+# documented elsewhere in this repo, e.g. scripts/latent_shift_metrics.py,
+# as "never touched by any train/eval split or tuning decision"). Every
+# pre-Chapter-6 arm (kl0/kl1e5/.../sds/anchor/etc.) used eval_sims=675 and
+# is therefore NOT directly comparable to Chapter 6 numbers -- Chapter 6
+# arms must be (re)trained under this file's eval_sims=500 to be part of
+# the same controlled campaign.
+#
+# Test-set evaluation (test.h5, 500 sims, touched exactly once at the very
+# end after all config/hyperparameter decisions are frozen) does not go
+# through this file's eval_sims mechanism at all -- it is a separate,
+# unsplit file evaluated via scripts/latent_stats.py --split test --test-h5
+# <path> (VAE-only reconstruction metrics) and, for DiT/rollout arms, via
+# scripts/preprocess_dataset.py <test.h5 path> --eval-sims 0 ... followed by
+# scripts/eval_dit_vrmse.py against that preprocessed output.
+#
+# Launch (sng_pvc): sbatch jobs/sng_pvc/finetune_vae.sbatch \
+#     configs/finetune_vae/finetune_vae_ch6_full_ft_256res.yaml
+# (the sbatch script patches batch_size/accum/data_root for sng_pvc's 8 XPU
+# tiles via windinet.cluster_config.patch_config_for_cluster -- the
+# batch_size/gradient_accumulation_steps values below are placeholders,
+# same convention as the file this was forked from.)
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  # Placeholder -- overridden at launch by jobs/<cluster>/*.sbatch's
+  # data_root argument/cluster default. Only meaningful if this config is
+  # ever run through a launcher that does NOT override data_root.
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: null
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.15
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  interval_epochs: 4
+  num_samples: 3
+  frame_numbers: [25, 50, 75, 100]
+  dpi: 150
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "lr1x", "shockwave-cfd", "chapter6", "full-ft", "256res", "eval500"]
+
+seed: 42
+output_dir: "finetune_vae_ch6_full_ft_256res"
+clean_output_dir: true

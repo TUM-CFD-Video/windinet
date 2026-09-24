@@ -28,7 +28,7 @@ lora:
   - to_v
   - to_out.0
 model:
-  load_checkpoint: null
+  load_checkpoint: dit_outputs/lundquist/dit_sds_untrained_30k/checkpoints
   model_source: LTXV_2B_0.9.6_DEV
 optimization:
   batch_size: 4
@@ -87,3 +87,4 @@ wandb:
   - sds-untrained-critic
   - sds-w0p1
   - 30k-steps
+  - resume

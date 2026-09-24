@@ -1,0 +1,82 @@
+START TIME: Tue 22 Sep 2026 08:17:14 AM CEST
+job=541002 node=i20r03c01s06
+start_time=2026-09-22T08:17:14+02:00
++-----------+--------------------------------------------------------------------------------------+
+| Device ID | Device Information                                                                   |
++-----------+--------------------------------------------------------------------------------------+
+| 0         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-003a-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:3a:00.0                                                        |
+|           | DRM Device: /dev/dri/card0                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 1         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-004b-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:4b:00.0                                                        |
+|           | DRM Device: /dev/dri/card1                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 2         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00ca-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:ca:00.0                                                        |
+|           | DRM Device: /dev/dri/card2                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 3         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00da-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:da:00.0                                                        |
+|           | DRM Device: /dev/dri/card3                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+VAE_CHECKPOINT: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_whole_structure_baseline_ep20_256res_sds_w0p01/checkpoints/vae_shockwave_best.safetensors
+DATA_ROOT: /hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/train.h5
+OUTPUT_NAME: finetune_vae_whole_structure_baseline_ep20_256res_sds_w0p01 -> /hppfs/scratch/0D/go76fuz2/windinet/dit_preprocessed/finetune_vae_whole_structure_baseline_ep20_256res_sds_w0p01
+INFO     Found 4500 samples in                         preprocess_dataset.py:194
+         /hppfs/scratch/0D/go76fuz2/windinet/euler_mq_                          
+         dataset/256x256_ds/train.h5                                            
+INFO     Split (seed=42): 3825 train, 675 val ->       preprocess_dataset.py:214
+         /hppfs/scratch/0D/go76fuz2/windinet/dit_prepr                          
+         ocessed/finetune_vae_whole_structure_baseline                          
+         _ep20_256res_sds_w0p01/val                                             
+INFO     Loading inflated VAE (LTXV_2B_0.9.6_DEV) +    preprocess_dataset.py:228
+         checkpoint                                                             
+         /hppfs/scratch/0D/go76fuz2/windinet/finetune_                          
+         vae_outputs_sng_pvc/finetune_vae_whole_struct                          
+         ure_baseline_ep20_256res_sds_w0p01/checkpoint                          
+         s/vae_shockwave_best.safetensors...                                    
+[windinet] loaded inflated VAE checkpoint: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_whole_structure_baseline_ep20_256res_sds_w0p01/checkpoints/vae_shockwave_best.safetensors (epoch=20, step=2380)
+INFO     Channel normalization from                    preprocess_dataset.py:238
+         /hppfs/scratch/0D/go76fuz2/windinet/finetune_                          
+         vae_outputs_sng_pvc/finetune_vae_whole_struct                          
+         ure_baseline_ep20_256res_sds_w0p01/training_c                          
+         onfig.yaml: mean=[0.9050976477108856,                                  
+         0.004045365949982484, -0.0019089379638760548,                          
+         0.9031908053900578], std=[0.6618199912434938,                          
+         0.5335233432828087, 0.5268940723644505,                                
+         0.8053303341374023], clip=5.0                                          
+INFO     Latent space fingerprint: 7f8c50f124544b66    preprocess_dataset.py:249
+Encoding ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4500/4500 4:37:37 0:00:00
+INFO     Done: 4500 processed, 0 skipped               preprocess_dataset.py:357
+INFO     Latents:                                      preprocess_dataset.py:358
+         /hppfs/scratch/0D/go76fuz2/windinet/dit_prepr                          
+         ocessed/finetune_vae_whole_structure_baseline                          
+         _ep20_256res_sds_w0p01/latents                                         
+INFO     Scalars:                                      preprocess_dataset.py:359
+         /hppfs/scratch/0D/go76fuz2/windinet/dit_prepr                          
+         ocessed/finetune_vae_whole_structure_baseline                          
+         _ep20_256res_sds_w0p01/scalars                                         
+INFO     Held-out split (675 sims):                    preprocess_dataset.py:361
+         /hppfs/scratch/0D/go76fuz2/windinet/dit_prepr                          
+         ocessed/finetune_vae_whole_structure_baseline                          
+         _ep20_256res_sds_w0p01/val                                             
+INFO     Split manifest:                               preprocess_dataset.py:362
+         /hppfs/scratch/0D/go76fuz2/windinet/dit_prepr                          
+         ocessed/finetune_vae_whole_structure_baseline                          
+         _ep20_256res_sds_w0p01/split_manifest.json                             
+Mirrored manifests to finetune_vae_outputs/sng_pvc/dit_preprocessed/finetune_vae_whole_structure_baseline_ep20_256res_sds_w0p01
+END TIME: Tue 22 Sep 2026 01:23:11 PM CEST
+end_time=2026-09-22T13:23:11+02:00 elapsed=18357s
