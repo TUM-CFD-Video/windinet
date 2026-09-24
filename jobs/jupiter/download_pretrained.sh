@@ -3,7 +3,8 @@
 # VAE fallback from 0.9.5, scheduler config) under project storage, so it
 # survives scratch purges and is shared by every jupiter job.
 #
-# Run ONCE on a LOGIN node (compute nodes have no internet), from the repo root:
+# Run ONCE on a LOGIN node (compute nodes have no internet), from the repo root,
+# with the windinet env active:
 #   bash jobs/jupiter/download_pretrained.sh
 #
 # Every jobs/jupiter/*.sbatch reads the same directory offline via
@@ -14,9 +15,13 @@ set -euo pipefail
 LTX_CACHE=/e/project1/e-dev-2026d09-262/wh_work/ltx_pretrained_wh
 mkdir -p "${LTX_CACHE}"
 
-set +eu  # modules.sh has a failing "module load mpi4py" and unset vars
-source sc_venv_template/activate.sh
-set -eu
+# Uses the caller's environment (e.g. `conda activate windinet`); the
+# sc_venv_template venv is only sourced if a checkout actually has one.
+if [[ -f sc_venv_template/activate.sh ]]; then
+    set +eu  # modules.sh has a failing "module load mpi4py" and unset vars
+    source sc_venv_template/activate.sh
+    set -eu
+fi
 
 export WINDINET_HF_CACHE="${LTX_CACHE}"
 export HF_HUB_CACHE="${LTX_CACHE}"
