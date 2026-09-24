@@ -16,8 +16,12 @@
 # submitting a full training run, within your partition's allowed limit.
 #
 # Needs, before the first run (compute nodes have no internet):
-#   - dataset at $SCRATCH/windinet/euler_mq_dataset/128x128_ds/train.h5
-#   - LTX weights in ~/.cache/huggingface/hub (download on a login node)
+#   - dataset at /e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/256x256_ds/
+#     (login node: python euler_mq_dataset/jupiter/download_from_hf.py)
+#   - LTX weights in /e/project1/e-dev-2026d09-262/wh_work/ltx_pretrained_wh
+#     (login node: bash jobs/jupiter/download_pretrained.sh)
+# Outputs land under /e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/
+# (windinet/cluster_config.py's CLUSTER_DEFAULTS["jupiter"]).
 #
 # Before submission:           mkdir -p logs/jupiter
 # Submit from the repo root:   sbatch jobs/jupiter/finetune_vae_debug.sbatch <config.yaml>
@@ -33,6 +37,8 @@ PYTHON=python
 
 export SCRATCH="${SCRATCH_e_dev_2026d09_262}"
 export HF_HUB_OFFLINE=1
+export WINDINET_HF_CACHE=/e/project1/e-dev-2026d09-262/wh_work/ltx_pretrained_wh
+export HF_HUB_CACHE="${WINDINET_HF_CACHE}"
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"  # windinet is not pip-installed in the venv
 
 BASE_CONFIG=${1:?usage: sbatch jobs/jupiter/finetune_vae_debug.sbatch configs/finetune_vae/<config>.yaml}
@@ -43,14 +49,7 @@ trap 'exit 143' TERM
 
 "${PYTHON}" - "${BASE_CONFIG}" "${RUN_CONFIG}" <<'PY'
 import os, sys, yaml
-from windinet.cluster_config import CLUSTER_DEFAULTS, patch_config_for_cluster
-# Keep this port self-contained: the shared module does not yet define Jupiter.
-CLUSTER_DEFAULTS["jupiter"] = {
-    "data_root": "/e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/128x128_ds/train.h5",
-    "output_root": "/e/scratch/e-dev-2026d09-262/wh_work",
-    "num_dataloader_workers": 4,
-    "effective_batch": 32,
-}
+from windinet.cluster_config import patch_config_for_cluster
 src, dst = sys.argv[1], sys.argv[2]
 cfg = yaml.safe_load(open(src))
 patch_config_for_cluster(

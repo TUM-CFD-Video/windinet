@@ -11,6 +11,10 @@ machine specifically. sng_pvc and lrz_ai must keep using the ordinary
 absorb an in-repo copy (job 5750198, "Disk quota exceeded", 2026-08-15,
 from an earlier version of this setup that redirected every cluster).
 
+jupiter also sets `WINDINET_HF_CACHE`, but to a shared project-storage cache
+outside the repo (`/e/project1/e-dev-2026d09-262/wh_work/ltx_pretrained_wh`),
+populated on a login node by `jobs/jupiter/download_pretrained.sh`.
+
 `pretrained/hub/` is a regular HuggingFace hub cache, so `huggingface_hub` reads
 it offline and writes new downloads into it unchanged:
 
