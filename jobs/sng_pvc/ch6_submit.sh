@@ -20,7 +20,8 @@
 #   vae_only  = decoder_only_nossim lr_1e4_nossim lr_1e5_nossim
 #               color_adapter_nossim loss_rmse_h1_ssimfix
 #   g4_ready  = loss_rmse_h1 unfinetuned   (VAE already trained)
-#   g5        = kl_1e7 kl_1e6 kl_1e5 sds_stock sds_cfd
+#   g5        = kl_1e7 kl_1e6 kl_1e5 sds_stock
+#               (sds_cfd dropped 2026-09-25: Group 5 uses the stock teacher only)
 #
 # Typical order:
 #   bash jobs/sng_pvc/ch6_submit.sh vae vae_only
@@ -56,7 +57,7 @@ expand_arms() {
         case "$a" in
             vae_only) echo decoder_only_nossim lr_1e4_nossim lr_1e5_nossim color_adapter_nossim loss_rmse_h1_ssimfix ;;
             g4_ready) echo loss_rmse_h1 unfinetuned ;;
-            g5)       echo kl_1e7 kl_1e6 kl_1e5 sds_stock sds_cfd ;;
+            g5)       echo kl_1e7 kl_1e6 kl_1e5 sds_stock ;;
             *)        echo "$a" ;;
         esac
     done
@@ -76,19 +77,9 @@ need_file() {
     [ -e "$1" ] || { echo "error: missing $1" >&2; return 1; }
 }
 
-check_sds_teacher() {
-    # sds_cfd's teacher is a DiT checkpoint on scratch; fail at submit time,
-    # not 30 min into the job.
-    [ "$1" = sds_cfd ] || return 0
-    local t
-    t=$(python -c "import yaml,sys;print(yaml.safe_load(open(sys.argv[1]))['sds']['dit_checkpoint'])" "$(vae_config sds_cfd)")
-    need_file "$t"
-}
-
 submit_vae() {  # $1=arm, $2=optional dependency; prints job id
     local arm=$1 dep=${2:-} args=(--parsable)
     need_file "$(vae_config "$arm")"
-    check_sds_teacher "$arm"
     case "$arm" in sds_*) args+=(--time=22:00:00) ;; esac
     [ -n "$dep" ] && args+=(--dependency="afterok:${dep}")
     sbatch "${args[@]}" jobs/sng_pvc/finetune_vae.sbatch "$(vae_config "$arm")" "$DATA_256"
