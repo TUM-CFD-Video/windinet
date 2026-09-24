@@ -1,11 +1,11 @@
 # Chapter 6, Group 5 (KL/SDS Compatibility Mitigation) -- "SDS_stock" arm.
 #
 # Fixed across all of Group 5: Group 1-3's winner (full-structure FT,
-# assumed RMSE+H1+SSIM @ 5e-5, cosine) -- see finetune_vae_ch6_kl_1e7_256res
+# assumed RMSE+H1 @ 5e-5, cosine) -- see finetune_vae_ch6_kl_1e7_256res
 # .yaml for the full group rationale. Same 256res data, eval_sims=500,
 # epochs=20, seed=42.
 #
-# THIS ARM vs finetune_vae_ch6_full_ft_256res.yaml: adds the "sds" loss
+# THIS ARM vs finetune_vae_ch6_loss_rmse_h1_256res.yaml: adds the "sds" loss
 # term (windinet.training.sds_loss.SdsDistillationLoss -- see
 # windinet/config.py's SdsLossConfig docstring for the full formula) with
 # `sds.untrained_dit: true`.
@@ -86,9 +86,9 @@ loss_weighting:
   weights:
     rmse: 1.0
     h1: 50.0
-    ssim: 0.15
+    ssim: 0.0  # SSIM dropped from the Chapter 6 baseline (2026-09-25)
     mlw: 0.0
-    # THE variable vs finetune_vae_ch6_full_ft_256res.yaml.
+    # THE variable vs finetune_vae_ch6_loss_rmse_h1_256res.yaml.
     sds: 0.1
 
 loss:
