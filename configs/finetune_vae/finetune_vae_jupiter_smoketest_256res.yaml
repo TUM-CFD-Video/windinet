@@ -1,0 +1,109 @@
+# Throwaway jupiter bring-up config -- NOT an EXPERIMENTS.md ledger entry.
+#
+# Purpose: first 30-minute run on jupiter (4 GPUs, jobs/jupiter/
+# finetune_vae_debug.sbatch) that exercises the whole output path end to
+# end -- LTX weights from the project-storage cache, 256x256_ds from project
+# storage, and every artifact landing on scratch
+# (/e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/
+# finetune_vae_jupiter_smoketest_256res_job<ID>/): checkpoints/*.safetensors,
+# the optimizer/scheduler/RNG *.state.pt, visualizations/*.png,
+# metrics/*.csv+png, training_config.yaml.
+#
+# Forked from finetune_vae_ch6_full_ft_256res.yaml. Changes:
+#   data.overfit_sims: 64 (overfit_repeat 1) -- trains AND evaluates on the
+#     same 64 sims, so an epoch is ~64/4000 of a real one and checkpoints/
+#     visualizations appear within minutes instead of after ~50min. val_vrmse
+#     is a memorization score: meaningless, do not record it anywhere.
+#   optimization.epochs: 20 -> 6 (4 GPUs x batch 1 x accum 8 -> 2 optimizer
+#     steps/epoch; still inside warmup, so LR stays tiny -- fine for a smoke)
+#   visualization.interval_epochs: 4 -> 2 (panels at epochs 2/4/6)
+#   output_dir / wandb tags renamed.
+# Per-epoch "Epoch N timing" lines in the log give a first jupiter throughput
+# estimate: a real epoch is roughly (4000 train + 500 eval) / (64 + 64) x that.
+#
+# Usage (from the repo root, windinet venv active):
+#   sbatch jobs/jupiter/finetune_vae_debug.sbatch configs/finetune_vae/finetune_vae_jupiter_smoketest_256res.yaml
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  # Placeholder -- overridden at launch by jobs/<cluster>/*.sbatch's
+  # data_root argument/cluster default. Only meaningful if this config is
+  # ever run through a launcher that does NOT override data_root.
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: null
+  eval_sims: 500
+  overfit_sims: 64
+  overfit_repeat: 1
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 6
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.15
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  interval_epochs: 2
+  num_samples: 3
+  frame_numbers: [25, 50, 75, 100]
+  dpi: 150
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["smoketest", "throwaway", "jupiter", "256res"]
+
+seed: 42
+output_dir: "finetune_vae_jupiter_smoketest_256res"
+clean_output_dir: true
