@@ -2,10 +2,22 @@
 Structural Similarity (SSIM) loss.
 
 Expected input:
-    pred, target: [B, C, T, H, W]
+    pred, target: [B, C, T, H, W], normalized to [-1, 1] (the dataset's
+    clipped z-score, windinet.training.shockwave_data.normalize_fields).
 
 Returns:
     1 - SSIM
+
+SSIM assumes non-negative intensities with a known data range: its
+luminance term (2*mu_x*mu_y + C1) / (mu_x^2 + mu_y^2 + C1) is only well
+behaved when the local means are positive. Our fields are signed and mostly
+close to 0 (the momentum channels especially), so on the raw [-1, 1] values
+that term flips sign and blows up wherever a local mean sits near zero, and
+it dominated the loss gradient (Chapter 6 Group 2: adding SSIM made val SSIM
+itself worse). Inputs are therefore shifted to [0, 1] first, with
+data_range = 1 and the standard C1 = (0.01)^2, C2 = (0.03)^2. The Gaussian
+window is applied without padding ("valid"), as in the reference
+implementation, so zero padding cannot create fake edges at the border.
 """
 
 import torch
@@ -59,7 +71,6 @@ class GaussianFilter(nn.Module):
         )
 
         self.groups = channels
-        self.padding = window_size // 2
 
 
     def forward(
@@ -70,7 +81,6 @@ class GaussianFilter(nn.Module):
         return F.conv2d(
             x,
             self.kernel,
-            padding=self.padding,
             groups=self.groups,
         )
 
@@ -172,6 +182,10 @@ class SSIMLoss(nn.Module):
             .permute(0, 2, 1, 3, 4)
             .reshape(B * T, C, H, W)
         )
+
+        # [-1, 1] -> [0, 1], see the module docstring.
+        pred = (pred + 1.0) * 0.5
+        target = (target + 1.0) * 0.5
 
 
         ssim_map = _ssim(
