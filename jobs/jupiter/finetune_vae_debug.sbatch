@@ -42,6 +42,7 @@ PYTHON=python
 
 export SCRATCH="${SCRATCH_e_dev_2026d09_262}"
 export HF_HUB_OFFLINE=1
+export WANDB_MODE=offline  # compute nodes have no internet
 export WINDINET_HF_CACHE=/e/project1/e-dev-2026d09-262/wh_work/ltx_pretrained_wh
 export HF_HUB_CACHE="${WINDINET_HF_CACHE}"
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"  # windinet is not pip-installed in the venv
