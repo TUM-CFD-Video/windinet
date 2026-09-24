@@ -490,6 +490,11 @@ def main():
         "vae_dit_vrmse_mean": sum_overall["vae_dit"] / n,
         "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(CHANNEL_NAMES)},
         "vae_dit_vrmse_per_channel": {name: sum_channel["vae_dit"][c] / n for c, name in enumerate(CHANNEL_NAMES)},
+        # Mean of the per-channel VRMSEs (The Well's convention), same as the
+        # VAE trainer's val_vrmse_chmean. The *_vrmse_mean above uses one pooled
+        # variance over all channels and is kept for comparability.
+        "vae_only_vrmse_chmean": sum(sum_channel["vae_only"]) / (4 * n),
+        "vae_dit_vrmse_chmean": sum(sum_channel["vae_dit"]) / (4 * n),
         "latent_vrmse_mean": sum_lat_vrmse / n,
         "latent_rmse_mean": sum_lat_rmse / n,
         "latent_vrmse_per_channel": mean_lat_channel,
@@ -506,6 +511,8 @@ def main():
     delta = summary["vae_dit_vrmse_mean"] - summary["vae_only_vrmse_mean"]
     pct = delta / summary["vae_only_vrmse_mean"] * 100
     print(f"Delta (DiT forecasting cost on top of VAE recon): {delta:+.5f} ({pct:+.1f}%)")
+    print(f"VAE-only  val_vrmse_chmean   : {summary['vae_only_vrmse_chmean']:.5f}")
+    print(f"VAE+DiT   val_vrmse_chmean   : {summary['vae_dit_vrmse_chmean']:.5f}")
     for name in CHANNEL_NAMES:
         vo = summary["vae_only_vrmse_per_channel"][name]
         vd = summary["vae_dit_vrmse_per_channel"][name]
