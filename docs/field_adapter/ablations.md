@@ -8,7 +8,8 @@ without loss, and can that map also make the latents look like natural video?
 tanh, exact inverse, 14 to 160 parameters. The code in the repo keeps only what
 these ablations supported (log/z-score → linear mix → tanh, [bijections.py](../../windinet/field_adapter/bijections.py));
 the removed variants (splines, PCA init, single/triplet groupings, latent losses)
-are in commit `0a525c9`.
+are in commit `0a525c9`. Checkpoints of runs that used splines (`warp=True` in the
+raw log) only load there; the pruned code's reference run is `wan_pairs_nowarp_lr3e3_600`.
 Round trip = fields → adapter → Wan encode → Wan decode → adapter⁻¹ → fields.
 Data: euler_mq 256×256, 500 sims (50 per γ), every 5th sim per γ held out.
 Metric: VRMSE per field in physical units on held-out frames (0.05 = 5 % of the

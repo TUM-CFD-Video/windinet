@@ -33,7 +33,7 @@ def main(
     rgb = video.permute(0, 4, 1, 2, 3).float() / 127.5 - 1  # [N, 3, F, H, W] in (-1, 1)
     latents = torch.cat([vae.encode(rgb[i : i + batch].to(device)).cpu() for i in range(0, len(rgb), batch)])
     stats = {
-        "rgb": channel_stats(rgb[:, :, :, ::4, ::4]),
+        "rgb": channel_stats(rgb[:, :, :, ::4, ::4]),  # kept for reference, unused by train_adapter.py
         "latent": channel_stats(latents),
         "n_clips": len(rgb),
         "frames": rgb.shape[2],

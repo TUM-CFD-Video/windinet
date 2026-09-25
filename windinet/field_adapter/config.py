@@ -12,10 +12,10 @@ class _Base(BaseModel):
 
 
 class DataConfig(_Base):
-    h5_path: str = Field(description="euler_mq HDF5 with one group per simulation")
-    stats_json: str = Field(description="output of scripts/compute_channel_stats.py on the same file")
-    test_every: int = Field(default=5, ge=2, description="every n-th sim per gamma is held out")
-    frames_per_sim: int = Field(default=2, ge=1, description="random frames read per simulation per step")
+    h5_path: str
+    stats_json: str = Field(description="output of scripts/compute_channel_stats.py on h5_path")
+    test_every: int = Field(default=5, description="every n-th sim per gamma is held out")
+    frames_per_sim: int = Field(default=2, description="random frames read per simulation per step")
     num_workers: int = 4
 
 
@@ -24,7 +24,7 @@ class AdapterConfig(_Base):
         default=[["density", "pressure"], ["momentum_x", "momentum_y"]],
         description="field names per colour image, at most three each; one VAE pass per group",
     )
-    load: str | None = Field(default=None, description="state_dict (.pt) of an earlier run; skips init_from_data")
+    load: str | None = Field(default=None, description="state_dict (.pt) of an earlier run")
 
 
 class LossConfig(_Base):
@@ -35,7 +35,7 @@ class LossConfig(_Base):
 
 
 class TrainConfig(_Base):
-    steps: int = 600
+    steps: int = Field(default=600, description="0 = evaluate only")
     batch_sims: int = 1
     lr: float = 3e-3
     eval_every: int = 300
@@ -43,12 +43,10 @@ class TrainConfig(_Base):
 
 
 class FieldAdapterConfig(_Base):
-    name: str = Field(description="run name; results land in <results_dir>/<stage>/<name>.*")
-    vae: Literal["none", "wan"] = Field(default="wan", description="'none': A^-1(A(x)) only; 'wan': A -> frozen Wan VAE -> A^-1")
+    name: str
+    vae: Literal["none", "wan"] = Field(default="wan", description="'none' skips the VAE: adapter round trip only")
     data: DataConfig
     adapter: AdapterConfig = AdapterConfig()
     loss: LossConfig = LossConfig()
     train: TrainConfig = TrainConfig()
-    results_dir: str = "results/field_adapter"
-    ablations_md: str = "docs/field_adapter/ablations.md"
-    ref_stats: str | None = Field(default=None, description="reference statistics (.pt from scripts/field_adapter/ref_latents.py); enables the Fréchet metrics")
+    ref_stats: str | None = Field(default=None, description="natural-video latent statistics from ref_latents.py; enables the Fréchet metric")
