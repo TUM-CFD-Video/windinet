@@ -1,0 +1,30 @@
+# Field adapter on euler_mq 256x256 (the rha6696 test shards, 50 sims per gamma).
+# The only config; vary runs with CLI overrides, e.g.
+#   python scripts/field_adapter/train_adapter.py configs/field_adapter/eulermq.yaml \
+#       --name compress_nowarp --set adapter.warp=false
+name: compress
+vae: none
+
+data:
+  h5_path: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  test_every: 5
+  frames_per_sim: 4
+  num_workers: 4
+
+adapter:
+  warp: true
+  bins: 8
+
+loss:
+  rmse: 1.0
+  h1: 1.0
+  slope_penalty: 1.0e-3
+  rgb_moment: 0.0
+
+train:
+  steps: 2000
+  batch_sims: 1
+  lr: 1.0e-3
+  eval_every: 250
+  seed: 0
