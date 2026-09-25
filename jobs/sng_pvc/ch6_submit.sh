@@ -15,6 +15,9 @@
 #                    afterok (Group 5: the VAE doesn't exist yet).
 #   eval ARM...      eval_dit_vrmse on the arm's LATEST DiT checkpoint
 #                    (run after its DiT job has finished).
+#   vae128 ARM...    VAE finetune from finetune_vae_ch6_ARM_128res.yaml on
+#                    the cluster-default 128x128_ds (resolution comparison
+#                    against the 256res arm of the same name).
 #
 # Named sets:
 #   vae_only  = decoder_only_nossim lr_1e4_nossim lr_1e5_nossim
@@ -123,6 +126,15 @@ case "$cmd" in
             [[ "$vae_id" =~ ^[0-9]+$ ]] || { echo "[$arm] bad VAE job id '${vae_id}', stopping" >&2; exit 1; }
             echo "[$arm] vae=${vae_id}"
             submit_encode_and_dit "$arm" "$vae_id"
+        done
+        ;;
+    vae128)
+        for arm in $arms; do
+            cfg="configs/finetune_vae/finetune_vae_ch6_${arm}_128res.yaml"
+            need_file "$cfg"
+            # No data_root argument: finetune_vae.sbatch then uses
+            # CLUSTER_DEFAULTS['sng_pvc']'s 128x128_ds.
+            echo "[$arm 128res] vae=$(sbatch --parsable jobs/sng_pvc/finetune_vae.sbatch "$cfg")"
         done
         ;;
     eval)
