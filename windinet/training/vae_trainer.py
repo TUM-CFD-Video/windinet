@@ -8,6 +8,7 @@ adapters are trained using reconstruction, gradient, structural, and wavelet
 losses on normalized HDF5 simulation fields.
 """
 
+import csv
 import math
 import os
 import shutil
@@ -393,6 +394,19 @@ class VaeTrainer:
         saved_epoch = int(state.get("epoch", 0))
         self._start_epoch = saved_epoch + 1
         self._resume_global_step = int(state.get("global_opt_step", 0))
+        # Without this a resumed run would start from best=inf and let its
+        # first epoch overwrite vae_shockwave_best even if it is worse.
+        if "best_metric_value" in state:
+            self._best_metric_value = float(state["best_metric_value"])
+            self._best_epoch = state.get("best_epoch")
+            best_path = Path(self._config.output_dir) / "checkpoints" / "vae_shockwave_best.safetensors"
+            if best_path.exists():
+                self._best_ckpt_path = best_path
+        else:
+            logger.warning(
+                f"{state_path} predates best-metric tracking in the training state; "
+                "the first resumed epoch will overwrite the best checkpoint."
+            )
         logger.info(
             f"Loaded training state from {state_path}: resuming at epoch "
             f"{self._start_epoch} (saved epoch {saved_epoch}, "
@@ -774,6 +788,18 @@ class VaeTrainer:
         global_opt_step = self._resume_global_step
         saved_path = None
         metrics_history: list[dict[str, float]] = []
+        if self._start_epoch > 1:
+            # save_metrics_history rewrites metrics.csv from this list, so keep
+            # the rows of the epochs the killed run already finished.
+            prev_csv = Path(cfg.output_dir) / "metrics" / "metrics.csv"
+            if prev_csv.exists():
+                with prev_csv.open(newline="") as handle:
+                    metrics_history = [
+                        {k: float(v) for k, v in row.items()}
+                        for row in csv.DictReader(handle)
+                        if float(row["epoch"]) < self._start_epoch
+                    ]
+                logger.info(f"Loaded {len(metrics_history)} previous epoch rows from {prev_csv}")
 
         # `self._start_epoch > 1` guard: epochs=0 with a fresh (non-resumed) run
         # is a deliberate "materialize the freshly-inflated adapter, train zero
@@ -1433,6 +1459,8 @@ class VaeTrainer:
             "scheduler": self._scheduler.state_dict(),
             "loss_weighter": loss_weighter_state,
             "rng": rng,
+            "best_metric_value": self._best_metric_value,
+            "best_epoch": self._best_epoch,
         }
         torch.save(state, state_path)
         logger.info(
