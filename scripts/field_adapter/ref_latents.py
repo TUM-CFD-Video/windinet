@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Encode the reference clips with the frozen Wan VAE and store what "natural" looks like.
 
-Output <out>: {"rgb": {mean, var, cov}, "latent": {mean, var, cov, log_psd}, "n_clips", "frames"}
+Output <out>: {"rgb": {mean, var, cov}, "latent": {mean, var, cov}, "n_clips", "frames"}
   rgb    -- pixel statistics of the clips in (-1, 1)          (C = 3)
-  latent -- statistics of the normalised Wan latents          (C = 16), per-frame radial log-PSD
+  latent -- statistics of the normalised Wan latents          (C = 16)
 The tensors are a few KB; the latents themselves are not kept.
 
     python scripts/field_adapter/ref_latents.py --clips ref_clips/clips.pt \
@@ -17,7 +17,7 @@ from pathlib import Path
 import torch
 import typer
 
-from windinet.field_adapter.latent_stats import channel_stats, radial_log_psd
+from windinet.field_adapter.latent_stats import channel_stats
 from windinet.wan.vae import WanVAE
 
 
@@ -34,7 +34,7 @@ def main(
     latents = torch.cat([vae.encode(rgb[i : i + batch].to(device)).cpu() for i in range(0, len(rgb), batch)])
     stats = {
         "rgb": channel_stats(rgb[:, :, :, ::4, ::4]),
-        "latent": {**channel_stats(latents), "log_psd": radial_log_psd(latents.movedim(2, 1).flatten(0, 1))},
+        "latent": channel_stats(latents),
         "n_clips": len(rgb),
         "frames": rgb.shape[2],
     }
