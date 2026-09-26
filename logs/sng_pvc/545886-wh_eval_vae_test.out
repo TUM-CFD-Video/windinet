@@ -1,0 +1,194 @@
+START TIME: Sat 26 Sep 2026 11:19:54 AM CEST
+job=545886 node=i20r04c04s06
+start_time=2026-09-26T11:19:54+02:00
++-----------+--------------------------------------------------------------------------------------+
+| Device ID | Device Information                                                                   |
++-----------+--------------------------------------------------------------------------------------+
+| 0         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-003a-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:3a:00.0                                                        |
+|           | DRM Device: /dev/dri/card0                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 1         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-004b-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:4b:00.0                                                        |
+|           | DRM Device: /dev/dri/card1                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 2         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00ca-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:ca:00.0                                                        |
+|           | DRM Device: /dev/dri/card2                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 3         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00da-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:da:00.0                                                        |
+|           | DRM Device: /dev/dri/card3                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+config=configs/finetune_vae/finetune_vae_ch6_sds_stock_w1e4_256res.yaml checkpoint=/hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_sds_stock_w1e4_256res/checkpoints/vae_shockwave_best.safetensors test_h5=/hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/test.h5 num_samples=0 output=finetune_vae_outputs/sng_pvc/finetune_vae_ch6_sds_stock_w1e4_256res/test_eval_256.json
+INFO     Failed to extract font properties from             font_manager.py:1107
+         /usr/share/fonts/truetype/Cantarell-VF.otf: Can                        
+         not load face (SFNT font table missing; error code                     
+         0x8e)                                                                  
+INFO     generated new fontManager                          font_manager.py:1639
+Device: xpu  config: 
+configs/finetune_vae/finetune_vae_ch6_sds_stock_w1e4_256res.yaml
+Test set: 
+/hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/test.h5 -- 
+evaluating 500 of 500 sims
+Saving figure samples ['0000_gamma1.1299999952', '0250_gamma1.3999999762', 
+'0499_gamma1.7599999905'] (frames [0, 25, 50, 75, 100]) to 
+/hppfs/scratch/0D/go76fuz2/windinet/figure_data/vae_test/finetune_vae_ch6_sds_st
+ock_w1e4_256res
+[windinet] loaded inflated VAE checkpoint: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_sds_stock_w1e4_256res/checkpoints/vae_shockwave_best.safetensors (epoch=20, step=2500)
+  loaded inflate checkpoint (epoch=20): 
+/hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch
+6_sds_stock_w1e4_256res/checkpoints/vae_shockwave_best.safetensors
+  4/500 sims  (38s)
+  8/500 sims  (41s)
+  12/500 sims  (45s)
+  16/500 sims  (49s)
+  20/500 sims  (52s)
+  24/500 sims  (56s)
+  28/500 sims  (60s)
+  32/500 sims  (63s)
+  36/500 sims  (67s)
+  40/500 sims  (71s)
+  44/500 sims  (74s)
+  48/500 sims  (78s)
+  52/500 sims  (82s)
+  56/500 sims  (85s)
+  60/500 sims  (89s)
+  64/500 sims  (93s)
+  68/500 sims  (96s)
+  72/500 sims  (100s)
+  76/500 sims  (104s)
+  80/500 sims  (107s)
+  84/500 sims  (111s)
+  88/500 sims  (115s)
+  92/500 sims  (118s)
+  96/500 sims  (122s)
+  100/500 sims  (126s)
+  104/500 sims  (129s)
+  108/500 sims  (133s)
+  112/500 sims  (136s)
+  116/500 sims  (140s)
+  120/500 sims  (144s)
+  124/500 sims  (148s)
+  128/500 sims  (151s)
+  132/500 sims  (155s)
+  136/500 sims  (158s)
+  140/500 sims  (162s)
+  144/500 sims  (166s)
+  148/500 sims  (169s)
+  152/500 sims  (173s)
+  156/500 sims  (177s)
+  160/500 sims  (180s)
+  164/500 sims  (184s)
+  168/500 sims  (188s)
+  172/500 sims  (191s)
+  176/500 sims  (195s)
+  180/500 sims  (199s)
+  184/500 sims  (202s)
+  188/500 sims  (206s)
+  192/500 sims  (210s)
+  196/500 sims  (213s)
+  200/500 sims  (217s)
+  204/500 sims  (221s)
+  208/500 sims  (224s)
+  212/500 sims  (228s)
+  216/500 sims  (232s)
+  220/500 sims  (235s)
+  224/500 sims  (239s)
+  228/500 sims  (243s)
+  232/500 sims  (246s)
+  236/500 sims  (250s)
+  240/500 sims  (254s)
+  244/500 sims  (257s)
+  248/500 sims  (261s)
+  252/500 sims  (265s)
+  256/500 sims  (269s)
+  260/500 sims  (272s)
+  264/500 sims  (276s)
+  268/500 sims  (280s)
+  272/500 sims  (283s)
+  276/500 sims  (287s)
+  280/500 sims  (291s)
+  284/500 sims  (294s)
+  288/500 sims  (298s)
+  292/500 sims  (302s)
+  296/500 sims  (305s)
+  300/500 sims  (309s)
+  304/500 sims  (313s)
+  308/500 sims  (316s)
+  312/500 sims  (320s)
+  316/500 sims  (324s)
+  320/500 sims  (327s)
+  324/500 sims  (331s)
+  328/500 sims  (335s)
+  332/500 sims  (338s)
+  336/500 sims  (342s)
+  340/500 sims  (346s)
+  344/500 sims  (349s)
+  348/500 sims  (353s)
+  352/500 sims  (357s)
+  356/500 sims  (360s)
+  360/500 sims  (364s)
+  364/500 sims  (368s)
+  368/500 sims  (371s)
+  372/500 sims  (375s)
+  376/500 sims  (379s)
+  380/500 sims  (382s)
+  384/500 sims  (386s)
+  388/500 sims  (389s)
+  392/500 sims  (393s)
+  396/500 sims  (397s)
+  400/500 sims  (400s)
+  404/500 sims  (404s)
+  408/500 sims  (408s)
+  412/500 sims  (411s)
+  416/500 sims  (415s)
+  420/500 sims  (419s)
+  424/500 sims  (422s)
+  428/500 sims  (426s)
+  432/500 sims  (430s)
+  436/500 sims  (433s)
+  440/500 sims  (437s)
+  444/500 sims  (441s)
+  448/500 sims  (444s)
+  452/500 sims  (448s)
+  456/500 sims  (452s)
+  460/500 sims  (455s)
+  464/500 sims  (459s)
+  468/500 sims  (463s)
+  472/500 sims  (466s)
+  476/500 sims  (470s)
+  480/500 sims  (474s)
+  484/500 sims  (477s)
+  488/500 sims  (481s)
+  492/500 sims  (485s)
+  496/500 sims  (488s)
+  500/500 sims  (492s)
+  Test-set reconstruction (500 sims)  
+┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━┓
+┃ metric           ┃   mean ┃    sem ┃
+┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━┩
+│ vrmse            │ 0.0585 │ 0.0013 │
+│ vrmse_chmean     │ 0.0793 │ 0.0014 │
+│ vrmse_density    │ 0.0723 │ 0.0015 │
+│ vrmse_momentum_x │ 0.0703 │ 0.0016 │
+│ vrmse_momentum_y │ 0.0700 │ 0.0016 │
+│ vrmse_pressure   │ 0.1046 │ 0.0016 │
+└──────────────────┴────────┴────────┘
+Report written to 
+finetune_vae_outputs/sng_pvc/finetune_vae_ch6_sds_stock_w1e4_256res/test_eval_25
+6.json
+END TIME: Sat 26 Sep 2026 11:54:00 AM CEST
+end_time=2026-09-26T11:54:00+02:00 elapsed=2046s
