@@ -134,9 +134,16 @@ if [ -n "${TEST_H5:-}" ]; then
 fi
 if [ -n "${SAVE_NPZ_SAMPLES:-}" ]; then
     EXTRA_ARGS+=(--save_npz_samples "${SAVE_NPZ_SAMPLES}")
-    [ -n "${NPZ_DIR:-}" ] && EXTRA_ARGS+=(--npz_dir "${NPZ_DIR}")
     echo "SAVE_NPZ_SAMPLES: ${SAVE_NPZ_SAMPLES} -> ${NPZ_DIR:-<out_dir>/samples}"
 fi
+# SIM_IDS (space-separated): evaluate only these sims and save an npz for each
+# (hand-picked thesis figure sims, any split; see --sim_ids).
+if [ -n "${SIM_IDS:-}" ]; then
+    # shellcheck disable=SC2206
+    EXTRA_ARGS+=(--sim_ids ${SIM_IDS})
+    echo "SIM_IDS: ${SIM_IDS} -> ${NPZ_DIR:-<out_dir>/samples}"
+fi
+[ -n "${NPZ_DIR:-}" ] && EXTRA_ARGS+=(--npz_dir "${NPZ_DIR}")
 
 if [ "${DIT_CHECKPOINT}" = "untrained" ]; then
     echo "DIT_CHECKPOINT=untrained: DiT-never-finetuned control, skipping checkpoint prewarm/load"

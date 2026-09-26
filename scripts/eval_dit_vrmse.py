@@ -255,6 +255,11 @@ def parse_args():
     ap.add_argument("--npz_frames", type=int, nargs="+", default=[0, 25, 50, 75, 100],
                      help="0-indexed frames saved per npz sample (frame 0 = the conditioning IC)")
     ap.add_argument("--npz_dir", type=Path, default=None, help="Where the npz samples go (default: <out_dir>/samples)")
+    ap.add_argument("--sim_ids", type=str, nargs="+", default=None,
+                     help="Evaluate exactly these sim ids of the h5 (the manifest's data_root, or --test_h5) "
+                          "and save an npz for each, e.g. a hand-picked sim for a thesis figure. They may "
+                          "come from any split; the split of each id is printed. The averages then cover "
+                          "only these sims, not a held-out set.")
     return ap.parse_args()
 
 
@@ -288,6 +293,11 @@ def main():
         print(f"Held-out split: {len(val_ids)} sims (seed={manifest['split_seed']}) from {manifest_path}")
     print(f"h5: {h5_path}")
 
+    if args.sim_ids:
+        for sid in args.sim_ids:
+            split = next((k for k in ("train_ids", "val_ids") if sid in manifest.get(k, [])), "not in manifest")
+            print(f"--sim_ids: {sid} ({split})")
+        val_ids = list(args.sim_ids)
     if args.num_samples is not None:
         val_ids = val_ids[: args.num_samples]
     print(f"Evaluating {len(val_ids)} sim(s)")
@@ -295,7 +305,7 @@ def main():
     vis_ids = pick_gamma_spread_ids(val_ids, args.save_vis_samples)
     if vis_ids:
         print(f"Visualizing {len(vis_ids)} sample(s) spanning the gamma range: {sorted(vis_ids)}")
-    npz_ids = pick_gamma_spread_ids(val_ids, args.save_npz_samples)
+    npz_ids = set(val_ids) if args.sim_ids else pick_gamma_spread_ids(val_ids, args.save_npz_samples)
     npz_dir = args.npz_dir or args.out_dir / "samples"
     if npz_ids:
         print(f"Saving npz fields for {sorted(npz_ids)} (frames {args.npz_frames}) to {npz_dir}")
