@@ -4,16 +4,18 @@
 #SBATCH --partition=booster
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=16
 #SBATCH --time=01:00:00  # 500 sims took ~8 min on one sng_pvc tile; generous here
 #SBATCH --output=logs/jupiter/%x_%j.log
 #SBATCH --error=logs/jupiter/%x_%j.err
 
-# jupiter sibling of jobs/sng_pvc/eval_vae_test.sbatch: single-GPU launcher for
+# jupiter sibling of jobs/sng_pvc/eval_vae_test.sbatch: launcher for
 # scripts/eval_vae_test.py (VAE-only reconstruction, pooled/chmean/per-channel
 # VRMSE, per-sim values kept) on the standalone 256x256 test.h5 -- the common
 # held-out set every Chapter 6 VAE arm is compared on. Forward-only, plain python.
+# Allocates the full node (1 node, 4 GPUs) like the other jupiter jobs; the
+# eval itself is plain python and runs on the first GPU.
 #
 # Only <config> is required. By default the checkpoint and output JSON are
 # derived from the run that jobs/jupiter/finetune_vae.sbatch trained with that
