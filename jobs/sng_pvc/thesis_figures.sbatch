@@ -19,7 +19,7 @@
 #   vae-dit-frame  <- figure_data/dit/loss_rmse_h1/<SIM>.npz
 #                     (written by the baseline DiT eval; skipped until it exists)
 #
-# The PDFs land in figures/ of this checkout; commit and push them from here.
+# The PNGs land in figures/ of this checkout; commit and push them from here.
 # SIM picks one of the three gamma-spread test sims (0000/0250/0499); the
 # default is the median-gamma one.
 #
@@ -48,14 +48,14 @@ echo "SIM=${SIM}"
 if [ -f "${VAE_NPZ}" ]; then
     python scripts/thesis_figures.py dataset --npz "${VAE_NPZ}" \
         --frames 0 --frames 50 --frames 100 \
-        --out "figures/ch3_euler_mq_${SIM%%_*}.pdf"
+        --out "figures/ch3_euler_mq_${SIM%%_*}.png"
 else
     echo "missing ${VAE_NPZ} -- dataset figure skipped" >&2
 fi
 
 if [ -f "${DIT_NPZ}" ]; then
     python scripts/thesis_figures.py vae-dit-frame --npz "${DIT_NPZ}" --frame 100 \
-        --out "figures/ch6_vae_dit_frame100_${SIM%%_*}.pdf"
+        --out "figures/ch6_vae_dit_frame100_${SIM%%_*}.png"
 else
     echo "missing ${DIT_NPZ} -- vae-dit-frame figure skipped (baseline DiT eval not done yet?)" >&2
 fi

@@ -112,7 +112,7 @@ def _err_ax(ax, img, vmax):
 def vae_dit_frame(
     npz: Path = typer.Option(..., help="Baseline DiT eval sample, figure_data/dit/loss_rmse_h1/<sim>.npz"),
     frame: int = typer.Option(100, help="0-indexed frame (must be one of the saved frames)"),
-    out: Path = typer.Option(Path("figures/ch6_vae_dit_frame100.pdf")),
+    out: Path = typer.Option(Path("figures/ch6_vae_dit_frame100.png")),
 ) -> None:
     """Rows = channels. Columns = GT, VAE-only reconstruction, VAE+DiT rollout, |error| of each.
 
@@ -154,7 +154,7 @@ def vae_dit_frame(
 def dataset(
     npz: Path = typer.Option(..., help="Any figure sample npz (uses its raw, unclipped gt_raw)"),
     frames: list[int] = typer.Option([0, 50, 100]),
-    out: Path = typer.Option(Path("figures/ch3_euler_mq_sample.pdf")),
+    out: Path = typer.Option(Path("figures/ch3_euler_mq_sample.png")),
 ) -> None:
     """Rows = the four raw fields, columns = frames. Physical units, colour limits at the 0.5/99.5 percentiles."""
     _style()
