@@ -42,7 +42,8 @@ AXIS = "#c3c2b7"
 BLUE_RAMP = ["#fcfcfb", "#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
 ORANGE_RAMP = ["#fcfcfb", "#fbe0d3", "#f5b597", "#eb6834", "#c24f1f", "#8a3413"]
 DIVERGING = ["#0d366b", "#256abf", "#6da7ec", "#f0efec", "#ef8a89", "#e34948", "#8f1f1f"]
-CMAP_SEQ = LinearSegmentedColormap.from_list("seq_blue", BLUE_RAMP)
+# starts at a light tint, not white: low values must not merge into the page
+CMAP_SEQ = LinearSegmentedColormap.from_list("seq_blue", BLUE_RAMP[1:])
 CMAP_ERR = LinearSegmentedColormap.from_list("seq_orange", ORANGE_RAMP)
 CMAP_DIV = LinearSegmentedColormap.from_list("div_blue_red", DIVERGING)
 
@@ -142,12 +143,10 @@ def vae_dit_frame(
         axes[0, k].set_title(title)
     axes[0, 3].set_title("|error|\nVAE only", color=INK_2)
     axes[0, 4].set_title("|error|\nVAE + DiT", color=INK_2)
-    fig.suptitle(
-        f"Test sim {npz.stem} (gamma = {float(d['gamma']):.3f}), frame {frame}; the DiT is conditioned on frame 0 only\n"
-        f"Whole-sim VRMSE (channel mean): VAE only {float(d['vae_only_vrmse_chmean']):.4f}, "
-        f"VAE + DiT {float(d['vae_dit_vrmse_chmean']):.4f}",
-        color=INK_2, fontsize=7, y=0.995,
-    )
+    # no suptitle: sim id and numbers belong in the LaTeX caption
+    print(f"caption: test sim {npz.stem}, gamma = {float(d['gamma']):.3f}, frame {frame}; "
+          f"whole-sim VRMSE (channel mean): VAE only {float(d['vae_only_vrmse_chmean']):.4f}, "
+          f"VAE + DiT {float(d['vae_dit_vrmse_chmean']):.4f}")
     _save(fig, out)
 
 
@@ -172,7 +171,7 @@ def dataset(
         fig.colorbar(im, ax=list(axes[c, :]), fraction=0.04, pad=0.02).outline.set_visible(False)
     for k, f in enumerate(frames):
         axes[0, k].set_title(f"t = {f}")
-    fig.suptitle(f"{npz.stem}  (gamma = {float(d['gamma']):.3f})", color=INK_2, fontsize=8, y=0.995)
+    print(f"caption: test sim {npz.stem}, gamma = {float(d['gamma']):.3f}")  # no suptitle, see vae-dit-frame
     _save(fig, out)
 
 
