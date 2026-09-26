@@ -125,6 +125,18 @@ EXTRA_ARGS=()
 if [ -n "${NUM_INFERENCE_STEPS}" ]; then
     EXTRA_ARGS+=(--num_inference_steps "${NUM_INFERENCE_STEPS}")
 fi
+# Optional env vars (set by ch6_submit.sh eval): TEST_H5 evaluates a
+# standalone test.h5 instead of the manifest's val_ids; SAVE_NPZ_SAMPLES /
+# NPZ_DIR save float16 fields of gamma-spread sims for thesis figures.
+if [ -n "${TEST_H5:-}" ]; then
+    echo "TEST_H5: ${TEST_H5}"
+    EXTRA_ARGS+=(--test_h5 "${TEST_H5}")
+fi
+if [ -n "${SAVE_NPZ_SAMPLES:-}" ]; then
+    EXTRA_ARGS+=(--save_npz_samples "${SAVE_NPZ_SAMPLES}")
+    [ -n "${NPZ_DIR:-}" ] && EXTRA_ARGS+=(--npz_dir "${NPZ_DIR}")
+    echo "SAVE_NPZ_SAMPLES: ${SAVE_NPZ_SAMPLES} -> ${NPZ_DIR:-<out_dir>/samples}"
+fi
 
 if [ "${DIT_CHECKPOINT}" = "untrained" ]; then
     echo "DIT_CHECKPOINT=untrained: DiT-never-finetuned control, skipping checkpoint prewarm/load"

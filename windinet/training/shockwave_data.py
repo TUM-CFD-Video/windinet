@@ -33,6 +33,21 @@ def parse_gamma(sid: str) -> float:
     return float(sid.split("gamma")[1])
 
 
+def pick_gamma_spread_ids(ids: list[str], n: int) -> set[str]:
+    """N sample ids spanning the gamma range of `ids`: min/median/max for n=3,
+    evenly-spaced quantiles otherwise. Deterministic, so every eval script
+    that calls it on the same id list shows the same sims in its figures."""
+    if n <= 0:
+        return set()
+    gamma_order = sorted(range(len(ids)), key=lambda k: parse_gamma(ids[k]))
+    n = min(n, len(gamma_order))
+    if n == 1:
+        picks = [gamma_order[len(gamma_order) // 2]]
+    else:
+        picks = [gamma_order[round(i * (len(gamma_order) - 1) / (n - 1))] for i in range(n)]
+    return {ids[i] for i in picks}
+
+
 class ShockWaveDataset(Dataset):
     """
     Load ShockWave CFD simulations from HDF5.

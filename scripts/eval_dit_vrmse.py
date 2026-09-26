@@ -70,6 +70,7 @@ import json
 from copy import deepcopy
 from pathlib import Path
 
+import numpy as np
 import torch
 import yaml
 from safetensors.torch import load_file
@@ -87,7 +88,7 @@ from windinet.training.shockwave_data import (
     build_shockwave_video,
     load_channel_normalization,
     normalize_fields,
-    parse_gamma,
+    pick_gamma_spread_ids,
 )
 from windinet.training.vae_visualization import denormalize_fields, save_reconstruction_panels
 from windinet.utils import get_default_device
@@ -209,24 +210,6 @@ def trim_latent_frames(a: torch.Tensor, b: torch.Tensor) -> tuple[torch.Tensor, 
     return a[:, :, :n], b[:, :, :n]
 
 
-def pick_gamma_spread_ids(val_ids: list[str], n: int) -> set[str]:
-    """N sample ids spanning val_ids' gamma range: min/median/max for n=3,
-    evenly-spaced quantiles otherwise -- same selection vae_trainer.py's
-    own visualization uses (see train()'s vis_loader), so figures always
-    show the full physical regime rather than whichever sims happen to
-    land first in split order. Cheap here since gamma is parsed straight
-    out of the sample id, no h5 access needed."""
-    if n <= 0:
-        return set()
-    gamma_order = sorted(range(len(val_ids)), key=lambda k: parse_gamma(val_ids[k]))
-    n = min(n, len(gamma_order))
-    if n == 1:
-        picks = [gamma_order[len(gamma_order) // 2]]
-    else:
-        picks = [gamma_order[round(i * (len(gamma_order) - 1) / (n - 1))] for i in range(n)]
-    return {val_ids[i] for i in picks}
-
-
 def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument("config", type=Path, help="Path to inference YAML config")
@@ -261,6 +244,17 @@ def parse_args():
                           "DitVisualizationConfig's own default)")
     ap.add_argument("--dpi", type=int, default=150, help="Panel image DPI")
     ap.add_argument("--out_dir", type=Path, default=Path("outputs/eval_dit_vrmse"))
+    ap.add_argument("--test_h5", type=Path, default=None,
+                     help="Evaluate every sim of this standalone test.h5 instead of the manifest's val_ids "
+                          "(Chapter 6: the same 256x256_ds/test.h5 scripts/eval_vae_test.py uses). The "
+                          "manifest is still read, for provenance only.")
+    ap.add_argument("--save_npz_samples", type=int, default=0,
+                     help="Save float16 fields (gt_raw, gt_norm, vae_only_norm, vae_dit_norm) of N "
+                          "gamma-spread sims at --npz_frames for thesis figures; same picks as "
+                          "eval_vae_test.py on the same id list")
+    ap.add_argument("--npz_frames", type=int, nargs="+", default=[0, 25, 50, 75, 100],
+                     help="0-indexed frames saved per npz sample (frame 0 = the conditioning IC)")
+    ap.add_argument("--npz_dir", type=Path, default=None, help="Where the npz samples go (default: <out_dir>/samples)")
     return ap.parse_args()
 
 
@@ -283,9 +277,15 @@ def main():
 
     manifest_path = args.preprocessed_data_root / "split_manifest.json"
     manifest = json.loads(manifest_path.read_text())
-    h5_path = manifest["data_root"]
-    val_ids = manifest["val_ids"]
-    print(f"Held-out split: {len(val_ids)} sims (seed={manifest['split_seed']}) from {manifest_path}")
+    if args.test_h5 is not None:
+        # val_ids keeps its name below but holds the test ids from here on.
+        h5_path = str(args.test_h5)
+        val_ids = list(ShockWaveDataset(h5_path).ids)
+        print(f"Standalone test set: {len(val_ids)} sims from {h5_path} (manifest {manifest_path} not used for ids)")
+    else:
+        h5_path = manifest["data_root"]
+        val_ids = manifest["val_ids"]
+        print(f"Held-out split: {len(val_ids)} sims (seed={manifest['split_seed']}) from {manifest_path}")
     print(f"h5: {h5_path}")
 
     if args.num_samples is not None:
@@ -295,6 +295,10 @@ def main():
     vis_ids = pick_gamma_spread_ids(val_ids, args.save_vis_samples)
     if vis_ids:
         print(f"Visualizing {len(vis_ids)} sample(s) spanning the gamma range: {sorted(vis_ids)}")
+    npz_ids = pick_gamma_spread_ids(val_ids, args.save_npz_samples)
+    npz_dir = args.npz_dir or args.out_dir / "samples"
+    if npz_ids:
+        print(f"Saving npz fields for {sorted(npz_ids)} (frames {args.npz_frames}) to {npz_dir}")
 
     model_source = cfg.get("model_source", "LTXV_2B_0.9.6_DEV")
     checkpoint = None if args.untrained_dit else ensure_checkpoint(cfg["checkpoint"])
@@ -447,6 +451,26 @@ def main():
         print(f"[{i+1}/{len(val_ids)}] {sid}: vae_only={vo_overall:.5f}  vae+dit={vd_overall:.5f}  "
               f"latent_vrmse={lat_vrmse:.5f}")
 
+        if sid in npz_ids:
+            frames = [f for f in args.npz_frames if f < n_px]
+            gt_raw = torch.stack([sample[name] for name in CHANNEL_NAMES])  # [C, F, H, W]
+            npz_dir.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                npz_dir / f"{sid}.npz",
+                frames=np.array(frames),
+                channel_order=np.array(CHANNEL_NAMES),
+                gamma=float(sample["meta"]["gamma"]),
+                gt_raw=gt_raw[:, frames].numpy().astype(np.float16),
+                gt_norm=target_cmp[0][:, frames].cpu().numpy().astype(np.float16),
+                vae_only_norm=vae_recon[0][:, frames].cpu().numpy().astype(np.float16),
+                vae_dit_norm=dit_pred[0][:, frames].cpu().numpy().astype(np.float16),
+                channel_mean=np.array(stats["channel_mean"]),
+                channel_std=np.array(stats["channel_std"]),
+                normalization_clip=float(stats["normalization_clip"]),
+                vae_only_vrmse_chmean=sum(vo_channel) / 4,
+                vae_dit_vrmse_chmean=sum(vd_channel) / 4,
+            )
+
         if sid in vis_ids:
             # Physical-units ground truth, straight from the dataset -- same
             # approach dit_visualization.py's own periodic panels use (not
@@ -483,6 +507,7 @@ def main():
     ranked = sorted(range(len(mean_lat_channel)), key=lambda c: mean_lat_channel[c], reverse=True)
     summary = {
         "n_samples": n,
+        "split": "test" if args.test_h5 is not None else "val",
         "h5": h5_path,
         "checkpoint": str(checkpoint) if checkpoint else "untrained (stock pretrained transformer + random ScalarEmbedding)",
         "vae_checkpoint": str(vae_ckpt),

@@ -36,13 +36,23 @@ Usage:
         --test-h5 $SCRATCH/windinet/euler_mq_dataset/256x256_ds/test.h5 \\
         --output finetune_vae_outputs/sng_pvc/finetune_vae_ch6_loss_rmse_h1_256res/test_eval_256.json
 
+Figure data: for --save-samples sims spanning the test set's gamma range
+(min/median/max for 3, the same picks for every arm and for
+scripts/eval_dit_vrmse.py --test_h5), the fields at --sample-frames are saved
+as one float16 .npz per sim: gt_raw (physical units), gt_norm and recon_norm
+(the normalized/clipped space the metrics use), plus the normalization stats.
+They go to $SCRATCH/windinet/figure_data/vae_test/<run>/ by default, not
+into the git-tracked run mirror (~5 MB per sim).
+
 Single tile, plain python (no accelerate launch): forward passes only.
 """
 
 import json
+import os
 import time
 from pathlib import Path
 
+import numpy as np
 import torch
 import typer
 import yaml
@@ -52,7 +62,7 @@ from torch.utils.data import DataLoader, Subset
 
 from windinet.config import VaeTrainerConfig
 from windinet.inference.model_loader import load_vae
-from windinet.training.shockwave_data import ShockWaveDataset, build_shockwave_video
+from windinet.training.shockwave_data import ShockWaveDataset, build_shockwave_video, pick_gamma_spread_ids
 from windinet.training.vae_trainer import vrmse, vrmse_per_channel
 from windinet.utils import get_default_device
 from windinet.vae_adapter import inflate_vae_io_channels, load_adapted_vae, load_inflated_vae_checkpoint
@@ -128,6 +138,13 @@ def main(
     num_samples: int = typer.Option(0, help="Evaluate only the first N test sims (0 = all)"),
     batch_size: int = typer.Option(4, help="Sims per forward pass (does not affect the metrics)"),
     output: str = typer.Option("vae_test_eval.json", help="Where to write the JSON report"),
+    save_samples: int = typer.Option(3, help="Save fields of N gamma-spread test sims for figures (0 = none)"),
+    sample_frames: list[int] = typer.Option([0, 25, 50, 75, 100], help="Frames saved per sample (repeat the option)"),
+    samples_dir: str = typer.Option(
+        None,
+        help="Where the sample .npz files go (default: $SCRATCH/windinet/figure_data/vae_test/<run>, "
+        "<run> = the output JSON's parent folder name; <output dir>/samples without $SCRATCH)",
+    ),
 ) -> None:
     with open(config_path) as f:
         cfg = VaeTrainerConfig(**yaml.safe_load(f))
@@ -140,6 +157,17 @@ def main(
     if num_samples > 0:
         indices = indices[:num_samples]
     console.print(f"Test set: {test_h5} -- evaluating {len(indices)} of {len(dataset)} sims")
+    sample_ids = pick_gamma_spread_ids([dataset.ids[i] for i in indices], save_samples)
+    if samples_dir is None:
+        run_name = Path(output).resolve().parent.name
+        scratch = os.environ.get("SCRATCH")
+        samples_dir = (
+            str(Path(scratch) / "windinet" / "figure_data" / "vae_test" / run_name)
+            if scratch
+            else str(Path(output).parent / "samples")
+        )
+    if sample_ids:
+        console.print(f"Saving figure samples {sorted(sample_ids)} (frames {sample_frames}) to {samples_dir}")
     loader = DataLoader(
         Subset(dataset, indices),
         batch_size=batch_size,
@@ -179,6 +207,23 @@ def main(
                 }
                 row.update({f"vrmse_{name}": float(v) for name, v in zip(channel_order, per_channel.tolist())})
                 per_sim.append(row)
+                if ids[i] in sample_ids:
+                    frames = [f for f in sample_frames if f < orig_F]
+                    gt_raw = torch.stack([batch[name][i] for name in channel_order])  # [C, F, H, W]
+                    Path(samples_dir).mkdir(parents=True, exist_ok=True)
+                    np.savez_compressed(
+                        Path(samples_dir) / f"{ids[i]}.npz",
+                        frames=np.array(frames),
+                        channel_order=np.array(channel_order),
+                        gamma=float(batch["meta"]["gamma"][i]),
+                        gt_raw=gt_raw[:, frames].numpy().astype(np.float16),
+                        gt_norm=target[i][:, frames].cpu().numpy().astype(np.float16),
+                        recon_norm=recon[i][:, frames].cpu().numpy().astype(np.float16),
+                        channel_mean=np.array(cfg.data.channel_mean),
+                        channel_std=np.array(cfg.data.channel_std),
+                        normalization_clip=cfg.data.normalization_clip,
+                        vrmse_chmean=row["vrmse_chmean"],
+                    )
             console.print(f"  {len(per_sim)}/{len(indices)} sims  ({time.time() - t0:.0f}s)")
 
     keys = ["vrmse", "vrmse_chmean"] + [f"vrmse_{name}" for name in channel_order]
@@ -196,6 +241,7 @@ def main(
         "mixed_precision": cfg.acceleration.mixed_precision_mode,
         "normalization_stats_file": str(cfg.data.normalization_stats_file),
         "channel_order": channel_order,
+        "figure_samples": {"ids": sorted(sample_ids), "frames": sample_frames, "dir": samples_dir},
         "metrics": summary,
         "per_sim": per_sim,
     }

@@ -14,7 +14,9 @@
 #   pipeline ARM...  VAE finetune -> encode -> train DiT, all chained with
 #                    afterok (Group 5: the VAE doesn't exist yet).
 #   eval ARM...      eval_dit_vrmse on the arm's LATEST DiT checkpoint
-#                    (run after its DiT job has finished).
+#                    (run after its DiT job has finished), on the 500 sims of
+#                    the standalone 256x256 test.h5 (same set as vaetest),
+#                    saving figure fields to $SCRATCH/windinet/figure_data/dit/ARM.
 #   vae128 ARM...    VAE finetune from finetune_vae_ch6_ARM_128res.yaml on
 #                    the cluster-default 128x128_ds (resolution comparison
 #                    against the 256res arm of the same name).
@@ -168,7 +170,11 @@ case "$cmd" in
             pre="${SCRATCH_ROOT}/dit_preprocessed/$(vae_run "$arm")"
             need_file "$pre" && need_file "$(vae_ckpt "$arm")" || { echo "[$arm] skipped" >&2; continue; }
             echo "[$arm] eval on $(basename "$dit")"
-            sbatch jobs/sng_pvc/eval_dit_vrmse.sbatch "$pre" "$dit" "$(vae_ckpt "$arm")" "$EVAL_SIMS_CH6"
+            # Chapter 6 DiTs are scored on the same standalone 256x256 test.h5
+            # as the VAE test eval (vaetest), with figure fields saved to scratch.
+            TEST_H5="${SCRATCH_ROOT}/euler_mq_dataset/256x256_ds/test.h5" \
+            SAVE_NPZ_SAMPLES=3 NPZ_DIR="${SCRATCH_ROOT}/figure_data/dit/${arm}" \
+                sbatch jobs/sng_pvc/eval_dit_vrmse.sbatch "$pre" "$dit" "$(vae_ckpt "$arm")" "$EVAL_SIMS_CH6"
         done
         ;;
     vaetest)
