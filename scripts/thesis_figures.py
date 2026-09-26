@@ -144,7 +144,7 @@ def vae_dit_frame(
     axes[0, 3].set_title("|error|\nVAE only", color=INK_2)
     axes[0, 4].set_title("|error|\nVAE + DiT", color=INK_2)
     # no suptitle: sim id and numbers belong in the LaTeX caption
-    print(f"caption: test sim {npz.stem}, gamma = {float(d['gamma']):.3f}, frame {frame}; "
+    print(f"caption: sim {npz.stem}, gamma = {float(d['gamma']):.3f}, frame {frame}; "
           f"whole-sim VRMSE (channel mean): VAE only {float(d['vae_only_vrmse_chmean']):.4f}, "
           f"VAE + DiT {float(d['vae_dit_vrmse_chmean']):.4f}")
     _save(fig, out)
@@ -171,7 +171,7 @@ def dataset(
         fig.colorbar(im, ax=list(axes[c, :]), fraction=0.04, pad=0.02).outline.set_visible(False)
     for k, f in enumerate(frames):
         axes[0, k].set_title(f"t = {f}")
-    print(f"caption: test sim {npz.stem}, gamma = {float(d['gamma']):.3f}")  # no suptitle, see vae-dit-frame
+    print(f"caption: sim {npz.stem}, gamma = {float(d['gamma']):.3f}")  # no suptitle, see vae-dit-frame
     _save(fig, out)
 
 
