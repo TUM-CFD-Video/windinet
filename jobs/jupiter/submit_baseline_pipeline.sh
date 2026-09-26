@@ -14,8 +14,8 @@
 # The last VAE job only exits 0 once the VAE has really finished (or was
 # already finished), so encode never starts on a half-trained VAE.
 #
-# NUM_VAE_RESUMES (default 1 -> 24h total) / NUM_DIT_RESUMES (default 3 ->
-# 48h total for 30k steps): neither throughput is measured on jupiter yet.
+# NUM_VAE_RESUMES (default 0: the VAE takes ~3.5h, one 6h job) / NUM_DIT_RESUMES (default 3 ->
+# 48h total for 30k steps): DiT throughput is not measured on jupiter yet.
 # If the chain runs out before a stage finishes, just resubmit that stage's
 # sbatch with the same arguments (it continues), then chain the rest by hand.
 # SKIP_VAE=1 skips the VAE stage (checkpoint already on scratch).
@@ -32,7 +32,7 @@ DIT_CONFIG=configs/dit/train_dit_jupiter_ch6_loss_rmse_h1_30k.yaml
 VAE_RUN=finetune_vae_ch6_loss_rmse_h1_256res
 VAE_DIR=/e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/${VAE_RUN}
 VAE_CKPT=${VAE_DIR}/checkpoints/vae_shockwave_best.safetensors
-NUM_VAE_RESUMES=${NUM_VAE_RESUMES:-1}
+NUM_VAE_RESUMES=${NUM_VAE_RESUMES:-0}
 NUM_DIT_RESUMES=${NUM_DIT_RESUMES:-3}
 
 mkdir -p logs/jupiter

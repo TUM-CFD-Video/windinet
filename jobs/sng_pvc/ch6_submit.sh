@@ -18,6 +18,11 @@
 #   vae128 ARM...    VAE finetune from finetune_vae_ch6_ARM_128res.yaml on
 #                    the cluster-default 128x128_ds (resolution comparison
 #                    against the 256res arm of the same name).
+#   vaetest ARM...   VAE-only reconstruction eval (scripts/eval_vae_test.py)
+#                    on the standalone 256x256 test.h5, one job per arm. The
+#                    JSON goes to finetune_vae_outputs/sng_pvc/<run>/test_eval_256.json.
+#                    An ARM ending in _128res names the 128res run verbatim
+#                    (e.g. loss_rmse_h1_128res), still evaluated on 256x256.
 #
 # Named sets:
 #   vae_only  = decoder_only_nossim lr_1e4_nossim lr_1e5_nossim
@@ -26,6 +31,9 @@
 #   g5        = kl_1e7 kl_1e6 kl_1e5 sds_stock_w1e4 sds_stock_w1e2 sds_stock_w1
 #               (stock SDS teacher only, weights 1e-4/1e-2/1; sds_cfd dropped
 #               and the single weight-0.1 sds_stock arm replaced, 2026-09-25)
+#   vae_all   = every planned, non-discarded Chapter 6 VAE arm (Groups 1-3,
+#               Group 5 and the 128res baseline); lr_1e4_nossim and kl_1e6
+#               diverged and are left out. For vaetest.
 #
 # Typical order:
 #   bash jobs/sng_pvc/ch6_submit.sh vae vae_only
@@ -33,6 +41,7 @@
 #   bash jobs/sng_pvc/ch6_submit.sh pipeline g5
 #   ...once each DiT job has finished:
 #   bash jobs/sng_pvc/ch6_submit.sh eval g4_ready g5
+#   bash jobs/sng_pvc/ch6_submit.sh vaetest vae_all   # any time after the VAEs exist
 #
 # If an upstream job fails, its afterok dependents sit in PENDING with
 # reason DependencyNeverSatisfied: scancel them and resubmit that arm.
@@ -62,13 +71,24 @@ expand_arms() {
             vae_only) echo decoder_only_nossim lr_1e4_nossim lr_1e5_nossim color_adapter_nossim loss_rmse_h1_ssimfix ;;
             g4_ready) echo loss_rmse_h1 unfinetuned ;;
             g5)       echo kl_1e7 kl_1e6 kl_1e5 sds_stock_w1e4 sds_stock_w1e2 sds_stock_w1 ;;
+            vae_all)  echo unfinetuned loss_rmse_h1 decoder_only_nossim color_adapter_nossim \
+                           loss_rmse_only loss_rmse_h1_ssimfix lr_1e5_nossim \
+                           kl_1e7 kl_1e5 sds_stock_w1e4 sds_stock_w1e2 sds_stock_w1 \
+                           loss_rmse_h1_128res ;;
             *)        echo "$a" ;;
         esac
     done
 }
 
-vae_config()  { echo "configs/finetune_vae/finetune_vae_ch6_$1_256res.yaml"; }
-vae_run()     { echo "finetune_vae_ch6_$1_256res"; }
+vae_config()  { echo "configs/finetune_vae/$(vae_run "$1").yaml"; }
+vae_run() {
+    # An arm that already carries its resolution (only vaetest's
+    # loss_rmse_h1_128res) is used verbatim; every other arm is 256res.
+    case "$1" in
+        *_128res) echo "finetune_vae_ch6_$1" ;;
+        *)        echo "finetune_vae_ch6_$1_256res" ;;
+    esac
+}
 dit_config()  { echo "configs/dit/train_dit_sng_pvc_ch6_$1.yaml"; }
 vae_ckpt() {
     # epochs: 0 (unfinetuned) never sets a best, only the last checkpoint.
@@ -103,7 +123,7 @@ submit_encode_and_dit() {  # $1=arm, $2=optional dependency
 cmd=${1:-}
 [ -n "$cmd" ] && shift || true
 arms=$(expand_arms "$@")
-[ -n "$arms" ] || { sed -n '2,40p' "$0"; exit 1; }
+[ -n "$arms" ] || { sed -n '2,50p' "$0"; exit 1; }
 
 case "$cmd" in
     vae)
@@ -151,8 +171,20 @@ case "$cmd" in
             sbatch jobs/sng_pvc/eval_dit_vrmse.sbatch "$pre" "$dit" "$(vae_ckpt "$arm")" "$EVAL_SIMS_CH6"
         done
         ;;
+    vaetest)
+        test_h5="${SCRATCH_ROOT}/euler_mq_dataset/256x256_ds/test.h5"
+        need_file "$test_h5"
+        for arm in $arms; do
+            cfg=$(vae_config "$arm")
+            need_file "$cfg"
+            ckpt=$(vae_ckpt "$arm")
+            need_file "$ckpt" || { echo "[$arm] skipped: VAE not trained" >&2; continue; }
+            out="finetune_vae_outputs/sng_pvc/$(vae_run "$arm")/test_eval_256.json"
+            echo "[$arm] vaetest=$(sbatch --parsable jobs/sng_pvc/eval_vae_test.sbatch "$cfg" "$ckpt" "$out" "$test_h5")"
+        done
+        ;;
     *)
-        sed -n '2,40p' "$0"
+        sed -n '2,50p' "$0"
         exit 1
         ;;
 esac

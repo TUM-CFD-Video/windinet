@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=16
-#SBATCH --time=12:00:00  # jupiter booster limit
+#SBATCH --time=06:00:00  # 20ep 256res full FT takes ~3.5h here; booster limit is 12h
 #SBATCH --output=logs/jupiter/%x_%j.log
 #SBATCH --error=logs/jupiter/%x_%j.err
 
@@ -19,9 +19,9 @@
 #     ch6 arms at batch_size 4 too, 8 tiles x accum 1). Override with
 #     BATCH_SIZE=<n> if it doesn't fit in memory -- but keep it the same
 #     across the resume jobs of one run.
-#   - AUTO-RESUME, because the 12h walltime may not fit a full run
-#     (sng_pvc's 256res/20ep baseline took ~16h on 8 tiles; jupiter
-#     throughput at full scale is not measured yet):
+#   - AUTO-RESUME, kept as a safety net: a 20-epoch 256res full FT takes
+#     ~3.5h on jupiter (vs ~16h on sng_pvc's 8 tiles), so one 6h job
+#     normally finishes the run; a resume is only needed if it gets killed:
 #       * <output_dir>/.train_complete exists -> exit 0 without training
 #         (written below only after scripts/finetune_vae.py exits 0).
 #       * checkpoints/vae_shockwave_last.{safetensors,state.pt} exist ->
