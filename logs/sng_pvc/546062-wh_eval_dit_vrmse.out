@@ -1,0 +1,580 @@
+START TIME: Sat 26 Sep 2026 06:02:01 PM CEST
+job=546062 node=i20r03c03s08
+start_time=2026-09-26T18:02:01+02:00
++-----------+--------------------------------------------------------------------------------------+
+| Device ID | Device Information                                                                   |
++-----------+--------------------------------------------------------------------------------------+
+| 0         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-003a-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:3a:00.0                                                        |
+|           | DRM Device: /dev/dri/card0                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 1         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-004b-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:4b:00.0                                                        |
+|           | DRM Device: /dev/dri/card1                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 2         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00ca-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:ca:00.0                                                        |
+|           | DRM Device: /dev/dri/card2                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 3         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00da-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:da:00.0                                                        |
+|           | DRM Device: /dev/dri/card3                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+PREPROCESSED_DATA_ROOT: /hppfs/scratch/0D/go76fuz2/windinet/dit_preprocessed/finetune_vae_ch6_kl_1e5_256res
+DIT_CHECKPOINT: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_kl_1e5/checkpoints/model_weights_step_08000.safetensors
+VAE_CHECKPOINT: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_kl_1e5_256res/checkpoints/vae_shockwave_best.safetensors
+NORMALIZATION: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_kl_1e5_256res/training_config.yaml
+NUM_SAMPLES: 500
+NUM_INFERENCE_STEPS: <config default>
+OUT_DIR: logs/sng_pvc/eval_dit_vrmse/546062
+TEST_H5: /hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/test.h5
+SAVE_NPZ_SAMPLES: 3 -> /hppfs/scratch/0D/go76fuz2/windinet/figure_data/dit/kl_1e5
+SCALAR_CHECKPOINT: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_kl_1e5/checkpoints/scalar_embedding_step_08000.safetensors
+Prewarming checkpoints (sequential read, see comment above)...
+Prewarm done.
+Standalone test set: 500 sims from /hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/test.h5 (manifest /hppfs/scratch/0D/go76fuz2/windinet/dit_preprocessed/finetune_vae_ch6_kl_1e5_256res/split_manifest.json not used for ids)
+h5: /hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/test.h5
+Evaluating 500 sim(s)
+Visualizing 3 sample(s) spanning the gamma range: ['0000_gamma1.1299999952', '0250_gamma1.3999999762', '0499_gamma1.7599999905']
+Saving npz fields for ['0000_gamma1.1299999952', '0250_gamma1.3999999762', '0499_gamma1.7599999905'] (frames [0, 25, 50, 75, 100]) to /hppfs/scratch/0D/go76fuz2/windinet/figure_data/dit/kl_1e5
+Normalization from /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_kl_1e5_256res/training_config.yaml: clip=5.0
+Latent space verified: fingerprint 7931106b4f0577b3 matches the DiT's training latents
+[windinet] loaded inflated VAE checkpoint: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_kl_1e5_256res/checkpoints/vae_shockwave_best.safetensors (epoch=20, step=2500)
+Loading transformer: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_kl_1e5/checkpoints/model_weights_step_08000.safetensors
+Loading scalar embedding: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_kl_1e5/checkpoints/scalar_embedding_step_08000.safetensors
+[1/500] 0000_gamma1.1299999952: vae_only=0.06039  vae+dit=0.33558  latent_vrmse=0.23604
+[2/500] 0001_gamma1.1299999952: vae_only=0.04396  vae+dit=0.27784  latent_vrmse=0.32902
+[3/500] 0002_gamma1.1299999952: vae_only=0.11798  vae+dit=0.51353  latent_vrmse=0.31808
+[4/500] 0003_gamma1.1299999952: vae_only=0.06583  vae+dit=0.41272  latent_vrmse=0.27556
+[5/500] 0004_gamma1.1299999952: vae_only=0.05756  vae+dit=0.27214  latent_vrmse=0.20980
+[6/500] 0005_gamma1.1299999952: vae_only=0.06453  vae+dit=0.47879  latent_vrmse=0.35040
+[7/500] 0006_gamma1.1299999952: vae_only=0.08568  vae+dit=0.52469  latent_vrmse=0.34596
+[8/500] 0007_gamma1.1299999952: vae_only=0.06589  vae+dit=0.42055  latent_vrmse=0.28812
+[9/500] 0008_gamma1.1299999952: vae_only=0.05929  vae+dit=0.32111  latent_vrmse=0.24081
+[10/500] 0009_gamma1.1299999952: vae_only=0.12933  vae+dit=0.80938  latent_vrmse=0.53546
+[11/500] 0010_gamma1.1299999952: vae_only=0.05684  vae+dit=0.34639  latent_vrmse=0.27354
+[12/500] 0011_gamma1.1299999952: vae_only=0.08985  vae+dit=0.40568  latent_vrmse=0.25439
+[13/500] 0012_gamma1.1299999952: vae_only=0.11031  vae+dit=0.64329  latent_vrmse=0.39840
+[14/500] 0013_gamma1.1299999952: vae_only=0.09117  vae+dit=0.45750  latent_vrmse=0.35881
+[15/500] 0014_gamma1.1299999952: vae_only=0.06537  vae+dit=0.33844  latent_vrmse=0.25392
+[16/500] 0015_gamma1.1299999952: vae_only=0.03729  vae+dit=0.29024  latent_vrmse=0.37660
+[17/500] 0016_gamma1.1299999952: vae_only=0.02344  vae+dit=0.13979  latent_vrmse=0.08902
+[18/500] 0017_gamma1.1299999952: vae_only=0.03386  vae+dit=0.21350  latent_vrmse=0.18028
+[19/500] 0018_gamma1.1299999952: vae_only=0.09310  vae+dit=0.53093  latent_vrmse=0.33599
+[20/500] 0019_gamma1.1299999952: vae_only=0.06242  vae+dit=0.37776  latent_vrmse=0.25750
+[21/500] 0020_gamma1.1299999952: vae_only=0.14193  vae+dit=0.68445  latent_vrmse=0.39236
+[22/500] 0021_gamma1.1299999952: vae_only=0.12369  vae+dit=0.61165  latent_vrmse=0.38856
+[23/500] 0022_gamma1.1299999952: vae_only=0.14383  vae+dit=0.55619  latent_vrmse=0.31882
+[24/500] 0023_gamma1.1299999952: vae_only=0.06980  vae+dit=0.36104  latent_vrmse=0.21259
+[25/500] 0024_gamma1.1299999952: vae_only=0.07149  vae+dit=0.50394  latent_vrmse=0.39899
+[26/500] 0025_gamma1.1299999952: vae_only=0.04639  vae+dit=0.24694  latent_vrmse=0.19626
+[27/500] 0026_gamma1.1299999952: vae_only=0.13281  vae+dit=0.60042  latent_vrmse=0.46201
+[28/500] 0027_gamma1.1299999952: vae_only=0.03931  vae+dit=0.29988  latent_vrmse=0.27687
+[29/500] 0028_gamma1.1299999952: vae_only=0.10595  vae+dit=0.58209  latent_vrmse=0.40248
+[30/500] 0029_gamma1.1299999952: vae_only=0.03537  vae+dit=0.28087  latent_vrmse=0.31590
+[31/500] 0030_gamma1.1299999952: vae_only=0.03906  vae+dit=0.28791  latent_vrmse=0.15115
+[32/500] 0031_gamma1.1299999952: vae_only=0.04987  vae+dit=0.32792  latent_vrmse=0.17900
+[33/500] 0032_gamma1.1299999952: vae_only=0.08743  vae+dit=0.47349  latent_vrmse=0.39870
+[34/500] 0033_gamma1.1299999952: vae_only=0.07396  vae+dit=0.37972  latent_vrmse=0.38536
+[35/500] 0034_gamma1.1299999952: vae_only=0.03748  vae+dit=0.23528  latent_vrmse=0.17900
+[36/500] 0035_gamma1.1299999952: vae_only=0.08579  vae+dit=0.55331  latent_vrmse=0.45315
+[37/500] 0036_gamma1.1299999952: vae_only=0.10961  vae+dit=0.52105  latent_vrmse=0.36634
+[38/500] 0037_gamma1.1299999952: vae_only=0.04238  vae+dit=0.27224  latent_vrmse=0.18392
+[39/500] 0038_gamma1.1299999952: vae_only=0.06773  vae+dit=0.41991  latent_vrmse=0.32579
+[40/500] 0039_gamma1.1299999952: vae_only=0.14087  vae+dit=0.53460  latent_vrmse=0.33542
+[41/500] 0040_gamma1.1299999952: vae_only=0.05301  vae+dit=0.29719  latent_vrmse=0.21088
+[42/500] 0041_gamma1.1299999952: vae_only=0.17485  vae+dit=0.70229  latent_vrmse=0.44111
+[43/500] 0042_gamma1.1299999952: vae_only=0.05231  vae+dit=0.28564  latent_vrmse=0.16185
+[44/500] 0043_gamma1.1299999952: vae_only=0.04596  vae+dit=0.37467  latent_vrmse=0.19590
+[45/500] 0044_gamma1.1299999952: vae_only=0.09001  vae+dit=0.51307  latent_vrmse=0.32328
+[46/500] 0045_gamma1.1299999952: vae_only=0.15581  vae+dit=0.61710  latent_vrmse=0.31887
+[47/500] 0046_gamma1.1299999952: vae_only=0.07367  vae+dit=0.40770  latent_vrmse=0.30411
+[48/500] 0047_gamma1.1299999952: vae_only=0.03301  vae+dit=0.13691  latent_vrmse=0.12145
+[49/500] 0048_gamma1.1299999952: vae_only=0.06084  vae+dit=0.43433  latent_vrmse=0.28314
+[50/500] 0049_gamma1.1299999952: vae_only=0.06050  vae+dit=0.41699  latent_vrmse=0.32642
+[51/500] 0050_gamma1.2200000286: vae_only=0.07918  vae+dit=0.42866  latent_vrmse=0.33008
+[52/500] 0051_gamma1.2200000286: vae_only=0.09632  vae+dit=0.49046  latent_vrmse=0.30468
+[53/500] 0052_gamma1.2200000286: vae_only=0.02872  vae+dit=0.15260  latent_vrmse=0.15289
+[54/500] 0053_gamma1.2200000286: vae_only=0.04213  vae+dit=0.23565  latent_vrmse=0.18333
+[55/500] 0054_gamma1.2200000286: vae_only=0.02921  vae+dit=0.18442  latent_vrmse=0.14747
+[56/500] 0055_gamma1.2200000286: vae_only=0.07189  vae+dit=0.44281  latent_vrmse=0.24203
+[57/500] 0056_gamma1.2200000286: vae_only=0.03406  vae+dit=0.23033  latent_vrmse=0.13569
+[58/500] 0057_gamma1.2200000286: vae_only=0.05604  vae+dit=0.49742  latent_vrmse=0.20910
+[59/500] 0058_gamma1.2200000286: vae_only=0.03776  vae+dit=0.24035  latent_vrmse=0.18321
+[60/500] 0059_gamma1.2200000286: vae_only=0.04227  vae+dit=0.18517  latent_vrmse=0.18754
+[61/500] 0060_gamma1.2200000286: vae_only=0.12260  vae+dit=0.54721  latent_vrmse=0.36705
+[62/500] 0061_gamma1.2200000286: vae_only=0.02926  vae+dit=0.22949  latent_vrmse=0.13565
+[63/500] 0062_gamma1.2200000286: vae_only=0.04371  vae+dit=0.29252  latent_vrmse=0.14217
+[64/500] 0063_gamma1.2200000286: vae_only=0.06780  vae+dit=0.42779  latent_vrmse=0.34749
+[65/500] 0064_gamma1.2200000286: vae_only=0.02214  vae+dit=0.13515  latent_vrmse=0.11393
+[66/500] 0065_gamma1.2200000286: vae_only=0.14493  vae+dit=0.68646  latent_vrmse=0.44517
+[67/500] 0066_gamma1.2200000286: vae_only=0.04032  vae+dit=0.29308  latent_vrmse=0.23226
+[68/500] 0067_gamma1.2200000286: vae_only=0.04852  vae+dit=0.35081  latent_vrmse=0.22459
+[69/500] 0068_gamma1.2200000286: vae_only=0.06086  vae+dit=0.30348  latent_vrmse=0.25982
+[70/500] 0069_gamma1.2200000286: vae_only=0.05122  vae+dit=0.51113  latent_vrmse=0.28060
+[71/500] 0070_gamma1.2200000286: vae_only=0.07332  vae+dit=0.40128  latent_vrmse=0.26286
+[72/500] 0071_gamma1.2200000286: vae_only=0.10849  vae+dit=0.53974  latent_vrmse=0.39228
+[73/500] 0072_gamma1.2200000286: vae_only=0.06063  vae+dit=0.43116  latent_vrmse=0.33506
+[74/500] 0073_gamma1.2200000286: vae_only=0.06884  vae+dit=0.48172  latent_vrmse=0.31750
+[75/500] 0074_gamma1.2200000286: vae_only=0.08497  vae+dit=0.44729  latent_vrmse=0.32498
+[76/500] 0075_gamma1.2200000286: vae_only=0.14342  vae+dit=0.74215  latent_vrmse=0.47296
+[77/500] 0076_gamma1.2200000286: vae_only=0.01453  vae+dit=0.07146  latent_vrmse=0.06108
+[78/500] 0077_gamma1.2200000286: vae_only=0.06871  vae+dit=0.41723  latent_vrmse=0.29385
+[79/500] 0078_gamma1.2200000286: vae_only=0.10623  vae+dit=0.37612  latent_vrmse=0.25251
+[80/500] 0079_gamma1.2200000286: vae_only=0.07162  vae+dit=0.39508  latent_vrmse=0.25757
+[81/500] 0080_gamma1.2200000286: vae_only=0.03128  vae+dit=0.26815  latent_vrmse=0.35010
+[82/500] 0081_gamma1.2200000286: vae_only=0.08711  vae+dit=0.40139  latent_vrmse=0.34638
+[83/500] 0082_gamma1.2200000286: vae_only=0.11002  vae+dit=0.56906  latent_vrmse=0.38884
+[84/500] 0083_gamma1.2200000286: vae_only=0.10958  vae+dit=0.52980  latent_vrmse=0.36389
+[85/500] 0084_gamma1.2200000286: vae_only=0.07133  vae+dit=0.42633  latent_vrmse=0.31219
+[86/500] 0085_gamma1.2200000286: vae_only=0.12410  vae+dit=0.57629  latent_vrmse=0.38272
+[87/500] 0086_gamma1.2200000286: vae_only=0.02251  vae+dit=0.17921  latent_vrmse=0.17241
+[88/500] 0087_gamma1.2200000286: vae_only=0.08069  vae+dit=0.49860  latent_vrmse=0.43947
+[89/500] 0088_gamma1.2200000286: vae_only=0.06937  vae+dit=0.37539  latent_vrmse=0.18907
+[90/500] 0089_gamma1.2200000286: vae_only=0.06620  vae+dit=0.24279  latent_vrmse=0.20883
+[91/500] 0090_gamma1.2200000286: vae_only=0.07327  vae+dit=0.40300  latent_vrmse=0.21313
+[92/500] 0091_gamma1.2200000286: vae_only=0.04992  vae+dit=0.31334  latent_vrmse=0.24783
+[93/500] 0092_gamma1.2200000286: vae_only=0.05604  vae+dit=0.41962  latent_vrmse=0.38839
+[94/500] 0093_gamma1.2200000286: vae_only=0.06295  vae+dit=0.42906  latent_vrmse=0.26866
+[95/500] 0094_gamma1.2200000286: vae_only=0.09644  vae+dit=0.46905  latent_vrmse=0.37485
+[96/500] 0095_gamma1.2200000286: vae_only=0.02110  vae+dit=0.13989  latent_vrmse=0.12264
+[97/500] 0096_gamma1.2200000286: vae_only=0.10552  vae+dit=0.49652  latent_vrmse=0.33164
+[98/500] 0097_gamma1.2200000286: vae_only=0.12212  vae+dit=0.60828  latent_vrmse=0.40074
+[99/500] 0098_gamma1.2200000286: vae_only=0.05878  vae+dit=0.28313  latent_vrmse=0.25613
+[100/500] 0099_gamma1.2200000286: vae_only=0.03631  vae+dit=0.27989  latent_vrmse=0.12642
+[101/500] 0100_gamma1.2999999523: vae_only=0.04137  vae+dit=0.34446  latent_vrmse=0.29350
+[102/500] 0101_gamma1.2999999523: vae_only=0.03592  vae+dit=0.23256  latent_vrmse=0.33049
+[103/500] 0102_gamma1.2999999523: vae_only=0.04119  vae+dit=0.28351  latent_vrmse=0.22964
+[104/500] 0103_gamma1.2999999523: vae_only=0.07048  vae+dit=0.30387  latent_vrmse=0.18691
+[105/500] 0104_gamma1.2999999523: vae_only=0.03713  vae+dit=0.26186  latent_vrmse=0.22318
+[106/500] 0105_gamma1.2999999523: vae_only=0.04548  vae+dit=0.27241  latent_vrmse=0.24540
+[107/500] 0106_gamma1.2999999523: vae_only=0.09737  vae+dit=0.50006  latent_vrmse=0.41933
+[108/500] 0107_gamma1.2999999523: vae_only=0.06035  vae+dit=0.40927  latent_vrmse=0.24644
+[109/500] 0108_gamma1.2999999523: vae_only=0.09523  vae+dit=0.50742  latent_vrmse=0.31215
+[110/500] 0109_gamma1.2999999523: vae_only=0.06603  vae+dit=0.46623  latent_vrmse=0.43761
+[111/500] 0110_gamma1.2999999523: vae_only=0.04023  vae+dit=0.35134  latent_vrmse=0.26035
+[112/500] 0111_gamma1.2999999523: vae_only=0.02277  vae+dit=0.13698  latent_vrmse=0.08843
+[113/500] 0112_gamma1.2999999523: vae_only=0.05869  vae+dit=0.40858  latent_vrmse=0.38796
+[114/500] 0113_gamma1.2999999523: vae_only=0.02222  vae+dit=0.14701  latent_vrmse=0.14695
+[115/500] 0114_gamma1.2999999523: vae_only=0.08921  vae+dit=0.42832  latent_vrmse=0.15863
+[116/500] 0115_gamma1.2999999523: vae_only=0.02089  vae+dit=0.16761  latent_vrmse=0.12560
+[117/500] 0116_gamma1.2999999523: vae_only=0.08296  vae+dit=0.45033  latent_vrmse=0.35766
+[118/500] 0117_gamma1.2999999523: vae_only=0.03588  vae+dit=0.20230  latent_vrmse=0.19112
+[119/500] 0118_gamma1.2999999523: vae_only=0.04153  vae+dit=0.21633  latent_vrmse=0.13958
+[120/500] 0119_gamma1.2999999523: vae_only=0.10666  vae+dit=0.45880  latent_vrmse=0.34179
+[121/500] 0120_gamma1.2999999523: vae_only=0.10561  vae+dit=0.43986  latent_vrmse=0.27394
+[122/500] 0121_gamma1.2999999523: vae_only=0.03487  vae+dit=0.21983  latent_vrmse=0.18129
+[123/500] 0122_gamma1.2999999523: vae_only=0.03614  vae+dit=0.26530  latent_vrmse=0.22870
+[124/500] 0123_gamma1.2999999523: vae_only=0.03961  vae+dit=0.18685  latent_vrmse=0.09579
+[125/500] 0124_gamma1.2999999523: vae_only=0.10339  vae+dit=0.47084  latent_vrmse=0.27542
+[126/500] 0125_gamma1.2999999523: vae_only=0.02725  vae+dit=0.15951  latent_vrmse=0.14060
+[127/500] 0126_gamma1.2999999523: vae_only=0.02748  vae+dit=0.26447  latent_vrmse=0.26663
+[128/500] 0127_gamma1.2999999523: vae_only=0.05291  vae+dit=0.34978  latent_vrmse=0.26862
+[129/500] 0128_gamma1.2999999523: vae_only=0.13023  vae+dit=0.61001  latent_vrmse=0.47325
+[130/500] 0129_gamma1.2999999523: vae_only=0.04628  vae+dit=0.30563  latent_vrmse=0.15577
+[131/500] 0130_gamma1.2999999523: vae_only=0.07149  vae+dit=0.46899  latent_vrmse=0.31289
+[132/500] 0131_gamma1.2999999523: vae_only=0.02633  vae+dit=0.21223  latent_vrmse=0.14976
+[133/500] 0132_gamma1.2999999523: vae_only=0.02818  vae+dit=0.16740  latent_vrmse=0.16316
+[134/500] 0133_gamma1.2999999523: vae_only=0.11427  vae+dit=0.48732  latent_vrmse=0.35081
+[135/500] 0134_gamma1.2999999523: vae_only=0.05672  vae+dit=0.32910  latent_vrmse=0.21470
+[136/500] 0135_gamma1.2999999523: vae_only=0.07189  vae+dit=0.32376  latent_vrmse=0.40753
+[137/500] 0136_gamma1.2999999523: vae_only=0.08590  vae+dit=0.43302  latent_vrmse=0.29367
+[138/500] 0137_gamma1.2999999523: vae_only=0.05615  vae+dit=0.40535  latent_vrmse=0.38933
+[139/500] 0138_gamma1.2999999523: vae_only=0.08865  vae+dit=0.58373  latent_vrmse=0.32777
+[140/500] 0139_gamma1.2999999523: vae_only=0.05330  vae+dit=0.34824  latent_vrmse=0.24775
+[141/500] 0140_gamma1.2999999523: vae_only=0.02880  vae+dit=0.17117  latent_vrmse=0.13034
+[142/500] 0141_gamma1.2999999523: vae_only=0.09507  vae+dit=0.56818  latent_vrmse=0.42347
+[143/500] 0142_gamma1.2999999523: vae_only=0.05138  vae+dit=0.31662  latent_vrmse=0.21309
+[144/500] 0143_gamma1.2999999523: vae_only=0.03160  vae+dit=0.26772  latent_vrmse=0.21898
+[145/500] 0144_gamma1.2999999523: vae_only=0.05177  vae+dit=0.39460  latent_vrmse=0.31996
+[146/500] 0145_gamma1.2999999523: vae_only=0.09678  vae+dit=0.38609  latent_vrmse=0.23805
+[147/500] 0146_gamma1.2999999523: vae_only=0.09771  vae+dit=0.45485  latent_vrmse=0.31285
+[148/500] 0147_gamma1.2999999523: vae_only=0.10189  vae+dit=0.38475  latent_vrmse=0.22486
+[149/500] 0148_gamma1.2999999523: vae_only=0.11261  vae+dit=0.57582  latent_vrmse=0.44143
+[150/500] 0149_gamma1.2999999523: vae_only=0.04232  vae+dit=0.30308  latent_vrmse=0.22176
+[151/500] 0150_gamma1.3300000429: vae_only=0.06278  vae+dit=0.34644  latent_vrmse=0.20697
+[152/500] 0151_gamma1.3300000429: vae_only=0.09385  vae+dit=0.51409  latent_vrmse=0.30287
+[153/500] 0152_gamma1.3300000429: vae_only=0.03017  vae+dit=0.23833  latent_vrmse=0.17027
+[154/500] 0153_gamma1.3300000429: vae_only=0.08480  vae+dit=0.46788  latent_vrmse=0.31650
+[155/500] 0154_gamma1.3300000429: vae_only=0.06353  vae+dit=0.39846  latent_vrmse=0.27901
+[156/500] 0155_gamma1.3300000429: vae_only=0.07523  vae+dit=0.45079  latent_vrmse=0.36166
+[157/500] 0156_gamma1.3300000429: vae_only=0.04808  vae+dit=0.31888  latent_vrmse=0.29027
+[158/500] 0157_gamma1.3300000429: vae_only=0.02112  vae+dit=0.16866  latent_vrmse=0.12814
+[159/500] 0158_gamma1.3300000429: vae_only=0.02151  vae+dit=0.07667  latent_vrmse=0.07403
+[160/500] 0159_gamma1.3300000429: vae_only=0.03681  vae+dit=0.21148  latent_vrmse=0.15017
+[161/500] 0160_gamma1.3300000429: vae_only=0.06713  vae+dit=0.41409  latent_vrmse=0.39131
+[162/500] 0161_gamma1.3300000429: vae_only=0.06745  vae+dit=0.37218  latent_vrmse=0.23803
+[163/500] 0162_gamma1.3300000429: vae_only=0.02119  vae+dit=0.17060  latent_vrmse=0.15789
+[164/500] 0163_gamma1.3300000429: vae_only=0.10474  vae+dit=0.59169  latent_vrmse=0.38175
+[165/500] 0164_gamma1.3300000429: vae_only=0.07768  vae+dit=0.47067  latent_vrmse=0.34444
+[166/500] 0165_gamma1.3300000429: vae_only=0.09418  vae+dit=0.47467  latent_vrmse=0.37911
+[167/500] 0166_gamma1.3300000429: vae_only=0.05784  vae+dit=0.40236  latent_vrmse=0.21349
+[168/500] 0167_gamma1.3300000429: vae_only=0.10325  vae+dit=0.57734  latent_vrmse=0.41657
+[169/500] 0168_gamma1.3300000429: vae_only=0.03494  vae+dit=0.21289  latent_vrmse=0.18374
+[170/500] 0169_gamma1.3300000429: vae_only=0.13043  vae+dit=0.53670  latent_vrmse=0.39069
+[171/500] 0170_gamma1.3300000429: vae_only=0.07641  vae+dit=0.52805  latent_vrmse=0.29465
+[172/500] 0171_gamma1.3300000429: vae_only=0.06075  vae+dit=0.33549  latent_vrmse=0.18263
+[173/500] 0172_gamma1.3300000429: vae_only=0.09125  vae+dit=0.42435  latent_vrmse=0.25991
+[174/500] 0173_gamma1.3300000429: vae_only=0.07139  vae+dit=0.43925  latent_vrmse=0.27544
+[175/500] 0174_gamma1.3300000429: vae_only=0.06110  vae+dit=0.34424  latent_vrmse=0.38203
+[176/500] 0175_gamma1.3300000429: vae_only=0.01221  vae+dit=0.08007  latent_vrmse=0.07070
+[177/500] 0176_gamma1.3300000429: vae_only=0.14259  vae+dit=0.53829  latent_vrmse=0.30720
+[178/500] 0177_gamma1.3300000429: vae_only=0.09739  vae+dit=0.61492  latent_vrmse=0.47851
+[179/500] 0178_gamma1.3300000429: vae_only=0.05041  vae+dit=0.31710  latent_vrmse=0.26641
+[180/500] 0179_gamma1.3300000429: vae_only=0.02158  vae+dit=0.19259  latent_vrmse=0.15949
+[181/500] 0180_gamma1.3300000429: vae_only=0.07016  vae+dit=0.46691  latent_vrmse=0.24970
+[182/500] 0181_gamma1.3300000429: vae_only=0.03834  vae+dit=0.27847  latent_vrmse=0.21870
+[183/500] 0182_gamma1.3300000429: vae_only=0.04146  vae+dit=0.38811  latent_vrmse=0.28843
+[184/500] 0183_gamma1.3300000429: vae_only=0.05336  vae+dit=0.42517  latent_vrmse=0.30352
+[185/500] 0184_gamma1.3300000429: vae_only=0.05072  vae+dit=0.27234  latent_vrmse=0.22324
+[186/500] 0185_gamma1.3300000429: vae_only=0.05603  vae+dit=0.39713  latent_vrmse=0.30612
+[187/500] 0186_gamma1.3300000429: vae_only=0.06075  vae+dit=0.50195  latent_vrmse=0.31149
+[188/500] 0187_gamma1.3300000429: vae_only=0.06899  vae+dit=0.51932  latent_vrmse=0.28501
+[189/500] 0188_gamma1.3300000429: vae_only=0.01434  vae+dit=0.09011  latent_vrmse=0.06629
+[190/500] 0189_gamma1.3300000429: vae_only=0.04655  vae+dit=0.27306  latent_vrmse=0.14332
+[191/500] 0190_gamma1.3300000429: vae_only=0.10822  vae+dit=0.49317  latent_vrmse=0.31848
+[192/500] 0191_gamma1.3300000429: vae_only=0.05304  vae+dit=0.39701  latent_vrmse=0.21885
+[193/500] 0192_gamma1.3300000429: vae_only=0.08245  vae+dit=0.49476  latent_vrmse=0.38328
+[194/500] 0193_gamma1.3300000429: vae_only=0.02936  vae+dit=0.21841  latent_vrmse=0.16344
+[195/500] 0194_gamma1.3300000429: vae_only=0.06103  vae+dit=0.45762  latent_vrmse=0.45697
+[196/500] 0195_gamma1.3300000429: vae_only=0.06153  vae+dit=0.42351  latent_vrmse=0.18670
+[197/500] 0196_gamma1.3300000429: vae_only=0.04898  vae+dit=0.27715  latent_vrmse=0.18730
+[198/500] 0197_gamma1.3300000429: vae_only=0.06064  vae+dit=0.46586  latent_vrmse=0.40055
+[199/500] 0198_gamma1.3300000429: vae_only=0.04287  vae+dit=0.30520  latent_vrmse=0.17326
+[200/500] 0199_gamma1.3300000429: vae_only=0.03664  vae+dit=0.22809  latent_vrmse=0.18552
+[201/500] 0200_gamma1.3650000095: vae_only=0.06663  vae+dit=0.47471  latent_vrmse=0.28266
+[202/500] 0201_gamma1.3650000095: vae_only=0.03396  vae+dit=0.23389  latent_vrmse=0.35080
+[203/500] 0202_gamma1.3650000095: vae_only=0.07866  vae+dit=0.52850  latent_vrmse=0.36433
+[204/500] 0203_gamma1.3650000095: vae_only=0.08180  vae+dit=0.49886  latent_vrmse=0.36954
+[205/500] 0204_gamma1.3650000095: vae_only=0.05269  vae+dit=0.34277  latent_vrmse=0.22745
+[206/500] 0205_gamma1.3650000095: vae_only=0.06035  vae+dit=0.36965  latent_vrmse=0.32629
+[207/500] 0206_gamma1.3650000095: vae_only=0.06134  vae+dit=0.43201  latent_vrmse=0.22672
+[208/500] 0207_gamma1.3650000095: vae_only=0.10308  vae+dit=0.48974  latent_vrmse=0.37336
+[209/500] 0208_gamma1.3650000095: vae_only=0.04725  vae+dit=0.32958  latent_vrmse=0.34189
+[210/500] 0209_gamma1.3650000095: vae_only=0.02828  vae+dit=0.16063  latent_vrmse=0.14621
+[211/500] 0210_gamma1.3650000095: vae_only=0.08371  vae+dit=0.40955  latent_vrmse=0.23938
+[212/500] 0211_gamma1.3650000095: vae_only=0.07462  vae+dit=0.51780  latent_vrmse=0.35744
+[213/500] 0212_gamma1.3650000095: vae_only=0.05503  vae+dit=0.36260  latent_vrmse=0.28132
+[214/500] 0213_gamma1.3650000095: vae_only=0.05645  vae+dit=0.42500  latent_vrmse=0.36433
+[215/500] 0214_gamma1.3650000095: vae_only=0.05868  vae+dit=0.45112  latent_vrmse=0.41402
+[216/500] 0215_gamma1.3650000095: vae_only=0.03470  vae+dit=0.18511  latent_vrmse=0.15788
+[217/500] 0216_gamma1.3650000095: vae_only=0.03259  vae+dit=0.25175  latent_vrmse=0.23627
+[218/500] 0217_gamma1.3650000095: vae_only=0.11272  vae+dit=0.40597  latent_vrmse=0.25511
+[219/500] 0218_gamma1.3650000095: vae_only=0.13868  vae+dit=0.69212  latent_vrmse=0.49114
+[220/500] 0219_gamma1.3650000095: vae_only=0.02394  vae+dit=0.28218  latent_vrmse=0.23219
+[221/500] 0220_gamma1.3650000095: vae_only=0.05562  vae+dit=0.35101  latent_vrmse=0.23239
+[222/500] 0221_gamma1.3650000095: vae_only=0.02323  vae+dit=0.12133  latent_vrmse=0.06389
+[223/500] 0222_gamma1.3650000095: vae_only=0.04080  vae+dit=0.26619  latent_vrmse=0.22997
+[224/500] 0223_gamma1.3650000095: vae_only=0.04230  vae+dit=0.26665  latent_vrmse=0.22869
+[225/500] 0224_gamma1.3650000095: vae_only=0.04554  vae+dit=0.35841  latent_vrmse=0.16598
+[226/500] 0225_gamma1.3650000095: vae_only=0.02318  vae+dit=0.23136  latent_vrmse=0.16139
+[227/500] 0226_gamma1.3650000095: vae_only=0.14325  vae+dit=0.61355  latent_vrmse=0.39965
+[228/500] 0227_gamma1.3650000095: vae_only=0.02319  vae+dit=0.15841  latent_vrmse=0.12554
+[229/500] 0228_gamma1.3650000095: vae_only=0.06617  vae+dit=0.36987  latent_vrmse=0.33695
+[230/500] 0229_gamma1.3650000095: vae_only=0.04336  vae+dit=0.37217  latent_vrmse=0.37941
+[231/500] 0230_gamma1.3650000095: vae_only=0.06001  vae+dit=0.45215  latent_vrmse=0.30280
+[232/500] 0231_gamma1.3650000095: vae_only=0.08304  vae+dit=0.50510  latent_vrmse=0.36399
+[233/500] 0232_gamma1.3650000095: vae_only=0.04309  vae+dit=0.24384  latent_vrmse=0.18189
+[234/500] 0233_gamma1.3650000095: vae_only=0.05888  vae+dit=0.29431  latent_vrmse=0.25391
+[235/500] 0234_gamma1.3650000095: vae_only=0.09548  vae+dit=0.54681  latent_vrmse=0.38965
+[236/500] 0235_gamma1.3650000095: vae_only=0.05762  vae+dit=0.42276  latent_vrmse=0.19592
+[237/500] 0236_gamma1.3650000095: vae_only=0.05408  vae+dit=0.35676  latent_vrmse=0.13915
+[238/500] 0237_gamma1.3650000095: vae_only=0.04460  vae+dit=0.28503  latent_vrmse=0.17625
+[239/500] 0238_gamma1.3650000095: vae_only=0.06742  vae+dit=0.35617  latent_vrmse=0.29041
+[240/500] 0239_gamma1.3650000095: vae_only=0.04154  vae+dit=0.41080  latent_vrmse=0.34627
+[241/500] 0240_gamma1.3650000095: vae_only=0.05706  vae+dit=0.28993  latent_vrmse=0.18153
+[242/500] 0241_gamma1.3650000095: vae_only=0.02259  vae+dit=0.15436  latent_vrmse=0.16318
+[243/500] 0242_gamma1.3650000095: vae_only=0.05061  vae+dit=0.35762  latent_vrmse=0.34008
+[244/500] 0243_gamma1.3650000095: vae_only=0.07719  vae+dit=0.51390  latent_vrmse=0.26732
+[245/500] 0244_gamma1.3650000095: vae_only=0.08668  vae+dit=0.47291  latent_vrmse=0.31063
+[246/500] 0245_gamma1.3650000095: vae_only=0.06022  vae+dit=0.37295  latent_vrmse=0.21148
+[247/500] 0246_gamma1.3650000095: vae_only=0.02736  vae+dit=0.10762  latent_vrmse=0.05644
+[248/500] 0247_gamma1.3650000095: vae_only=0.10265  vae+dit=0.61224  latent_vrmse=0.42417
+[249/500] 0248_gamma1.3650000095: vae_only=0.04104  vae+dit=0.31710  latent_vrmse=0.22803
+[250/500] 0249_gamma1.3650000095: vae_only=0.07267  vae+dit=0.56622  latent_vrmse=0.33951
+[251/500] 0250_gamma1.3999999762: vae_only=0.03982  vae+dit=0.30631  latent_vrmse=0.17217
+[252/500] 0251_gamma1.3999999762: vae_only=0.12809  vae+dit=0.60690  latent_vrmse=0.45337
+[253/500] 0252_gamma1.3999999762: vae_only=0.05422  vae+dit=0.35618  latent_vrmse=0.26419
+[254/500] 0253_gamma1.3999999762: vae_only=0.04383  vae+dit=0.32805  latent_vrmse=0.20839
+[255/500] 0254_gamma1.3999999762: vae_only=0.03683  vae+dit=0.28692  latent_vrmse=0.20238
+[256/500] 0255_gamma1.3999999762: vae_only=0.03759  vae+dit=0.30264  latent_vrmse=0.27686
+[257/500] 0256_gamma1.3999999762: vae_only=0.09924  vae+dit=0.51850  latent_vrmse=0.32963
+[258/500] 0257_gamma1.3999999762: vae_only=0.09204  vae+dit=0.53795  latent_vrmse=0.40193
+[259/500] 0258_gamma1.3999999762: vae_only=0.02421  vae+dit=0.12103  latent_vrmse=0.11282
+[260/500] 0259_gamma1.3999999762: vae_only=0.07646  vae+dit=0.38487  latent_vrmse=0.29652
+[261/500] 0260_gamma1.3999999762: vae_only=0.05658  vae+dit=0.33165  latent_vrmse=0.26049
+[262/500] 0261_gamma1.3999999762: vae_only=0.03901  vae+dit=0.43114  latent_vrmse=0.26240
+[263/500] 0262_gamma1.3999999762: vae_only=0.05014  vae+dit=0.28667  latent_vrmse=0.22549
+[264/500] 0263_gamma1.3999999762: vae_only=0.04056  vae+dit=0.28040  latent_vrmse=0.13365
+[265/500] 0264_gamma1.3999999762: vae_only=0.06917  vae+dit=0.49008  latent_vrmse=0.28642
+[266/500] 0265_gamma1.3999999762: vae_only=0.05059  vae+dit=0.27964  latent_vrmse=0.22117
+[267/500] 0266_gamma1.3999999762: vae_only=0.05595  vae+dit=0.37939  latent_vrmse=0.25311
+[268/500] 0267_gamma1.3999999762: vae_only=0.06550  vae+dit=0.37768  latent_vrmse=0.20246
+[269/500] 0268_gamma1.3999999762: vae_only=0.05113  vae+dit=0.38123  latent_vrmse=0.32936
+[270/500] 0269_gamma1.3999999762: vae_only=0.10327  vae+dit=0.46993  latent_vrmse=0.31460
+[271/500] 0270_gamma1.3999999762: vae_only=0.06236  vae+dit=0.36799  latent_vrmse=0.26226
+[272/500] 0271_gamma1.3999999762: vae_only=0.13476  vae+dit=0.73525  latent_vrmse=0.47066
+[273/500] 0272_gamma1.3999999762: vae_only=0.06136  vae+dit=0.38991  latent_vrmse=0.34308
+[274/500] 0273_gamma1.3999999762: vae_only=0.04279  vae+dit=0.32175  latent_vrmse=0.22406
+[275/500] 0274_gamma1.3999999762: vae_only=0.04293  vae+dit=0.33565  latent_vrmse=0.27441
+[276/500] 0275_gamma1.3999999762: vae_only=0.06410  vae+dit=0.47764  latent_vrmse=0.32340
+[277/500] 0276_gamma1.3999999762: vae_only=0.03620  vae+dit=0.26416  latent_vrmse=0.14481
+[278/500] 0277_gamma1.3999999762: vae_only=0.11818  vae+dit=0.61907  latent_vrmse=0.33354
+[279/500] 0278_gamma1.3999999762: vae_only=0.04962  vae+dit=0.30961  latent_vrmse=0.23627
+[280/500] 0279_gamma1.3999999762: vae_only=0.08173  vae+dit=0.41571  latent_vrmse=0.35359
+[281/500] 0280_gamma1.3999999762: vae_only=0.08108  vae+dit=0.44985  latent_vrmse=0.29349
+[282/500] 0281_gamma1.3999999762: vae_only=0.04555  vae+dit=0.37954  latent_vrmse=0.42770
+[283/500] 0282_gamma1.3999999762: vae_only=0.09962  vae+dit=0.58552  latent_vrmse=0.43469
+[284/500] 0283_gamma1.3999999762: vae_only=0.05608  vae+dit=0.25881  latent_vrmse=0.15369
+[285/500] 0284_gamma1.3999999762: vae_only=0.02263  vae+dit=0.13098  latent_vrmse=0.13099
+[286/500] 0285_gamma1.3999999762: vae_only=0.06072  vae+dit=0.45943  latent_vrmse=0.32414
+[287/500] 0286_gamma1.3999999762: vae_only=0.04481  vae+dit=0.31815  latent_vrmse=0.22378
+[288/500] 0287_gamma1.3999999762: vae_only=0.07765  vae+dit=0.30213  latent_vrmse=0.19795
+[289/500] 0288_gamma1.3999999762: vae_only=0.02829  vae+dit=0.11377  latent_vrmse=0.06318
+[290/500] 0289_gamma1.3999999762: vae_only=0.04364  vae+dit=0.31822  latent_vrmse=0.16427
+[291/500] 0290_gamma1.3999999762: vae_only=0.02678  vae+dit=0.20833  latent_vrmse=0.26095
+[292/500] 0291_gamma1.3999999762: vae_only=0.07800  vae+dit=0.42687  latent_vrmse=0.40279
+[293/500] 0292_gamma1.3999999762: vae_only=0.09097  vae+dit=0.50158  latent_vrmse=0.47385
+[294/500] 0293_gamma1.3999999762: vae_only=0.10457  vae+dit=0.56600  latent_vrmse=0.39764
+[295/500] 0294_gamma1.3999999762: vae_only=0.04349  vae+dit=0.30959  latent_vrmse=0.21649
+[296/500] 0295_gamma1.3999999762: vae_only=0.09173  vae+dit=0.50511  latent_vrmse=0.45499
+[297/500] 0296_gamma1.3999999762: vae_only=0.04171  vae+dit=0.32414  latent_vrmse=0.26467
+[298/500] 0297_gamma1.3999999762: vae_only=0.07972  vae+dit=0.47640  latent_vrmse=0.42801
+[299/500] 0298_gamma1.3999999762: vae_only=0.09601  vae+dit=0.48188  latent_vrmse=0.30284
+[300/500] 0299_gamma1.3999999762: vae_only=0.04547  vae+dit=0.27045  latent_vrmse=0.22243
+[301/500] 0300_gamma1.4040000439: vae_only=0.04702  vae+dit=0.42312  latent_vrmse=0.29473
+[302/500] 0301_gamma1.4040000439: vae_only=0.04006  vae+dit=0.33768  latent_vrmse=0.29565
+[303/500] 0302_gamma1.4040000439: vae_only=0.10404  vae+dit=0.51189  latent_vrmse=0.30982
+[304/500] 0303_gamma1.4040000439: vae_only=0.05169  vae+dit=0.31427  latent_vrmse=0.33073
+[305/500] 0304_gamma1.4040000439: vae_only=0.02979  vae+dit=0.25593  latent_vrmse=0.18284
+[306/500] 0305_gamma1.4040000439: vae_only=0.02398  vae+dit=0.14204  latent_vrmse=0.12412
+[307/500] 0306_gamma1.4040000439: vae_only=0.08022  vae+dit=0.41310  latent_vrmse=0.23689
+[308/500] 0307_gamma1.4040000439: vae_only=0.06468  vae+dit=0.37655  latent_vrmse=0.31010
+[309/500] 0308_gamma1.4040000439: vae_only=0.04302  vae+dit=0.25405  latent_vrmse=0.14530
+[310/500] 0309_gamma1.4040000439: vae_only=0.04958  vae+dit=0.36129  latent_vrmse=0.26630
+[311/500] 0310_gamma1.4040000439: vae_only=0.03625  vae+dit=0.27947  latent_vrmse=0.22175
+[312/500] 0311_gamma1.4040000439: vae_only=0.04798  vae+dit=0.33031  latent_vrmse=0.28171
+[313/500] 0312_gamma1.4040000439: vae_only=0.03475  vae+dit=0.27846  latent_vrmse=0.19005
+[314/500] 0313_gamma1.4040000439: vae_only=0.08769  vae+dit=0.47979  latent_vrmse=0.36563
+[315/500] 0314_gamma1.4040000439: vae_only=0.09339  vae+dit=0.34834  latent_vrmse=0.26919
+[316/500] 0315_gamma1.4040000439: vae_only=0.03920  vae+dit=0.27661  latent_vrmse=0.23612
+[317/500] 0316_gamma1.4040000439: vae_only=0.02041  vae+dit=0.12621  latent_vrmse=0.11732
+[318/500] 0317_gamma1.4040000439: vae_only=0.03198  vae+dit=0.24967  latent_vrmse=0.17720
+[319/500] 0318_gamma1.4040000439: vae_only=0.04663  vae+dit=0.34077  latent_vrmse=0.23712
+[320/500] 0319_gamma1.4040000439: vae_only=0.10233  vae+dit=0.50599  latent_vrmse=0.37797
+[321/500] 0320_gamma1.4040000439: vae_only=0.02714  vae+dit=0.18757  latent_vrmse=0.12537
+[322/500] 0321_gamma1.4040000439: vae_only=0.09770  vae+dit=0.42002  latent_vrmse=0.24107
+[323/500] 0322_gamma1.4040000439: vae_only=0.03197  vae+dit=0.22760  latent_vrmse=0.18282
+[324/500] 0323_gamma1.4040000439: vae_only=0.13939  vae+dit=0.69482  latent_vrmse=0.44954
+[325/500] 0324_gamma1.4040000439: vae_only=0.09606  vae+dit=0.45842  latent_vrmse=0.32255
+[326/500] 0325_gamma1.4040000439: vae_only=0.07207  vae+dit=0.36162  latent_vrmse=0.35792
+[327/500] 0326_gamma1.4040000439: vae_only=0.07069  vae+dit=0.25437  latent_vrmse=0.11994
+[328/500] 0327_gamma1.4040000439: vae_only=0.12218  vae+dit=0.56708  latent_vrmse=0.28031
+[329/500] 0328_gamma1.4040000439: vae_only=0.08397  vae+dit=0.42032  latent_vrmse=0.19259
+[330/500] 0329_gamma1.4040000439: vae_only=0.08604  vae+dit=0.55342  latent_vrmse=0.39570
+[331/500] 0330_gamma1.4040000439: vae_only=0.05971  vae+dit=0.32679  latent_vrmse=0.18240
+[332/500] 0331_gamma1.4040000439: vae_only=0.08658  vae+dit=0.48326  latent_vrmse=0.36726
+[333/500] 0332_gamma1.4040000439: vae_only=0.10812  vae+dit=0.48026  latent_vrmse=0.33007
+[334/500] 0333_gamma1.4040000439: vae_only=0.11754  vae+dit=0.62508  latent_vrmse=0.33077
+[335/500] 0334_gamma1.4040000439: vae_only=0.04596  vae+dit=0.33003  latent_vrmse=0.24459
+[336/500] 0335_gamma1.4040000439: vae_only=0.04301  vae+dit=0.22434  latent_vrmse=0.17390
+[337/500] 0336_gamma1.4040000439: vae_only=0.08910  vae+dit=0.48175  latent_vrmse=0.40985
+[338/500] 0337_gamma1.4040000439: vae_only=0.06227  vae+dit=0.34203  latent_vrmse=0.30998
+[339/500] 0338_gamma1.4040000439: vae_only=0.06721  vae+dit=0.39852  latent_vrmse=0.15869
+[340/500] 0339_gamma1.4040000439: vae_only=0.03773  vae+dit=0.23866  latent_vrmse=0.16301
+[341/500] 0340_gamma1.4040000439: vae_only=0.04465  vae+dit=0.28309  latent_vrmse=0.16620
+[342/500] 0341_gamma1.4040000439: vae_only=0.04476  vae+dit=0.27561  latent_vrmse=0.23341
+[343/500] 0342_gamma1.4040000439: vae_only=0.06874  vae+dit=0.48690  latent_vrmse=0.26996
+[344/500] 0343_gamma1.4040000439: vae_only=0.11282  vae+dit=0.56682  latent_vrmse=0.33116
+[345/500] 0344_gamma1.4040000439: vae_only=0.05044  vae+dit=0.37508  latent_vrmse=0.19377
+[346/500] 0345_gamma1.4040000439: vae_only=0.08366  vae+dit=0.50027  latent_vrmse=0.36444
+[347/500] 0346_gamma1.4040000439: vae_only=0.08036  vae+dit=0.45283  latent_vrmse=0.33095
+[348/500] 0347_gamma1.4040000439: vae_only=0.05030  vae+dit=0.33994  latent_vrmse=0.14660
+[349/500] 0348_gamma1.4040000439: vae_only=0.03816  vae+dit=0.27045  latent_vrmse=0.29425
+[350/500] 0349_gamma1.4040000439: vae_only=0.05878  vae+dit=0.44045  latent_vrmse=0.30550
+[351/500] 0350_gamma1.4529999495: vae_only=0.06281  vae+dit=0.37329  latent_vrmse=0.26360
+[352/500] 0351_gamma1.4529999495: vae_only=0.03562  vae+dit=0.23224  latent_vrmse=0.20195
+[353/500] 0352_gamma1.4529999495: vae_only=0.07942  vae+dit=0.45522  latent_vrmse=0.31495
+[354/500] 0353_gamma1.4529999495: vae_only=0.06350  vae+dit=0.42485  latent_vrmse=0.31948
+[355/500] 0354_gamma1.4529999495: vae_only=0.02357  vae+dit=0.13457  latent_vrmse=0.12822
+[356/500] 0355_gamma1.4529999495: vae_only=0.04000  vae+dit=0.29257  latent_vrmse=0.30534
+[357/500] 0356_gamma1.4529999495: vae_only=0.09867  vae+dit=0.50406  latent_vrmse=0.42317
+[358/500] 0357_gamma1.4529999495: vae_only=0.03401  vae+dit=0.23561  latent_vrmse=0.20735
+[359/500] 0358_gamma1.4529999495: vae_only=0.08483  vae+dit=0.63253  latent_vrmse=0.35632
+[360/500] 0359_gamma1.4529999495: vae_only=0.09965  vae+dit=0.59632  latent_vrmse=0.35376
+[361/500] 0360_gamma1.4529999495: vae_only=0.09820  vae+dit=0.61355  latent_vrmse=0.35889
+[362/500] 0361_gamma1.4529999495: vae_only=0.08646  vae+dit=0.45836  latent_vrmse=0.34940
+[363/500] 0362_gamma1.4529999495: vae_only=0.04674  vae+dit=0.30372  latent_vrmse=0.23472
+[364/500] 0363_gamma1.4529999495: vae_only=0.01987  vae+dit=0.09958  latent_vrmse=0.09893
+[365/500] 0364_gamma1.4529999495: vae_only=0.05454  vae+dit=0.28635  latent_vrmse=0.17452
+[366/500] 0365_gamma1.4529999495: vae_only=0.05663  vae+dit=0.33464  latent_vrmse=0.21959
+[367/500] 0366_gamma1.4529999495: vae_only=0.02336  vae+dit=0.12627  latent_vrmse=0.11995
+[368/500] 0367_gamma1.4529999495: vae_only=0.02375  vae+dit=0.22203  latent_vrmse=0.23165
+[369/500] 0368_gamma1.4529999495: vae_only=0.05554  vae+dit=0.36626  latent_vrmse=0.17710
+[370/500] 0369_gamma1.4529999495: vae_only=0.04832  vae+dit=0.29587  latent_vrmse=0.22543
+[371/500] 0370_gamma1.4529999495: vae_only=0.03676  vae+dit=0.30663  latent_vrmse=0.23558
+[372/500] 0371_gamma1.4529999495: vae_only=0.05307  vae+dit=0.34088  latent_vrmse=0.37707
+[373/500] 0372_gamma1.4529999495: vae_only=0.05010  vae+dit=0.38134  latent_vrmse=0.16014
+[374/500] 0373_gamma1.4529999495: vae_only=0.08764  vae+dit=0.51842  latent_vrmse=0.29925
+[375/500] 0374_gamma1.4529999495: vae_only=0.02044  vae+dit=0.13307  latent_vrmse=0.08800
+[376/500] 0375_gamma1.4529999495: vae_only=0.09319  vae+dit=0.49936  latent_vrmse=0.34148
+[377/500] 0376_gamma1.4529999495: vae_only=0.09594  vae+dit=0.49934  latent_vrmse=0.40813
+[378/500] 0377_gamma1.4529999495: vae_only=0.07831  vae+dit=0.48297  latent_vrmse=0.38124
+[379/500] 0378_gamma1.4529999495: vae_only=0.09147  vae+dit=0.59499  latent_vrmse=0.34946
+[380/500] 0379_gamma1.4529999495: vae_only=0.08404  vae+dit=0.45830  latent_vrmse=0.34610
+[381/500] 0380_gamma1.4529999495: vae_only=0.03896  vae+dit=0.25548  latent_vrmse=0.21371
+[382/500] 0381_gamma1.4529999495: vae_only=0.05530  vae+dit=0.37486  latent_vrmse=0.25586
+[383/500] 0382_gamma1.4529999495: vae_only=0.10090  vae+dit=0.59081  latent_vrmse=0.38334
+[384/500] 0383_gamma1.4529999495: vae_only=0.11275  vae+dit=0.64004  latent_vrmse=0.45087
+[385/500] 0384_gamma1.4529999495: vae_only=0.06412  vae+dit=0.31338  latent_vrmse=0.22896
+[386/500] 0385_gamma1.4529999495: vae_only=0.03303  vae+dit=0.26911  latent_vrmse=0.18763
+[387/500] 0386_gamma1.4529999495: vae_only=0.05881  vae+dit=0.22069  latent_vrmse=0.14831
+[388/500] 0387_gamma1.4529999495: vae_only=0.06413  vae+dit=0.50417  latent_vrmse=0.30098
+[389/500] 0388_gamma1.4529999495: vae_only=0.08325  vae+dit=0.47668  latent_vrmse=0.41354
+[390/500] 0389_gamma1.4529999495: vae_only=0.06751  vae+dit=0.49517  latent_vrmse=0.40780
+[391/500] 0390_gamma1.4529999495: vae_only=0.03116  vae+dit=0.35801  latent_vrmse=0.32357
+[392/500] 0391_gamma1.4529999495: vae_only=0.12355  vae+dit=0.74169  latent_vrmse=0.42852
+[393/500] 0392_gamma1.4529999495: vae_only=0.08424  vae+dit=0.54648  latent_vrmse=0.45250
+[394/500] 0393_gamma1.4529999495: vae_only=0.13327  vae+dit=0.56221  latent_vrmse=0.36049
+[395/500] 0394_gamma1.4529999495: vae_only=0.03173  vae+dit=0.30377  latent_vrmse=0.16754
+[396/500] 0395_gamma1.4529999495: vae_only=0.03991  vae+dit=0.20646  latent_vrmse=0.20901
+[397/500] 0396_gamma1.4529999495: vae_only=0.07411  vae+dit=0.43194  latent_vrmse=0.27720
+[398/500] 0397_gamma1.4529999495: vae_only=0.06263  vae+dit=0.44674  latent_vrmse=0.19780
+[399/500] 0398_gamma1.4529999495: vae_only=0.06673  vae+dit=0.46595  latent_vrmse=0.36679
+[400/500] 0399_gamma1.4529999495: vae_only=0.11293  vae+dit=0.46269  latent_vrmse=0.33391
+[401/500] 0400_gamma1.5970000029: vae_only=0.09741  vae+dit=0.55261  latent_vrmse=0.21308
+[402/500] 0401_gamma1.5970000029: vae_only=0.07141  vae+dit=0.57267  latent_vrmse=0.34727
+[403/500] 0402_gamma1.5970000029: vae_only=0.03684  vae+dit=0.28405  latent_vrmse=0.23199
+[404/500] 0403_gamma1.5970000029: vae_only=0.08078  vae+dit=0.45344  latent_vrmse=0.38368
+[405/500] 0404_gamma1.5970000029: vae_only=0.03854  vae+dit=0.30754  latent_vrmse=0.27165
+[406/500] 0405_gamma1.5970000029: vae_only=0.07251  vae+dit=0.53086  latent_vrmse=0.43073
+[407/500] 0406_gamma1.5970000029: vae_only=0.06305  vae+dit=0.42046  latent_vrmse=0.30988
+[408/500] 0407_gamma1.5970000029: vae_only=0.13449  vae+dit=0.61305  latent_vrmse=0.42198
+[409/500] 0408_gamma1.5970000029: vae_only=0.05038  vae+dit=0.39505  latent_vrmse=0.21484
+[410/500] 0409_gamma1.5970000029: vae_only=0.09111  vae+dit=0.59280  latent_vrmse=0.47958
+[411/500] 0410_gamma1.5970000029: vae_only=0.09707  vae+dit=0.29469  latent_vrmse=0.23416
+[412/500] 0411_gamma1.5970000029: vae_only=0.02863  vae+dit=0.16552  latent_vrmse=0.12780
+[413/500] 0412_gamma1.5970000029: vae_only=0.02378  vae+dit=0.15297  latent_vrmse=0.09284
+[414/500] 0413_gamma1.5970000029: vae_only=0.02855  vae+dit=0.14855  latent_vrmse=0.11862
+[415/500] 0414_gamma1.5970000029: vae_only=0.05367  vae+dit=0.34202  latent_vrmse=0.27748
+[416/500] 0415_gamma1.5970000029: vae_only=0.05892  vae+dit=0.40590  latent_vrmse=0.34568
+[417/500] 0416_gamma1.5970000029: vae_only=0.08037  vae+dit=0.51830  latent_vrmse=0.46871
+[418/500] 0417_gamma1.5970000029: vae_only=0.05308  vae+dit=0.32877  latent_vrmse=0.20553
+[419/500] 0418_gamma1.5970000029: vae_only=0.12331  vae+dit=0.57068  latent_vrmse=0.40625
+[420/500] 0419_gamma1.5970000029: vae_only=0.08039  vae+dit=0.36427  latent_vrmse=0.22556
+[421/500] 0420_gamma1.5970000029: vae_only=0.03975  vae+dit=0.29547  latent_vrmse=0.33687
+[422/500] 0421_gamma1.5970000029: vae_only=0.08430  vae+dit=0.43242  latent_vrmse=0.28408
+[423/500] 0422_gamma1.5970000029: vae_only=0.07485  vae+dit=0.60465  latent_vrmse=0.33712
+[424/500] 0423_gamma1.5970000029: vae_only=0.03277  vae+dit=0.18231  latent_vrmse=0.10956
+[425/500] 0424_gamma1.5970000029: vae_only=0.08852  vae+dit=0.49688  latent_vrmse=0.46001
+[426/500] 0425_gamma1.5970000029: vae_only=0.03626  vae+dit=0.28641  latent_vrmse=0.31924
+[427/500] 0426_gamma1.5970000029: vae_only=0.03937  vae+dit=0.23871  latent_vrmse=0.24691
+[428/500] 0427_gamma1.5970000029: vae_only=0.05680  vae+dit=0.30676  latent_vrmse=0.26094
+[429/500] 0428_gamma1.5970000029: vae_only=0.06543  vae+dit=0.38518  latent_vrmse=0.24473
+[430/500] 0429_gamma1.5970000029: vae_only=0.06309  vae+dit=0.43985  latent_vrmse=0.23267
+[431/500] 0430_gamma1.5970000029: vae_only=0.06475  vae+dit=0.40828  latent_vrmse=0.34883
+[432/500] 0431_gamma1.5970000029: vae_only=0.11725  vae+dit=0.49811  latent_vrmse=0.37654
+[433/500] 0432_gamma1.5970000029: vae_only=0.07988  vae+dit=0.45302  latent_vrmse=0.30210
+[434/500] 0433_gamma1.5970000029: vae_only=0.07632  vae+dit=0.52750  latent_vrmse=0.26862
+[435/500] 0434_gamma1.5970000029: vae_only=0.05039  vae+dit=0.29127  latent_vrmse=0.15134
+[436/500] 0435_gamma1.5970000029: vae_only=0.05248  vae+dit=0.34070  latent_vrmse=0.39085
+[437/500] 0436_gamma1.5970000029: vae_only=0.03985  vae+dit=0.41739  latent_vrmse=0.40562
+[438/500] 0437_gamma1.5970000029: vae_only=0.09915  vae+dit=0.51079  latent_vrmse=0.33157
+[439/500] 0438_gamma1.5970000029: vae_only=0.02408  vae+dit=0.17380  latent_vrmse=0.09750
+[440/500] 0439_gamma1.5970000029: vae_only=0.05463  vae+dit=0.30502  latent_vrmse=0.19462
+[441/500] 0440_gamma1.5970000029: vae_only=0.07156  vae+dit=0.28417  latent_vrmse=0.23979
+[442/500] 0441_gamma1.5970000029: vae_only=0.07491  vae+dit=0.45160  latent_vrmse=0.26425
+[443/500] 0442_gamma1.5970000029: vae_only=0.03643  vae+dit=0.32993  latent_vrmse=0.34308
+[444/500] 0443_gamma1.5970000029: vae_only=0.04315  vae+dit=0.41333  latent_vrmse=0.26285
+[445/500] 0444_gamma1.5970000029: vae_only=0.10739  vae+dit=0.63143  latent_vrmse=0.34440
+[446/500] 0445_gamma1.5970000029: vae_only=0.05281  vae+dit=0.29898  latent_vrmse=0.30800
+[447/500] 0446_gamma1.5970000029: vae_only=0.04698  vae+dit=0.30562  latent_vrmse=0.40758
+[448/500] 0447_gamma1.5970000029: vae_only=0.04498  vae+dit=0.25737  latent_vrmse=0.16947
+[449/500] 0448_gamma1.5970000029: vae_only=0.03593  vae+dit=0.18538  latent_vrmse=0.13038
+[450/500] 0449_gamma1.5970000029: vae_only=0.08111  vae+dit=0.44870  latent_vrmse=0.37297
+[451/500] 0450_gamma1.7599999905: vae_only=0.12481  vae+dit=0.53442  latent_vrmse=0.29776
+[452/500] 0451_gamma1.7599999905: vae_only=0.07423  vae+dit=0.57691  latent_vrmse=0.41666
+[453/500] 0452_gamma1.7599999905: vae_only=0.08089  vae+dit=0.51865  latent_vrmse=0.29975
+[454/500] 0453_gamma1.7599999905: vae_only=0.05175  vae+dit=0.29458  latent_vrmse=0.26673
+[455/500] 0454_gamma1.7599999905: vae_only=0.10191  vae+dit=0.34392  latent_vrmse=0.22439
+[456/500] 0455_gamma1.7599999905: vae_only=0.05376  vae+dit=0.38761  latent_vrmse=0.21710
+[457/500] 0456_gamma1.7599999905: vae_only=0.04371  vae+dit=0.33325  latent_vrmse=0.27978
+[458/500] 0457_gamma1.7599999905: vae_only=0.03636  vae+dit=0.25155  latent_vrmse=0.13252
+[459/500] 0458_gamma1.7599999905: vae_only=0.06103  vae+dit=0.44292  latent_vrmse=0.46306
+[460/500] 0459_gamma1.7599999905: vae_only=0.04206  vae+dit=0.29234  latent_vrmse=0.24037
+[461/500] 0460_gamma1.7599999905: vae_only=0.05147  vae+dit=0.42082  latent_vrmse=0.18811
+[462/500] 0461_gamma1.7599999905: vae_only=0.08793  vae+dit=0.49677  latent_vrmse=0.30433
+[463/500] 0462_gamma1.7599999905: vae_only=0.07873  vae+dit=0.54351  latent_vrmse=0.33159
+[464/500] 0463_gamma1.7599999905: vae_only=0.06785  vae+dit=0.46935  latent_vrmse=0.35128
+[465/500] 0464_gamma1.7599999905: vae_only=0.11399  vae+dit=0.60111  latent_vrmse=0.38977
+[466/500] 0465_gamma1.7599999905: vae_only=0.07011  vae+dit=0.47782  latent_vrmse=0.29889
+[467/500] 0466_gamma1.7599999905: vae_only=0.07323  vae+dit=0.34797  latent_vrmse=0.27309
+[468/500] 0467_gamma1.7599999905: vae_only=0.03039  vae+dit=0.20913  latent_vrmse=0.26356
+[469/500] 0468_gamma1.7599999905: vae_only=0.09514  vae+dit=0.50096  latent_vrmse=0.29920
+[470/500] 0469_gamma1.7599999905: vae_only=0.03982  vae+dit=0.23454  latent_vrmse=0.16382
+[471/500] 0470_gamma1.7599999905: vae_only=0.06935  vae+dit=0.32596  latent_vrmse=0.18062
+[472/500] 0471_gamma1.7599999905: vae_only=0.09454  vae+dit=0.40888  latent_vrmse=0.21939
+[473/500] 0472_gamma1.7599999905: vae_only=0.03244  vae+dit=0.27098  latent_vrmse=0.23668
+[474/500] 0473_gamma1.7599999905: vae_only=0.12350  vae+dit=0.51737  latent_vrmse=0.38401
+[475/500] 0474_gamma1.7599999905: vae_only=0.03425  vae+dit=0.21369  latent_vrmse=0.21912
+[476/500] 0475_gamma1.7599999905: vae_only=0.04875  vae+dit=0.31236  latent_vrmse=0.23613
+[477/500] 0476_gamma1.7599999905: vae_only=0.03838  vae+dit=0.22252  latent_vrmse=0.21044
+[478/500] 0477_gamma1.7599999905: vae_only=0.05013  vae+dit=0.31900  latent_vrmse=0.24388
+[479/500] 0478_gamma1.7599999905: vae_only=0.02520  vae+dit=0.15782  latent_vrmse=0.15878
+[480/500] 0479_gamma1.7599999905: vae_only=0.08377  vae+dit=0.44274  latent_vrmse=0.27241
+[481/500] 0480_gamma1.7599999905: vae_only=0.04294  vae+dit=0.24582  latent_vrmse=0.21372
+[482/500] 0481_gamma1.7599999905: vae_only=0.05496  vae+dit=0.42312  latent_vrmse=0.28220
+[483/500] 0482_gamma1.7599999905: vae_only=0.02297  vae+dit=0.14770  latent_vrmse=0.16449
+[484/500] 0483_gamma1.7599999905: vae_only=0.05559  vae+dit=0.36876  latent_vrmse=0.30890
+[485/500] 0484_gamma1.7599999905: vae_only=0.03808  vae+dit=0.27942  latent_vrmse=0.16958
+[486/500] 0485_gamma1.7599999905: vae_only=0.07236  vae+dit=0.48429  latent_vrmse=0.44345
+[487/500] 0486_gamma1.7599999905: vae_only=0.04749  vae+dit=0.23808  latent_vrmse=0.17358
+[488/500] 0487_gamma1.7599999905: vae_only=0.06612  vae+dit=0.37199  latent_vrmse=0.21257
+[489/500] 0488_gamma1.7599999905: vae_only=0.05452  vae+dit=0.31550  latent_vrmse=0.17080
+[490/500] 0489_gamma1.7599999905: vae_only=0.06879  vae+dit=0.37481  latent_vrmse=0.21573
+[491/500] 0490_gamma1.7599999905: vae_only=0.05234  vae+dit=0.27132  latent_vrmse=0.16449
+[492/500] 0491_gamma1.7599999905: vae_only=0.08772  vae+dit=0.41487  latent_vrmse=0.34943
+[493/500] 0492_gamma1.7599999905: vae_only=0.03909  vae+dit=0.28084  latent_vrmse=0.18436
+[494/500] 0493_gamma1.7599999905: vae_only=0.12965  vae+dit=0.50771  latent_vrmse=0.28304
+[495/500] 0494_gamma1.7599999905: vae_only=0.03152  vae+dit=0.25561  latent_vrmse=0.13749
+[496/500] 0495_gamma1.7599999905: vae_only=0.08801  vae+dit=0.58684  latent_vrmse=0.32502
+[497/500] 0496_gamma1.7599999905: vae_only=0.09052  vae+dit=0.44581  latent_vrmse=0.36296
+[498/500] 0497_gamma1.7599999905: vae_only=0.08325  vae+dit=0.37195  latent_vrmse=0.29442
+[499/500] 0498_gamma1.7599999905: vae_only=0.06757  vae+dit=0.32860  latent_vrmse=0.25453
+[500/500] 0499_gamma1.7599999905: vae_only=0.05894  vae+dit=0.37557  latent_vrmse=0.30097
+
+============================================================
+n=500 sims
+VAE-only  val_vrmse (pixel)  : 0.06504
+VAE+DiT   val_vrmse (pixel)  : 0.38020
+Delta (DiT forecasting cost on top of VAE recon): +0.31516 (+484.6%)
+VAE-only  val_vrmse_chmean   : 0.08787
+VAE+DiT   val_vrmse_chmean   : 0.47325
+  density      vae_only=0.08093  vae+dit=0.49265  delta=+0.41172
+  momentum_x   vae_only=0.07931  vae+dit=0.47980  delta=+0.40049
+  momentum_y   vae_only=0.07864  vae+dit=0.48770  delta=+0.40906
+  pressure     vae_only=0.11258  vae+dit=0.43286  delta=+0.32028
+
+DiT rollout vs VAE-encoder ground truth, LATENT space (isolated from VAE decode):
+  latent_vrmse : 0.27334
+  latent_rmse  : 0.09735
+  worst 5 latent channels: [{'channel': 35, 'vrmse': 0.8351985216140747}, {'channel': 93, 'vrmse': 0.83155357837677}, {'channel': 78, 'vrmse': 0.8231770396232605}, {'channel': 87, 'vrmse': 0.821438193321228}, {'channel': 8, 'vrmse': 0.8184735178947449}]
+
+Saved: logs/sng_pvc/eval_dit_vrmse/546062/vrmse_summary.json
+Saved GT/Prediction/Residual panels for 3 sample(s) spanning the gamma range, frames [25, 50, 75, 100], under:
+  logs/sng_pvc/eval_dit_vrmse/546062/visualizations/vae_only/<sample_id>/frame_XXXX.png
+  logs/sng_pvc/eval_dit_vrmse/546062/visualizations/vae_dit/<sample_id>/frame_XXXX.png
+END TIME: Sat 26 Sep 2026 07:32:18 PM CEST
+end_time=2026-09-26T19:32:18+02:00 elapsed=5417s
