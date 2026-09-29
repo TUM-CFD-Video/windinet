@@ -8,6 +8,10 @@ activation, working directory, ...) still hard-codes to that cluster and is
 not meant to be portable (see jobs/lundquist/README.md); this module is
 the one shared piece, since it's plain Python imported by scripts on both
 clusters rather than a script that itself needs to move between them.
+
+Per user: the output_root values above name one person's scratch work dir. Set
+WINDINET_WORK=/path/to/<your>_work (in your shell rc or your own launcher) and
+outputs go to $WINDINET_WORK/finetune_vae_outputs on any cluster instead.
 """
 
 import os
@@ -61,7 +65,7 @@ CLUSTER_DEFAULTS = {
         # euler_mq_dataset/jupiter/download_from_hf.py; 256x256_ds is this
         # cluster's default resolution. Checkpoints go to scratch.
         "data_root": "/e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/256x256_ds/train.h5",
-        "output_root": "/e/scratch/e-dev-2026d09-262/lc_work/finetune_vae_outputs",
+        "output_root": "/e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs",
         "num_dataloader_workers": 4,
         "effective_batch": 32,
     },
@@ -123,7 +127,8 @@ def patch_config_for_cluster(
     cfg["optimization"]["gradient_accumulation_steps"] = target_batch // (batch_size * num_processes)
 
     output_dir = cfg["output_dir"].rstrip("/") + output_suffix
-    output_root = defaults["output_root"]
+    work = os.environ.get("WINDINET_WORK")  # per-user work dir: overrides the shared default
+    output_root = os.path.join(work, "finetune_vae_outputs") if work else defaults["output_root"]
     if output_root is not None:
         output_dir = os.path.join(output_root.format(scratch=scratch), output_dir)
     cfg["output_dir"] = output_dir

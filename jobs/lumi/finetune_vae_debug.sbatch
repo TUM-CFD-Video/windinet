@@ -24,6 +24,7 @@ PYTHON=(singularity exec -B "${PWD}":/workspace -B "${SCRATCH}" --pwd /workspace
 
 export SRUN_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK}  # srun no longer inherits --cpus-per-task
 export HF_HUB_OFFLINE=1 WANDB_MODE=offline
+export WINDINET_WORK=${SCRATCH}/lc_work  # outputs: cluster_config.py
 export WINDINET_HF_CACHE=${SCRATCH}/lc_work/ltx_pretrained_lc HF_HUB_CACHE=${SCRATCH}/lc_work/ltx_pretrained_lc
 export MIOPEN_USER_DB_PATH=/tmp/${USER}-miopen MIOPEN_CUSTOM_CACHE_DIR=/tmp/${USER}-miopen
 export PYTHONPATH=/workspace
