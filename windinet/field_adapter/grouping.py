@@ -8,7 +8,7 @@ A field that appears in several groups is averaged on the way back.
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from windinet.training.shockwave_data import CHANNEL_NAMES as BASE_FIELDS
 
@@ -19,9 +19,13 @@ LOG_FIELDS = {"density", "pressure"}
 
 def _norm_args(names: list[str], stats: dict[str, dict]) -> dict:
     keys = [f"log_{n}" if n in LOG_FIELDS else n for n in names]
-    return {"mean": [stats[k]["mean"] for k in keys], "std": [stats[k]["std"] for k in keys],
-            "lo": [stats[k]["min"] for k in keys], "hi": [stats[k]["max"] for k in keys],
-            "log_channels": [n in LOG_FIELDS for n in names]}
+    return {
+        "mean": [stats[k]["mean"] for k in keys],
+        "std": [stats[k]["std"] for k in keys],
+        "lo": [stats[k]["min"] for k in keys],
+        "hi": [stats[k]["max"] for k in keys],
+        "log_channels": [n in LOG_FIELDS for n in names],
+    }
 
 
 class GroupedAdapter(nn.Module):

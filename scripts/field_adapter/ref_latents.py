@@ -41,9 +41,11 @@ def main(
     out.parent.mkdir(parents=True, exist_ok=True)
     torch.save(stats, out)
     lat = stats["latent"]
-    print(f"{len(rgb)} clips -> latents {tuple(latents.shape[1:])}; per-channel mean in "
-          f"[{lat['mean'].min():.2f}, {lat['mean'].max():.2f}], var in [{lat['var'].min():.2f}, {lat['var'].max():.2f}] "
-          f"(expect ~0 / ~1 if latents_mean/std are right)")
+    print(
+        f"{len(rgb)} clips -> latents {tuple(latents.shape[1:])}; per-channel mean in "
+        f"[{lat['mean'].min():.2f}, {lat['mean'].max():.2f}], var in [{lat['var'].min():.2f}, {lat['var'].max():.2f}] "
+        f"(expect ~0 / ~1 if latents_mean/std are right)"
+    )
 
 
 if __name__ == "__main__":

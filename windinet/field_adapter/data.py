@@ -37,8 +37,14 @@ class FrameSampler(ShockWaveDataset):
     spread over the trajectory, or consecutive (a clip) when `consecutive` is set.
     """
 
-    def __init__(self, h5_path: str | Path, ids: list[str], frames_per_item: int, seed: int | None = None,
-                 consecutive: bool = False):
+    def __init__(
+        self,
+        h5_path: str | Path,
+        ids: list[str],
+        frames_per_item: int,
+        seed: int | None = None,
+        consecutive: bool = False,
+    ):
         super().__init__(h5_path)
         self.ids = list(ids)
         self.k = frames_per_item
@@ -50,7 +56,9 @@ class FrameSampler(ShockWaveDataset):
         sid = self.ids[idx]
         group = self._get_group(sid)
         n_frames = group[CHANNEL_NAMES[0]].shape[0]
-        rng = random if self.seed is None else random.Random(self.seed + idx)  # loader workers seed `random` from the torch seed
+        rng = (
+            random if self.seed is None else random.Random(self.seed + idx)
+        )  # loader workers seed `random` from the torch seed
         start = rng.randrange(n_frames - self.k + 1)
         frames = list(range(start, start + self.k)) if self.consecutive else sorted(rng.sample(range(n_frames), self.k))
         fields = np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)  # [k, 4, H, W]

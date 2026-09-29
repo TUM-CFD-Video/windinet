@@ -27,7 +27,9 @@ import time
 from itertools import cycle
 from pathlib import Path
 
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")  # fine-tuning fills the 11 GB card; avoids fragmentation OOM
+os.environ.setdefault(
+    "PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True"
+)  # fine-tuning fills the 11 GB card; avoids fragmentation OOM
 
 import torch
 import typer
@@ -74,6 +76,7 @@ def losses(cfg: FieldAdapterConfig, adapter: GroupedAdapter, x: torch.Tensor, va
 
 def lr_factor(t: TrainConfig):
     """Multiplier on every group's lr: linear warm-up from 1 %, then cosine decay to `lr_floor`. Constant without warm-up."""
+
     def factor(step: int) -> float:
         if not t.warmup_steps:
             return 1.0
@@ -81,11 +84,14 @@ def lr_factor(t: TrainConfig):
             return 0.01 + 0.99 * step / t.warmup_steps
         progress = (step - t.warmup_steps) / max(1, t.steps - t.warmup_steps)
         return t.lr_floor + (1 - t.lr_floor) * (1 + math.cos(math.pi * progress)) / 2
+
     return factor
 
 
 @torch.no_grad()
-def evaluate(adapter: GroupedAdapter, loader: DataLoader, vae, ref: dict | None, device, clip: int = 1) -> tuple[dict[str, float], tuple]:
+def evaluate(
+    adapter: GroupedAdapter, loader: DataLoader, vae, ref: dict | None, device, clip: int = 1
+) -> tuple[dict[str, float], tuple]:
     """Per-field VRMSE (physical units) per held-out sim, averaged; latent Fréchet per group; one panel example.
 
     The loader yields one sim at a time so the variance normalisation is per sim whatever the training batch."""
@@ -139,9 +145,17 @@ def save_curves(steps: list[dict], history: list[dict], blocks: dict[str, float]
     ax[0, 1].set(title="validation VRMSE", xlabel="step", ylim=(0, None))
     ax[0, 1].legend(fontsize=8)
     for g, label in enumerate(["adapter", "vae"][: len(steps[0]["update_ratio"])] if steps else []):
-        ax[1, 0].semilogy([s["step"] for s in steps], [s["update_ratio"][g] for s in steps], lw=0.8, label=f"{label}: step |dw|/|w|")
+        ax[1, 0].semilogy(
+            [s["step"] for s in steps], [s["update_ratio"][g] for s in steps], lw=0.8, label=f"{label}: step |dw|/|w|"
+        )
     if history and "vae_drift" in history[-1]:
-        ax[1, 0].semilogy([h["step"] for h in history], [h["vae_drift"] for h in history], "k--", marker="o", label="vae: drift from start")
+        ax[1, 0].semilogy(
+            [h["step"] for h in history],
+            [h["vae_drift"] for h in history],
+            "k--",
+            marker="o",
+            label="vae: drift from start",
+        )
     ax[1, 0].set(title="relative weight change", xlabel="step")
     ax[1, 0].legend(fontsize=8)
     ax[1, 1].barh(list(blocks), list(blocks.values()))
@@ -210,8 +224,13 @@ def main(
 
     def make_loader(ids, seed):  # seed=None: random frames every access (training); fixed seed: same frames (eval)
         sampler = FrameSampler(cfg.data.h5_path, ids, cfg.data.frames_per_sim, seed, consecutive=cfg.data.clip)
-        return DataLoader(sampler, batch_size=cfg.train.batch_sims if seed is None else 1, shuffle=seed is None,
-                          num_workers=cfg.data.num_workers, persistent_workers=cfg.data.num_workers > 0)
+        return DataLoader(
+            sampler,
+            batch_size=cfg.train.batch_sims if seed is None else 1,
+            shuffle=seed is None,
+            num_workers=cfg.data.num_workers,
+            persistent_workers=cfg.data.num_workers > 0,
+        )
 
     train_loader, test_loader = make_loader(train_ids, None), make_loader(test_ids, 0)
     batches = cycle(train_loader)
@@ -241,13 +260,17 @@ def main(
     opt = torch.optim.AdamW(groups, weight_decay=0.0)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_factor(cfg.train))
     params = [p for g in opt.param_groups for p in g["params"]]
-    w0 = [p.detach().cpu() for p in vae.trainable_params] if vae else []  # start weights (pretrained or vae_load), for the drift
+    w0 = (
+        [p.detach().cpu() for p in vae.trainable_params] if vae else []
+    )  # start weights (pretrained or vae_load), for the drift
     history, steps, t0 = [], [], time.time()  # per eval / per update
     for step in range(1, cfg.train.steps + 1):
         x = next(batches)[0].flatten(0, 1).to(device)
         opt.zero_grad(set_to_none=True)
         loss = 0.0
-        for xi in x.split(clip if vae else len(x)):  # backprop through the VAE costs ~1.5 GB per frame: one clip per backward
+        for xi in x.split(
+            clip if vae else len(x)
+        ):  # backprop through the VAE costs ~1.5 GB per frame: one clip per backward
             terms, total = losses(cfg, adapter, xi, vae)
             (total * len(xi) / len(x)).backward()
             loss += total.item() * len(xi) / len(x)
@@ -256,23 +279,46 @@ def main(
         before = [[p.detach().cpu() for p in g["params"]] for g in opt.param_groups]
         opt.step()
         sched.step()
-        steps.append({"step": step, "loss": loss, "update_ratio": [rel_change(g["params"], b) for g, b in zip(opt.param_groups, before)]})
+        steps.append(
+            {
+                "step": step,
+                "loss": loss,
+                "update_ratio": [rel_change(g["params"], b) for g, b in zip(opt.param_groups, before)],
+            }
+        )
         if step % cfg.train.eval_every == 0 or step == cfg.train.steps:
             metrics, example = evaluate(adapter, test_loader, vae, ref, device, clip)
             if w0:
                 metrics["vae_drift"] = rel_change(vae.trainable_params, w0)
             history.append({"step": step, "train": {k: v.item() for k, v in terms.items()}, **metrics})
-            print(f"step {step:5d}  loss {loss:.4f}  " + "  ".join(f"{k} {v:.4f}" for k, v in metrics.items())
-                  + f"  [{time.time() - t0:.0f}s]")
+            print(
+                f"step {step:5d}  loss {loss:.4f}  "
+                + "  ".join(f"{k} {v:.4f}" for k, v in metrics.items())
+                + f"  [{time.time() - t0:.0f}s]"
+            )
 
     save_panel(example, run_dir / "panel.png")
     save_curves(steps, history, drift_per_block(vae, w0) if w0 else {}, run_dir / "curves.png")
     torch.save(adapter.state_dict(), run_dir / "adapter.pt")
     if w0:  # fine-tuned VAE weights (gitignored); reload with train.vae_load
-        torch.save({k: v.detach().cpu() for k, v in vae.vae.state_dict(keep_vars=True).items() if v.requires_grad}, run_dir / "vae.pt")
-    (run_dir / "metrics.json").write_text(json.dumps({"config": cfg.model_dump(), "provenance": provenance(started), "init": metrics_init,
-                                                      "final": metrics, "history": history, "steps": steps,
-                                                      "n_params": sum(p.numel() for p in adapter.parameters())}, indent=1))
+        torch.save(
+            {k: v.detach().cpu() for k, v in vae.vae.state_dict(keep_vars=True).items() if v.requires_grad},
+            run_dir / "vae.pt",
+        )
+    (run_dir / "metrics.json").write_text(
+        json.dumps(
+            {
+                "config": cfg.model_dump(),
+                "provenance": provenance(started),
+                "init": metrics_init,
+                "final": metrics,
+                "history": history,
+                "steps": steps,
+                "n_params": sum(p.numel() for p in adapter.parameters()),
+            },
+            indent=1,
+        )
+    )
     write_index(out_dir)
     print(f"wrote {run_dir}/ and {out_dir / 'README.md'}")
 

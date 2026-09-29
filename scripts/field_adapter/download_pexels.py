@@ -25,11 +25,17 @@ QUERIES = ["nature", "city street", "people walking", "ocean", "forest", "traffi
 
 
 def _api_key() -> str:
-    return os.environ.get("PEXELS_API_KEY") or Path("~/.config/windinet/pexels_api_key").expanduser().read_text().strip()
+    return (
+        os.environ.get("PEXELS_API_KEY") or Path("~/.config/windinet/pexels_api_key").expanduser().read_text().strip()
+    )
 
 
 def _smallest_file(video: dict, min_side: int) -> dict | None:
-    ok = [f for f in video["video_files"] if f.get("width") and min(f["width"], f["height"]) >= min_side and f["file_type"] == "video/mp4"]
+    ok = [
+        f
+        for f in video["video_files"]
+        if f.get("width") and min(f["width"], f["height"]) >= min_side and f["file_type"] == "video/mp4"
+    ]
     return min(ok, key=lambda f: f["width"] * f["height"]) if ok else None
 
 
@@ -47,7 +53,11 @@ def _middle_frames(path: str, frames: int, size: int) -> np.ndarray | None:
                 continue
             h, w = frame.height, frame.width
             s = min(h, w)
-            img = frame.to_image().crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s)).resize((size, size))
+            img = (
+                frame.to_image()
+                .crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s))
+                .resize((size, size))
+            )
             out.append(np.asarray(img))
             if len(out) == frames:
                 break
@@ -63,8 +73,12 @@ def main(
     out.mkdir(parents=True, exist_ok=True)
     headers, clips, meta = {"Authorization": _api_key()}, [], []
     for query in QUERIES:
-        r = requests.get("https://api.pexels.com/videos/search", headers=headers, timeout=30,
-                         params={"query": query, "per_page": per_query, "orientation": "landscape", "size": "small"})
+        r = requests.get(
+            "https://api.pexels.com/videos/search",
+            headers=headers,
+            timeout=30,
+            params={"query": query, "per_page": per_query, "orientation": "landscape", "size": "small"},
+        )
         r.raise_for_status()
         for video in r.json()["videos"]:
             f = _smallest_file(video, size)

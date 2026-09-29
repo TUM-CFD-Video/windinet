@@ -19,11 +19,21 @@ TEMPORAL, SPATIAL = 4, 8
 
 
 class WanVAE:
-    def __init__(self, device: torch.device | str = "cuda", dtype: torch.dtype = torch.float32, repo: str = REPO,
-                 train: str = "none"):
+    def __init__(
+        self,
+        device: torch.device | str = "cuda",
+        dtype: torch.dtype = torch.float32,
+        repo: str = REPO,
+        train: str = "none",
+    ):
         """`train`: 'none' (frozen), 'decoder' (decoder + post_quant_conv, latents unchanged) or 'all'."""
         # fp32 on purpose: the Wan pipeline keeps its VAE in fp32; 507 MB fits any GPU.
-        self.vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=dtype).to(device).eval().requires_grad_(False)
+        self.vae = (
+            AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=dtype)
+            .to(device)
+            .eval()
+            .requires_grad_(False)
+        )
         trainable = {"none": [], "decoder": [self.vae.decoder, self.vae.post_quant_conv], "all": [self.vae]}[train]
         for module in trainable:
             module.requires_grad_(True)
@@ -60,7 +70,8 @@ def _checkpointed(block_forward):
     """Wan blocks read and advance a per-chunk frame cache. The forward pass runs on the real cache; the
     recompute in backward gets a scratch copy of just the entries this block read, so the caches of the
     whole pass are not kept alive until backward."""
-    def forward(x, feat_cache=None, feat_idx=[0], **kw):
+
+    def forward(x, feat_cache=None, feat_idx=[0], **kw):  # noqa: B006 (mirrors the diffusers block signature)
         if feat_cache is None or not torch.is_grad_enabled():
             return block_forward(x, feat_cache, feat_idx, **kw)
         state = {"cache": feat_cache, "idx": feat_idx[0], "n": len(feat_cache)}
@@ -69,11 +80,12 @@ def _checkpointed(block_forward):
             if "read" not in state:
                 return block_forward(x, state["cache"], feat_idx, **kw)
             scratch = [None] * state["n"]
-            scratch[state["idx"]:state["idx"] + len(state["read"])] = state["read"]
+            scratch[state["idx"] : state["idx"] + len(state["read"])] = state["read"]
             return block_forward(x, scratch, [state["idx"]], **kw)
 
         snapshot = list(feat_cache)
         out = checkpoint(run, x, use_reentrant=False)
-        state["read"], state["cache"] = snapshot[state["idx"]:feat_idx[0]], None
+        state["read"], state["cache"] = snapshot[state["idx"] : feat_idx[0]], None
         return out
+
     return forward

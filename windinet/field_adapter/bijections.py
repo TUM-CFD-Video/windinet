@@ -18,7 +18,7 @@ from __future__ import annotations
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 def _per_channel(t: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
@@ -34,13 +34,22 @@ class PreNorm(nn.Module):
     atanh -> exp and dominate any physical-unit metric.
     """
 
-    def __init__(self, mean: list[float], std: list[float], log_channels: list[bool],
-                 lo: list[float] | None = None, hi: list[float] | None = None, eps: float = 1e-6):
+    def __init__(
+        self,
+        mean: list[float],
+        std: list[float],
+        log_channels: list[bool],
+        lo: list[float] | None = None,
+        hi: list[float] | None = None,
+        eps: float = 1e-6,
+    ):
         super().__init__()
         self.register_buffer("mean", torch.tensor(mean))
         self.register_buffer("std", torch.tensor(std))
         self.register_buffer("log_mask", torch.tensor(log_channels))
-        self.register_buffer("lo", torch.tensor(lo if lo is not None else [-float("inf")] * len(mean)), persistent=False)
+        self.register_buffer(
+            "lo", torch.tensor(lo if lo is not None else [-float("inf")] * len(mean)), persistent=False
+        )
         self.register_buffer("hi", torch.tensor(hi if hi is not None else [float("inf")] * len(mean)), persistent=False)
         self.eps = eps
 
