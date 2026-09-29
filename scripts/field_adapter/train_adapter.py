@@ -75,7 +75,7 @@ def losses(cfg: FieldAdapterConfig, adapter: GroupedAdapter, x: torch.Tensor, va
 
 
 def lr_factor(t: TrainConfig):
-    """Multiplier on every group's lr: linear warm-up from 1 %, then cosine decay to `lr_floor`; constant without warm-up."""
+    """Multiplier on every group's lr: linear warm-up from 1 %, then cosine decay to `lr_floor`; constant without."""
 
     def factor(step: int) -> float:
         if not t.warmup_steps:
