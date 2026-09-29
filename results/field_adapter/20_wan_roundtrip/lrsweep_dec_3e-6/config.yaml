@@ -1,0 +1,33 @@
+# lrsweep_dec_3e-6: Peak-lr sweep, decoder only, adapter fixed, 15 updates of 8 frames, H1 weight 50: peak 3e-6; section 7
+# Re-run: python scripts/field_adapter/train_adapter.py results/field_adapter/20_wan_roundtrip/lrsweep_dec_3e-6/config.yaml --name <new name>
+name: lrsweep_dec_3e-6
+description: 'Peak-lr sweep, decoder only, adapter fixed, 15 updates of 8 frames, H1 weight 50: peak 3e-6; section 7'
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  test_every: 5
+  frames_per_sim: 2
+  num_workers: 2
+adapter:
+  groups:
+  - - density
+    - pressure
+  - - momentum_x
+    - momentum_y
+  load: results/field_adapter/20_wan_roundtrip/wan_pairs_h1_50/adapter.pt
+loss:
+  rmse: 1.0
+  h1: 50.0
+train:
+  steps: 15
+  batch_sims: 4
+  lr: 0.0
+  vae_parts: decoder
+  vae_lr: 3.0e-06
+  warmup_steps: 2
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 15
+  seed: 0
+ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt

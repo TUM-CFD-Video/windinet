@@ -279,8 +279,9 @@ dit_outputs/sng_pvc/**/dit_vrmse_curve.png
 dit_outputs/lrz_ai/**/visualizations/
 dit_outputs/lrz_ai/**/dit_vrmse_curve.png
 
-# field_adapter experiments: keep JSON/PNG, not tensors or reference latents
+# field_adapter experiments: keep JSON/PNG/YAML and the tiny adapter weights, not VAE checkpoints or reference latents
 results/**/*.pt
+!results/**/adapter.pt
 results/**/*.safetensors
 results/**/*.npy
 ref_clips/

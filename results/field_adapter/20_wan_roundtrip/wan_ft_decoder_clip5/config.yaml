@@ -1,0 +1,36 @@
+# wan_ft_decoder_clip5: Decoder fine-tune on 5-frame clips (3 clips per update), H1 weight 1; section 6
+# Re-run: python scripts/field_adapter/train_adapter.py results/field_adapter/20_wan_roundtrip/wan_ft_decoder_clip5/config.yaml --name <new name>
+name: wan_ft_decoder_clip5
+description: Decoder fine-tune on 5-frame clips (3 clips per update), H1 weight 1; section 6
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 5
+  clip: true
+  num_workers: 2
+adapter:
+  groups:
+  - - density
+    - pressure
+  - - momentum_x
+    - momentum_y
+  load: results/field_adapter/20_wan_roundtrip/wan_pairs_h1_50/adapter.pt
+loss:
+  rmse: 1.0
+  h1: 1.0
+train:
+  steps: 120
+  batch_sims: 3
+  lr: 0.0
+  vae_parts: decoder
+  vae_lr: 1.0e-06
+  vae_load: null
+  warmup_steps: 12
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 60
+  seed: 0
+ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt

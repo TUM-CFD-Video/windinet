@@ -1,0 +1,30 @@
+# wan_pairs_h1_50: Pairs, lr 3e-3, 600 steps, H1 weight 50: the fixed adapter behind the fine-tuning runs; sections 6 and 7
+# Re-run: python scripts/field_adapter/train_adapter.py results/field_adapter/20_wan_roundtrip/wan_pairs_h1_50/config.yaml --name <new name>
+name: wan_pairs_h1_50
+description: 'Pairs, lr 3e-3, 600 steps, H1 weight 50: the fixed adapter behind the fine-tuning runs; sections 6 and 7'
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  test_every: 5
+  frames_per_sim: 2
+  num_workers: 2
+adapter:
+  groups:
+  - - density
+    - pressure
+  - - momentum_x
+    - momentum_y
+  load: null
+loss:
+  rmse: 1.0
+  h1: 50.0
+train:
+  steps: 600
+  batch_sims: 1
+  lr: 0.003
+  vae_parts: none
+  vae_lr: 2.0e-05
+  eval_every: 300
+  seed: 0
+ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt

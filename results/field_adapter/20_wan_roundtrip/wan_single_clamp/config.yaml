@@ -1,0 +1,33 @@
+# wan_single_clamp: Single 4 -> 3 image, PCA init, 400 steps, inverse clamped to the data range; section 1
+# Re-run: python scripts/field_adapter/train_adapter.py results/field_adapter/20_wan_roundtrip/wan_single_clamp/config.yaml --name <new name>
+# config schema of commit 0a525c9 (spline warp, PCA init, latent losses): loads only with that code; adapter.load names a run removed from the repo; the weights it loaded are this folder's adapter.pt
+name: wan_single_clamp
+description: Single 4 -> 3 image, PCA init, 400 steps, inverse clamped to the data range; section 1
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  test_every: 5
+  frames_per_sim: 2
+  num_workers: 2
+adapter:
+  grouping: single
+  warp: true
+  bins: 8
+  init: pca
+  load: results/field_adapter/20_wan_roundtrip/wan_single/adapter.pt
+loss:
+  rmse: 1.0
+  h1: 1.0
+  slope_penalty: 0.001
+  rgb_moment: 0.0
+  latent_moment: 0.0
+  latent_cov: 0.0
+  latent_psd: 0.0
+train:
+  steps: 0
+  batch_sims: 1
+  lr: 0.001
+  eval_every: 250
+  seed: 0
+ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt
