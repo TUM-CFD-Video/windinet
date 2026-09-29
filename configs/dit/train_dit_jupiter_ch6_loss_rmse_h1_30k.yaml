@@ -1,0 +1,85 @@
+# ShockWaveNet (DiT) training config -- jupiter, 30k-step run on the
+# Chapter 6 baseline VAE (finetune_vae_ch6_loss_rmse_h1_256res, rmse+h1).
+#
+# Forked from train_dit_sng_pvc_ch6_loss_rmse_h1.yaml. Changes:
+#   optimization.steps: 8000 -> 30000 (fresh cosine schedule over 30k, not an
+#     extension of an 8k run)
+#   optimization.gradient_accumulation_steps: 4 -> 8 (jupiter has 4 GPUs per
+#     node, sng_pvc 8 tiles; effective batch stays 32, so checkpoints.interval
+#     and validation.interval keep their meaning)
+#   output_dir on jupiter scratch, wandb tags.
+#
+# The latents MUST be encoded with EVAL_SIMS=500 so the DiT val split is the
+# VAE's own Chapter 6 held-out split. jobs/jupiter/submit_baseline_pipeline.sh
+# does this.
+#
+# If the 12h walltime kills the job before step 30000, jobs/jupiter/
+# train_dit.sbatch resumes automatically from the newest checkpoint in
+# output_dir/checkpoints (optimizer/scheduler/step restored from the
+# sibling .state.pt), so just resubmit it with the same arguments.
+#
+# Usage: bash jobs/jupiter/submit_baseline_pipeline.sh
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+  load_checkpoint: null
+
+conditioning:
+  first_frame_conditioning_p: 1.0
+
+scalar_conditioning:
+  enabled: true
+  scalar_names:
+    - "gamma"
+  scalar_ranges:
+    gamma: [1.0, 2.0]
+  embedding_dim: 4096
+  num_tokens_per_scalar: 4
+  fourier_features: 64
+  mlp_hidden_dim: 256
+  dropout: 0.1
+
+optimization:
+  learning_rate: 1e-5
+  steps: 30000
+  batch_size: 1
+  gradient_accumulation_steps: 8  # 4 GPUs x 1 x 8 = effective batch 32, same as sng_pvc's 8 tiles x 1 x 4
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "cosine"
+  scheduler_params:
+    eta_min: 1.0e-8
+  enable_gradient_checkpointing: true
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+data:
+  preprocessed_data_root: "__PREPROCESSED_ROOT__"
+  num_dataloader_workers: 4
+
+validation:
+  data_root: "__PREPROCESSED_ROOT__/val"
+  interval: 600
+  max_samples: 0
+
+checkpoints:
+  interval: 120
+  keep_last_n: 2
+
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  enabled: false  # kept off to match the sng_pvc ch6 arms (see that config)
+  interval: 2000
+
+wandb:
+  enabled: false
+  project: "shockwavenet"
+  tags: ["cfd", "full", "2b", "scalar-only", "jupiter", "256res", "chapter6", "eval500", "baseline", "30k-steps"]
+
+seed: 42
+output_dir: "/e/scratch/e-dev-2026d09-262/wh_work/dit_outputs/shockwave_dit_jupiter_ch6_loss_rmse_h1_30k"

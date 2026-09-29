@@ -709,7 +709,14 @@ class LTXConditionPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraL
             extra_conditioning_mask = []
             extra_conditioning_num_latents = 0
             for data, strength, frame_index in zip(conditions, condition_strength, condition_frame_index, strict=False):
-                condition_latents = retrieve_latents(self.vae.encode(data), generator=generator)
+                # Posterior MEAN (argmax), not a sample: the DiT is trained on
+                # posterior-mean latents (windinet/latent_utils.py), so a sampled
+                # conditioning frame is off-distribution. Invisible for VAEs whose
+                # posterior variance collapsed (no KL term), but a KL-regularized
+                # VAE has a real sigma and sampling corrupts the initial condition.
+                condition_latents = retrieve_latents(
+                    self.vae.encode(data), generator=generator, sample_mode="argmax"
+                )
                 condition_latents = self._normalize_latents(
                     condition_latents, self.vae.latents_mean, self.vae.latents_std
                 ).to(device, dtype=dtype)
@@ -1146,7 +1153,10 @@ class LTXConditionPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraL
             reference_tensor = reference_tensor.repeat(batch_size * num_videos_per_prompt, 1, 1, 1, 1)
 
             # Encode reference video to latents
-            reference_latents = retrieve_latents(self.vae.encode(reference_tensor), generator=generator)
+            # Posterior mean, same reason as the conditioning latents above.
+            reference_latents = retrieve_latents(
+                self.vae.encode(reference_tensor), generator=generator, sample_mode="argmax"
+            )
             reference_latents = self._normalize_latents(
                 reference_latents, self.vae.latents_mean, self.vae.latents_std
             ).to(device, dtype=torch.float32)

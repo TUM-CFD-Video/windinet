@@ -1,0 +1,4545 @@
+{
+  "config": "configs/finetune_vae/finetune_vae_ch6_sds_stock_w1_256res.yaml",
+  "checkpoint": "/hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_sds_stock_w1_256res/checkpoints/vae_shockwave_best.safetensors",
+  "test_h5": "/hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/test.h5",
+  "num_sims": 500,
+  "mixed_precision": "bf16",
+  "normalization_stats_file": "None",
+  "channel_order": [
+    "density",
+    "momentum_x",
+    "momentum_y",
+    "pressure"
+  ],
+  "figure_samples": {
+    "ids": [
+      "0000_gamma1.1299999952",
+      "0250_gamma1.3999999762",
+      "0499_gamma1.7599999905"
+    ],
+    "frames": [
+      0,
+      25,
+      50,
+      75,
+      100
+    ],
+    "dir": "/hppfs/scratch/0D/go76fuz2/windinet/figure_data/vae_test/finetune_vae_ch6_sds_stock_w1_256res"
+  },
+  "metrics": {
+    "vrmse": 0.07658043886348605,
+    "vrmse_sem": 0.001375792273894552,
+    "vrmse_chmean": 0.10398867893218994,
+    "vrmse_chmean_sem": 0.0014528832874151365,
+    "vrmse_density": 0.09632012068480253,
+    "vrmse_density_sem": 0.0016027548523207741,
+    "vrmse_momentum_x": 0.09411902435868978,
+    "vrmse_momentum_x_sem": 0.001962690634502357,
+    "vrmse_momentum_y": 0.09396456098183989,
+    "vrmse_momentum_y_sem": 0.0019728855240644773,
+    "vrmse_pressure": 0.131551009722054,
+    "vrmse_pressure_sem": 0.0016559240748600906
+  },
+  "per_sim": [
+    {
+      "id": "0000_gamma1.1299999952",
+      "vrmse": 0.07169383764266968,
+      "vrmse_chmean": 0.10918222367763519,
+      "vrmse_density": 0.05947485193610191,
+      "vrmse_momentum_x": 0.14586816728115082,
+      "vrmse_momentum_y": 0.09741931408643723,
+      "vrmse_pressure": 0.1339665800333023
+    },
+    {
+      "id": "0001_gamma1.1299999952",
+      "vrmse": 0.04734069108963013,
+      "vrmse_chmean": 0.06923878937959671,
+      "vrmse_density": 0.058449190109968185,
+      "vrmse_momentum_x": 0.06835087388753891,
+      "vrmse_momentum_y": 0.04593019187450409,
+      "vrmse_pressure": 0.10422491282224655
+    },
+    {
+      "id": "0002_gamma1.1299999952",
+      "vrmse": 0.1275509148836136,
+      "vrmse_chmean": 0.15974023938179016,
+      "vrmse_density": 0.12829799950122833,
+      "vrmse_momentum_x": 0.2024213820695877,
+      "vrmse_momentum_y": 0.14380808174610138,
+      "vrmse_pressure": 0.16443344950675964
+    },
+    {
+      "id": "0003_gamma1.1299999952",
+      "vrmse": 0.07887506484985352,
+      "vrmse_chmean": 0.10337778925895691,
+      "vrmse_density": 0.11898660659790039,
+      "vrmse_momentum_x": 0.06478507071733475,
+      "vrmse_momentum_y": 0.09706012904644012,
+      "vrmse_pressure": 0.13267937302589417
+    },
+    {
+      "id": "0004_gamma1.1299999952",
+      "vrmse": 0.06945137679576874,
+      "vrmse_chmean": 0.09884084761142731,
+      "vrmse_density": 0.09358484297990799,
+      "vrmse_momentum_x": 0.09168849140405655,
+      "vrmse_momentum_y": 0.10067207366228104,
+      "vrmse_pressure": 0.10941798239946365
+    },
+    {
+      "id": "0005_gamma1.1299999952",
+      "vrmse": 0.07436472922563553,
+      "vrmse_chmean": 0.09047660231590271,
+      "vrmse_density": 0.07630649954080582,
+      "vrmse_momentum_x": 0.062261588871479034,
+      "vrmse_momentum_y": 0.10609794408082962,
+      "vrmse_pressure": 0.11724039167165756
+    },
+    {
+      "id": "0006_gamma1.1299999952",
+      "vrmse": 0.09754133224487305,
+      "vrmse_chmean": 0.11055563390254974,
+      "vrmse_density": 0.11762414127588272,
+      "vrmse_momentum_x": 0.09468472748994827,
+      "vrmse_momentum_y": 0.08848460018634796,
+      "vrmse_pressure": 0.14142905175685883
+    },
+    {
+      "id": "0007_gamma1.1299999952",
+      "vrmse": 0.07987666875123978,
+      "vrmse_chmean": 0.10119536519050598,
+      "vrmse_density": 0.08887968212366104,
+      "vrmse_momentum_x": 0.10175926983356476,
+      "vrmse_momentum_y": 0.06287138909101486,
+      "vrmse_pressure": 0.15127111971378326
+    },
+    {
+      "id": "0008_gamma1.1299999952",
+      "vrmse": 0.0704578310251236,
+      "vrmse_chmean": 0.09318660199642181,
+      "vrmse_density": 0.0995384082198143,
+      "vrmse_momentum_x": 0.08679724484682083,
+      "vrmse_momentum_y": 0.08892006427049637,
+      "vrmse_pressure": 0.09749070554971695
+    },
+    {
+      "id": "0009_gamma1.1299999952",
+      "vrmse": 0.14148946106433868,
+      "vrmse_chmean": 0.1641121506690979,
+      "vrmse_density": 0.15766091644763947,
+      "vrmse_momentum_x": 0.11576391756534576,
+      "vrmse_momentum_y": 0.15824489295482635,
+      "vrmse_pressure": 0.22477887570858002
+    },
+    {
+      "id": "0010_gamma1.1299999952",
+      "vrmse": 0.07015837728977203,
+      "vrmse_chmean": 0.09562070667743683,
+      "vrmse_density": 0.06783973425626755,
+      "vrmse_momentum_x": 0.0657518059015274,
+      "vrmse_momentum_y": 0.13682515919208527,
+      "vrmse_pressure": 0.1120661199092865
+    },
+    {
+      "id": "0011_gamma1.1299999952",
+      "vrmse": 0.09660487622022629,
+      "vrmse_chmean": 0.15914517641067505,
+      "vrmse_density": 0.15462537109851837,
+      "vrmse_momentum_x": 0.1701882928609848,
+      "vrmse_momentum_y": 0.16865700483322144,
+      "vrmse_pressure": 0.1431100219488144
+    },
+    {
+      "id": "0012_gamma1.1299999952",
+      "vrmse": 0.11899641901254654,
+      "vrmse_chmean": 0.1403304785490036,
+      "vrmse_density": 0.09646237641572952,
+      "vrmse_momentum_x": 0.15800544619560242,
+      "vrmse_momentum_y": 0.14799265563488007,
+      "vrmse_pressure": 0.158861443400383
+    },
+    {
+      "id": "0013_gamma1.1299999952",
+      "vrmse": 0.10386653244495392,
+      "vrmse_chmean": 0.1335412859916687,
+      "vrmse_density": 0.1216542199254036,
+      "vrmse_momentum_x": 0.09367477148771286,
+      "vrmse_momentum_y": 0.1207985207438469,
+      "vrmse_pressure": 0.19803765416145325
+    },
+    {
+      "id": "0014_gamma1.1299999952",
+      "vrmse": 0.07742679864168167,
+      "vrmse_chmean": 0.1034708023071289,
+      "vrmse_density": 0.08703617006540298,
+      "vrmse_momentum_x": 0.09992560744285583,
+      "vrmse_momentum_y": 0.11277905106544495,
+      "vrmse_pressure": 0.11414240300655365
+    },
+    {
+      "id": "0015_gamma1.1299999952",
+      "vrmse": 0.04101874306797981,
+      "vrmse_chmean": 0.06836250424385071,
+      "vrmse_density": 0.04505810886621475,
+      "vrmse_momentum_x": 0.048393089324235916,
+      "vrmse_momentum_y": 0.05015125870704651,
+      "vrmse_pressure": 0.12984757125377655
+    },
+    {
+      "id": "0016_gamma1.1299999952",
+      "vrmse": 0.03586658835411072,
+      "vrmse_chmean": 0.06067580357193947,
+      "vrmse_density": 0.05128740891814232,
+      "vrmse_momentum_x": 0.060901302844285965,
+      "vrmse_momentum_y": 0.05986221134662628,
+      "vrmse_pressure": 0.07065228372812271
+    },
+    {
+      "id": "0017_gamma1.1299999952",
+      "vrmse": 0.04492891952395439,
+      "vrmse_chmean": 0.06314697861671448,
+      "vrmse_density": 0.05531056970357895,
+      "vrmse_momentum_x": 0.06837727874517441,
+      "vrmse_momentum_y": 0.04361965134739876,
+      "vrmse_pressure": 0.0852804034948349
+    },
+    {
+      "id": "0018_gamma1.1299999952",
+      "vrmse": 0.1082148551940918,
+      "vrmse_chmean": 0.12918132543563843,
+      "vrmse_density": 0.13727447390556335,
+      "vrmse_momentum_x": 0.11424282938241959,
+      "vrmse_momentum_y": 0.09760639071464539,
+      "vrmse_pressure": 0.16760164499282837
+    },
+    {
+      "id": "0019_gamma1.1299999952",
+      "vrmse": 0.07632453739643097,
+      "vrmse_chmean": 0.09415657073259354,
+      "vrmse_density": 0.08424236625432968,
+      "vrmse_momentum_x": 0.07946328818798065,
+      "vrmse_momentum_y": 0.0916360393166542,
+      "vrmse_pressure": 0.1212846040725708
+    },
+    {
+      "id": "0020_gamma1.1299999952",
+      "vrmse": 0.1554403454065323,
+      "vrmse_chmean": 0.1743173897266388,
+      "vrmse_density": 0.13622280955314636,
+      "vrmse_momentum_x": 0.19669078290462494,
+      "vrmse_momentum_y": 0.16097421944141388,
+      "vrmse_pressure": 0.20338177680969238
+    },
+    {
+      "id": "0021_gamma1.1299999952",
+      "vrmse": 0.1388237476348877,
+      "vrmse_chmean": 0.1522207111120224,
+      "vrmse_density": 0.16651320457458496,
+      "vrmse_momentum_x": 0.11962059140205383,
+      "vrmse_momentum_y": 0.16032598912715912,
+      "vrmse_pressure": 0.1624230593442917
+    },
+    {
+      "id": "0022_gamma1.1299999952",
+      "vrmse": 0.1586235910654068,
+      "vrmse_chmean": 0.18107286095619202,
+      "vrmse_density": 0.16210287809371948,
+      "vrmse_momentum_x": 0.16403551399707794,
+      "vrmse_momentum_y": 0.22476744651794434,
+      "vrmse_pressure": 0.1733856052160263
+    },
+    {
+      "id": "0023_gamma1.1299999952",
+      "vrmse": 0.08738307654857635,
+      "vrmse_chmean": 0.0960536077618599,
+      "vrmse_density": 0.09095486253499985,
+      "vrmse_momentum_x": 0.07470282167196274,
+      "vrmse_momentum_y": 0.09098342061042786,
+      "vrmse_pressure": 0.12757332623004913
+    },
+    {
+      "id": "0024_gamma1.1299999952",
+      "vrmse": 0.08319373428821564,
+      "vrmse_chmean": 0.09691779315471649,
+      "vrmse_density": 0.09840833395719528,
+      "vrmse_momentum_x": 0.07333430647850037,
+      "vrmse_momentum_y": 0.07675379514694214,
+      "vrmse_pressure": 0.13917472958564758
+    },
+    {
+      "id": "0025_gamma1.1299999952",
+      "vrmse": 0.055740393698215485,
+      "vrmse_chmean": 0.08779995143413544,
+      "vrmse_density": 0.09413991868495941,
+      "vrmse_momentum_x": 0.08380166441202164,
+      "vrmse_momentum_y": 0.06880456209182739,
+      "vrmse_pressure": 0.1044536605477333
+    },
+    {
+      "id": "0026_gamma1.1299999952",
+      "vrmse": 0.14357724785804749,
+      "vrmse_chmean": 0.15110790729522705,
+      "vrmse_density": 0.15367889404296875,
+      "vrmse_momentum_x": 0.130356565117836,
+      "vrmse_momentum_y": 0.13651536405086517,
+      "vrmse_pressure": 0.1838807910680771
+    },
+    {
+      "id": "0027_gamma1.1299999952",
+      "vrmse": 0.04782622680068016,
+      "vrmse_chmean": 0.05946064367890358,
+      "vrmse_density": 0.058111757040023804,
+      "vrmse_momentum_x": 0.038779523223638535,
+      "vrmse_momentum_y": 0.04905790835618973,
+      "vrmse_pressure": 0.09189338237047195
+    },
+    {
+      "id": "0028_gamma1.1299999952",
+      "vrmse": 0.11943639069795609,
+      "vrmse_chmean": 0.13163214921951294,
+      "vrmse_density": 0.13059934973716736,
+      "vrmse_momentum_x": 0.13116656243801117,
+      "vrmse_momentum_y": 0.10258083045482635,
+      "vrmse_pressure": 0.16218183934688568
+    },
+    {
+      "id": "0029_gamma1.1299999952",
+      "vrmse": 0.044620122760534286,
+      "vrmse_chmean": 0.07862935215234756,
+      "vrmse_density": 0.06332840025424957,
+      "vrmse_momentum_x": 0.03971876576542854,
+      "vrmse_momentum_y": 0.06519848853349686,
+      "vrmse_pressure": 0.14627176523208618
+    },
+    {
+      "id": "0030_gamma1.1299999952",
+      "vrmse": 0.05486513674259186,
+      "vrmse_chmean": 0.07363808900117874,
+      "vrmse_density": 0.07488719373941422,
+      "vrmse_momentum_x": 0.07850513607263565,
+      "vrmse_momentum_y": 0.05859850347042084,
+      "vrmse_pressure": 0.08256152272224426
+    },
+    {
+      "id": "0031_gamma1.1299999952",
+      "vrmse": 0.0654352605342865,
+      "vrmse_chmean": 0.0717482715845108,
+      "vrmse_density": 0.08822877705097198,
+      "vrmse_momentum_x": 0.05562030151486397,
+      "vrmse_momentum_y": 0.06251072138547897,
+      "vrmse_pressure": 0.08063328266143799
+    },
+    {
+      "id": "0032_gamma1.1299999952",
+      "vrmse": 0.09885511547327042,
+      "vrmse_chmean": 0.11482693254947662,
+      "vrmse_density": 0.10042303800582886,
+      "vrmse_momentum_x": 0.10940389335155487,
+      "vrmse_momentum_y": 0.10032922029495239,
+      "vrmse_pressure": 0.14915157854557037
+    },
+    {
+      "id": "0033_gamma1.1299999952",
+      "vrmse": 0.08188241720199585,
+      "vrmse_chmean": 0.11806384474039078,
+      "vrmse_density": 0.10462962090969086,
+      "vrmse_momentum_x": 0.09000774472951889,
+      "vrmse_momentum_y": 0.1184685081243515,
+      "vrmse_pressure": 0.15914951264858246
+    },
+    {
+      "id": "0034_gamma1.1299999952",
+      "vrmse": 0.05110578611493111,
+      "vrmse_chmean": 0.08117752522230148,
+      "vrmse_density": 0.061886291950941086,
+      "vrmse_momentum_x": 0.07547207921743393,
+      "vrmse_momentum_y": 0.0815754160284996,
+      "vrmse_pressure": 0.10577632486820221
+    },
+    {
+      "id": "0035_gamma1.1299999952",
+      "vrmse": 0.09485968202352524,
+      "vrmse_chmean": 0.11476541310548782,
+      "vrmse_density": 0.09118933975696564,
+      "vrmse_momentum_x": 0.0969466120004654,
+      "vrmse_momentum_y": 0.11236055940389633,
+      "vrmse_pressure": 0.15856514871120453
+    },
+    {
+      "id": "0036_gamma1.1299999952",
+      "vrmse": 0.11948879808187485,
+      "vrmse_chmean": 0.1498241424560547,
+      "vrmse_density": 0.1651924103498459,
+      "vrmse_momentum_x": 0.13109342753887177,
+      "vrmse_momentum_y": 0.11844565719366074,
+      "vrmse_pressure": 0.18456509709358215
+    },
+    {
+      "id": "0037_gamma1.1299999952",
+      "vrmse": 0.055255841463804245,
+      "vrmse_chmean": 0.07507912069559097,
+      "vrmse_density": 0.08971434831619263,
+      "vrmse_momentum_x": 0.056643012911081314,
+      "vrmse_momentum_y": 0.05047006532549858,
+      "vrmse_pressure": 0.10348906368017197
+    },
+    {
+      "id": "0038_gamma1.1299999952",
+      "vrmse": 0.07615219056606293,
+      "vrmse_chmean": 0.10812873393297195,
+      "vrmse_density": 0.11154655367136002,
+      "vrmse_momentum_x": 0.08250527828931808,
+      "vrmse_momentum_y": 0.09888730198144913,
+      "vrmse_pressure": 0.13957579433918
+    },
+    {
+      "id": "0039_gamma1.1299999952",
+      "vrmse": 0.1469641625881195,
+      "vrmse_chmean": 0.204240620136261,
+      "vrmse_density": 0.20471635460853577,
+      "vrmse_momentum_x": 0.21877750754356384,
+      "vrmse_momentum_y": 0.22155803442001343,
+      "vrmse_pressure": 0.1719106137752533
+    },
+    {
+      "id": "0040_gamma1.1299999952",
+      "vrmse": 0.06757298111915588,
+      "vrmse_chmean": 0.09192502498626709,
+      "vrmse_density": 0.07458814233541489,
+      "vrmse_momentum_x": 0.07302277535200119,
+      "vrmse_momentum_y": 0.09607771784067154,
+      "vrmse_pressure": 0.12401146441698074
+    },
+    {
+      "id": "0041_gamma1.1299999952",
+      "vrmse": 0.18654575943946838,
+      "vrmse_chmean": 0.19502079486846924,
+      "vrmse_density": 0.17469441890716553,
+      "vrmse_momentum_x": 0.23765787482261658,
+      "vrmse_momentum_y": 0.17331206798553467,
+      "vrmse_pressure": 0.19441883265972137
+    },
+    {
+      "id": "0042_gamma1.1299999952",
+      "vrmse": 0.05946426838636398,
+      "vrmse_chmean": 0.10355440527200699,
+      "vrmse_density": 0.09125853329896927,
+      "vrmse_momentum_x": 0.13718558847904205,
+      "vrmse_momentum_y": 0.10425630211830139,
+      "vrmse_pressure": 0.08151719719171524
+    },
+    {
+      "id": "0043_gamma1.1299999952",
+      "vrmse": 0.062032632529735565,
+      "vrmse_chmean": 0.08805175870656967,
+      "vrmse_density": 0.07824854552745819,
+      "vrmse_momentum_x": 0.06393367797136307,
+      "vrmse_momentum_y": 0.10723476856946945,
+      "vrmse_pressure": 0.10279003530740738
+    },
+    {
+      "id": "0044_gamma1.1299999952",
+      "vrmse": 0.10635574162006378,
+      "vrmse_chmean": 0.1378762423992157,
+      "vrmse_density": 0.1317702978849411,
+      "vrmse_momentum_x": 0.1262613832950592,
+      "vrmse_momentum_y": 0.12038376182317734,
+      "vrmse_pressure": 0.17308954894542694
+    },
+    {
+      "id": "0045_gamma1.1299999952",
+      "vrmse": 0.1652943640947342,
+      "vrmse_chmean": 0.22416362166404724,
+      "vrmse_density": 0.20980612933635712,
+      "vrmse_momentum_x": 0.2507130205631256,
+      "vrmse_momentum_y": 0.24080760776996613,
+      "vrmse_pressure": 0.1953277587890625
+    },
+    {
+      "id": "0046_gamma1.1299999952",
+      "vrmse": 0.08011878281831741,
+      "vrmse_chmean": 0.12782153487205505,
+      "vrmse_density": 0.13015128672122955,
+      "vrmse_momentum_x": 0.1368504762649536,
+      "vrmse_momentum_y": 0.11228767782449722,
+      "vrmse_pressure": 0.131996750831604
+    },
+    {
+      "id": "0047_gamma1.1299999952",
+      "vrmse": 0.03592006117105484,
+      "vrmse_chmean": 0.1694735586643219,
+      "vrmse_density": 0.13784585893154144,
+      "vrmse_momentum_x": 0.271260142326355,
+      "vrmse_momentum_y": 0.1468830406665802,
+      "vrmse_pressure": 0.12190519273281097
+    },
+    {
+      "id": "0048_gamma1.1299999952",
+      "vrmse": 0.07431238144636154,
+      "vrmse_chmean": 0.09787102788686752,
+      "vrmse_density": 0.10220305621623993,
+      "vrmse_momentum_x": 0.06111540645360947,
+      "vrmse_momentum_y": 0.08661510050296783,
+      "vrmse_pressure": 0.14155055582523346
+    },
+    {
+      "id": "0049_gamma1.1299999952",
+      "vrmse": 0.0690397098660469,
+      "vrmse_chmean": 0.09516716748476028,
+      "vrmse_density": 0.09401309490203857,
+      "vrmse_momentum_x": 0.07343532890081406,
+      "vrmse_momentum_y": 0.11303920298814774,
+      "vrmse_pressure": 0.10018104314804077
+    },
+    {
+      "id": "0050_gamma1.2200000286",
+      "vrmse": 0.08944088965654373,
+      "vrmse_chmean": 0.11576737463474274,
+      "vrmse_density": 0.1309865564107895,
+      "vrmse_momentum_x": 0.09498109668493271,
+      "vrmse_momentum_y": 0.09190738201141357,
+      "vrmse_pressure": 0.14519447088241577
+    },
+    {
+      "id": "0051_gamma1.2200000286",
+      "vrmse": 0.11189503222703934,
+      "vrmse_chmean": 0.12503820657730103,
+      "vrmse_density": 0.1545969843864441,
+      "vrmse_momentum_x": 0.10021547973155975,
+      "vrmse_momentum_y": 0.10601532459259033,
+      "vrmse_pressure": 0.13932500779628754
+    },
+    {
+      "id": "0052_gamma1.2200000286",
+      "vrmse": 0.03929753974080086,
+      "vrmse_chmean": 0.086316779255867,
+      "vrmse_density": 0.06182146072387695,
+      "vrmse_momentum_x": 0.07801995426416397,
+      "vrmse_momentum_y": 0.10376887768507004,
+      "vrmse_pressure": 0.10165684670209885
+    },
+    {
+      "id": "0053_gamma1.2200000286",
+      "vrmse": 0.05400831997394562,
+      "vrmse_chmean": 0.091665118932724,
+      "vrmse_density": 0.08865702897310257,
+      "vrmse_momentum_x": 0.07896210998296738,
+      "vrmse_momentum_y": 0.08117155730724335,
+      "vrmse_pressure": 0.1178697794675827
+    },
+    {
+      "id": "0054_gamma1.2200000286",
+      "vrmse": 0.03542511910200119,
+      "vrmse_chmean": 0.06667665392160416,
+      "vrmse_density": 0.0577721931040287,
+      "vrmse_momentum_x": 0.05980001762509346,
+      "vrmse_momentum_y": 0.06728607416152954,
+      "vrmse_pressure": 0.08184833079576492
+    },
+    {
+      "id": "0055_gamma1.2200000286",
+      "vrmse": 0.08023814111948013,
+      "vrmse_chmean": 0.10271665453910828,
+      "vrmse_density": 0.08591016381978989,
+      "vrmse_momentum_x": 0.08787132799625397,
+      "vrmse_momentum_y": 0.11468914896249771,
+      "vrmse_pressure": 0.12239597737789154
+    },
+    {
+      "id": "0056_gamma1.2200000286",
+      "vrmse": 0.045540761202573776,
+      "vrmse_chmean": 0.06350883841514587,
+      "vrmse_density": 0.0636594295501709,
+      "vrmse_momentum_x": 0.061212386935949326,
+      "vrmse_momentum_y": 0.04384440928697586,
+      "vrmse_pressure": 0.08531910926103592
+    },
+    {
+      "id": "0057_gamma1.2200000286",
+      "vrmse": 0.07578259706497192,
+      "vrmse_chmean": 0.10286399722099304,
+      "vrmse_density": 0.08199562132358551,
+      "vrmse_momentum_x": 0.0970408022403717,
+      "vrmse_momentum_y": 0.06906238943338394,
+      "vrmse_pressure": 0.1633571833372116
+    },
+    {
+      "id": "0058_gamma1.2200000286",
+      "vrmse": 0.04855985566973686,
+      "vrmse_chmean": 0.07626453042030334,
+      "vrmse_density": 0.08484597504138947,
+      "vrmse_momentum_x": 0.06032438948750496,
+      "vrmse_momentum_y": 0.06345123052597046,
+      "vrmse_pressure": 0.0964365303516388
+    },
+    {
+      "id": "0059_gamma1.2200000286",
+      "vrmse": 0.05252360925078392,
+      "vrmse_chmean": 0.10671193152666092,
+      "vrmse_density": 0.08911121636629105,
+      "vrmse_momentum_x": 0.12864194810390472,
+      "vrmse_momentum_y": 0.10303373634815216,
+      "vrmse_pressure": 0.10606081783771515
+    },
+    {
+      "id": "0060_gamma1.2200000286",
+      "vrmse": 0.13488425314426422,
+      "vrmse_chmean": 0.15397879481315613,
+      "vrmse_density": 0.15248948335647583,
+      "vrmse_momentum_x": 0.14619646966457367,
+      "vrmse_momentum_y": 0.14902855455875397,
+      "vrmse_pressure": 0.16820062696933746
+    },
+    {
+      "id": "0061_gamma1.2200000286",
+      "vrmse": 0.039554398506879807,
+      "vrmse_chmean": 0.05646120011806488,
+      "vrmse_density": 0.06322278827428818,
+      "vrmse_momentum_x": 0.03636099398136139,
+      "vrmse_momentum_y": 0.047057121992111206,
+      "vrmse_pressure": 0.07920389622449875
+    },
+    {
+      "id": "0062_gamma1.2200000286",
+      "vrmse": 0.05748799815773964,
+      "vrmse_chmean": 0.07680146396160126,
+      "vrmse_density": 0.08581256866455078,
+      "vrmse_momentum_x": 0.07619250565767288,
+      "vrmse_momentum_y": 0.06074971705675125,
+      "vrmse_pressure": 0.08445107191801071
+    },
+    {
+      "id": "0063_gamma1.2200000286",
+      "vrmse": 0.07433098554611206,
+      "vrmse_chmean": 0.11087953299283981,
+      "vrmse_density": 0.0713912695646286,
+      "vrmse_momentum_x": 0.08333466947078705,
+      "vrmse_momentum_y": 0.10780669748783112,
+      "vrmse_pressure": 0.1809854954481125
+    },
+    {
+      "id": "0064_gamma1.2200000286",
+      "vrmse": 0.025025950744748116,
+      "vrmse_chmean": 0.11895181238651276,
+      "vrmse_density": 0.0725630670785904,
+      "vrmse_momentum_x": 0.16560667753219604,
+      "vrmse_momentum_y": 0.08756569027900696,
+      "vrmse_pressure": 0.15007179975509644
+    },
+    {
+      "id": "0065_gamma1.2200000286",
+      "vrmse": 0.15693622827529907,
+      "vrmse_chmean": 0.16850730776786804,
+      "vrmse_density": 0.1804603636264801,
+      "vrmse_momentum_x": 0.13566219806671143,
+      "vrmse_momentum_y": 0.13950353860855103,
+      "vrmse_pressure": 0.218403160572052
+    },
+    {
+      "id": "0066_gamma1.2200000286",
+      "vrmse": 0.05227237567305565,
+      "vrmse_chmean": 0.06276802718639374,
+      "vrmse_density": 0.04511236026883125,
+      "vrmse_momentum_x": 0.07339826971292496,
+      "vrmse_momentum_y": 0.05646330490708351,
+      "vrmse_pressure": 0.07609816640615463
+    },
+    {
+      "id": "0067_gamma1.2200000286",
+      "vrmse": 0.06000174582004547,
+      "vrmse_chmean": 0.07237107306718826,
+      "vrmse_density": 0.06883508712053299,
+      "vrmse_momentum_x": 0.04930375516414642,
+      "vrmse_momentum_y": 0.08037053793668747,
+      "vrmse_pressure": 0.09097490459680557
+    },
+    {
+      "id": "0068_gamma1.2200000286",
+      "vrmse": 0.07018943130970001,
+      "vrmse_chmean": 0.1067432165145874,
+      "vrmse_density": 0.10024402290582657,
+      "vrmse_momentum_x": 0.07809507101774216,
+      "vrmse_momentum_y": 0.10732424259185791,
+      "vrmse_pressure": 0.14130952954292297
+    },
+    {
+      "id": "0069_gamma1.2200000286",
+      "vrmse": 0.06447577476501465,
+      "vrmse_chmean": 0.08387362211942673,
+      "vrmse_density": 0.054136790335178375,
+      "vrmse_momentum_x": 0.054269541054964066,
+      "vrmse_momentum_y": 0.08623511344194412,
+      "vrmse_pressure": 0.14085303246974945
+    },
+    {
+      "id": "0070_gamma1.2200000286",
+      "vrmse": 0.08864899724721909,
+      "vrmse_chmean": 0.11019241809844971,
+      "vrmse_density": 0.09315285831689835,
+      "vrmse_momentum_x": 0.10777299851179123,
+      "vrmse_momentum_y": 0.08746980130672455,
+      "vrmse_pressure": 0.1523740291595459
+    },
+    {
+      "id": "0071_gamma1.2200000286",
+      "vrmse": 0.12115871906280518,
+      "vrmse_chmean": 0.13869455456733704,
+      "vrmse_density": 0.13923107087612152,
+      "vrmse_momentum_x": 0.10018809139728546,
+      "vrmse_momentum_y": 0.12361231446266174,
+      "vrmse_pressure": 0.19174674153327942
+    },
+    {
+      "id": "0072_gamma1.2200000286",
+      "vrmse": 0.0723864734172821,
+      "vrmse_chmean": 0.09445596486330032,
+      "vrmse_density": 0.08137872815132141,
+      "vrmse_momentum_x": 0.09149598330259323,
+      "vrmse_momentum_y": 0.06884447485208511,
+      "vrmse_pressure": 0.13610465824604034
+    },
+    {
+      "id": "0073_gamma1.2200000286",
+      "vrmse": 0.08153777569532394,
+      "vrmse_chmean": 0.09136535227298737,
+      "vrmse_density": 0.0739305391907692,
+      "vrmse_momentum_x": 0.08486813306808472,
+      "vrmse_momentum_y": 0.09669843316078186,
+      "vrmse_pressure": 0.10996431857347488
+    },
+    {
+      "id": "0074_gamma1.2200000286",
+      "vrmse": 0.09667740762233734,
+      "vrmse_chmean": 0.10240775346755981,
+      "vrmse_density": 0.10687247663736343,
+      "vrmse_momentum_x": 0.08598556369543076,
+      "vrmse_momentum_y": 0.08876237273216248,
+      "vrmse_pressure": 0.1280105859041214
+    },
+    {
+      "id": "0075_gamma1.2200000286",
+      "vrmse": 0.15630975365638733,
+      "vrmse_chmean": 0.17404110729694366,
+      "vrmse_density": 0.20632025599479675,
+      "vrmse_momentum_x": 0.13112327456474304,
+      "vrmse_momentum_y": 0.1394340544939041,
+      "vrmse_pressure": 0.21928685903549194
+    },
+    {
+      "id": "0076_gamma1.2200000286",
+      "vrmse": 0.023689191788434982,
+      "vrmse_chmean": 0.05084904655814171,
+      "vrmse_density": 0.036027733236551285,
+      "vrmse_momentum_x": 0.05787884443998337,
+      "vrmse_momentum_y": 0.062338706105947495,
+      "vrmse_pressure": 0.04715089872479439
+    },
+    {
+      "id": "0077_gamma1.2200000286",
+      "vrmse": 0.08407361805438995,
+      "vrmse_chmean": 0.10968589037656784,
+      "vrmse_density": 0.09126502275466919,
+      "vrmse_momentum_x": 0.10772960633039474,
+      "vrmse_momentum_y": 0.08381601423025131,
+      "vrmse_pressure": 0.15593291819095612
+    },
+    {
+      "id": "0078_gamma1.2200000286",
+      "vrmse": 0.11009825766086578,
+      "vrmse_chmean": 0.20406121015548706,
+      "vrmse_density": 0.22254030406475067,
+      "vrmse_momentum_x": 0.24536611139774323,
+      "vrmse_momentum_y": 0.20660105347633362,
+      "vrmse_pressure": 0.14173734188079834
+    },
+    {
+      "id": "0079_gamma1.2200000286",
+      "vrmse": 0.08499141037464142,
+      "vrmse_chmean": 0.09381136298179626,
+      "vrmse_density": 0.11421521008014679,
+      "vrmse_momentum_x": 0.08563575148582458,
+      "vrmse_momentum_y": 0.06940791010856628,
+      "vrmse_pressure": 0.10598655790090561
+    },
+    {
+      "id": "0080_gamma1.2200000286",
+      "vrmse": 0.035437196493148804,
+      "vrmse_chmean": 0.07993091642856598,
+      "vrmse_density": 0.044848863035440445,
+      "vrmse_momentum_x": 0.052390050143003464,
+      "vrmse_momentum_y": 0.03925834968686104,
+      "vrmse_pressure": 0.18322639167308807
+    },
+    {
+      "id": "0081_gamma1.2200000286",
+      "vrmse": 0.09868231415748596,
+      "vrmse_chmean": 0.1509856879711151,
+      "vrmse_density": 0.14919784665107727,
+      "vrmse_momentum_x": 0.12299983203411102,
+      "vrmse_momentum_y": 0.13614226877689362,
+      "vrmse_pressure": 0.19560284912586212
+    },
+    {
+      "id": "0082_gamma1.2200000286",
+      "vrmse": 0.12395740300416946,
+      "vrmse_chmean": 0.1411140263080597,
+      "vrmse_density": 0.13564930856227875,
+      "vrmse_momentum_x": 0.13417212665081024,
+      "vrmse_momentum_y": 0.10955370962619781,
+      "vrmse_pressure": 0.18508093059062958
+    },
+    {
+      "id": "0083_gamma1.2200000286",
+      "vrmse": 0.12499402463436127,
+      "vrmse_chmean": 0.1433645784854889,
+      "vrmse_density": 0.13712817430496216,
+      "vrmse_momentum_x": 0.10039160400629044,
+      "vrmse_momentum_y": 0.13809606432914734,
+      "vrmse_pressure": 0.19784249365329742
+    },
+    {
+      "id": "0084_gamma1.2200000286",
+      "vrmse": 0.08415764570236206,
+      "vrmse_chmean": 0.10283693671226501,
+      "vrmse_density": 0.10588327795267105,
+      "vrmse_momentum_x": 0.0810970664024353,
+      "vrmse_momentum_y": 0.08395813405513763,
+      "vrmse_pressure": 0.14040929079055786
+    },
+    {
+      "id": "0085_gamma1.2200000286",
+      "vrmse": 0.13394618034362793,
+      "vrmse_chmean": 0.16449271142482758,
+      "vrmse_density": 0.14108046889305115,
+      "vrmse_momentum_x": 0.13551990687847137,
+      "vrmse_momentum_y": 0.18231244385242462,
+      "vrmse_pressure": 0.19905804097652435
+    },
+    {
+      "id": "0086_gamma1.2200000286",
+      "vrmse": 0.034515462815761566,
+      "vrmse_chmean": 0.07364706695079803,
+      "vrmse_density": 0.04846096411347389,
+      "vrmse_momentum_x": 0.032903220504522324,
+      "vrmse_momentum_y": 0.09824182838201523,
+      "vrmse_pressure": 0.1149822399020195
+    },
+    {
+      "id": "0087_gamma1.2200000286",
+      "vrmse": 0.08812210708856583,
+      "vrmse_chmean": 0.11164049804210663,
+      "vrmse_density": 0.10964643955230713,
+      "vrmse_momentum_x": 0.0813479796051979,
+      "vrmse_momentum_y": 0.11357152462005615,
+      "vrmse_pressure": 0.14199605584144592
+    },
+    {
+      "id": "0088_gamma1.2200000286",
+      "vrmse": 0.08549350500106812,
+      "vrmse_chmean": 0.10831711441278458,
+      "vrmse_density": 0.08533746749162674,
+      "vrmse_momentum_x": 0.1060783788561821,
+      "vrmse_momentum_y": 0.1246136799454689,
+      "vrmse_pressure": 0.11723893880844116
+    },
+    {
+      "id": "0089_gamma1.2200000286",
+      "vrmse": 0.06916459649801254,
+      "vrmse_chmean": 0.14803406596183777,
+      "vrmse_density": 0.14729689061641693,
+      "vrmse_momentum_x": 0.14255617558956146,
+      "vrmse_momentum_y": 0.1881880909204483,
+      "vrmse_pressure": 0.11409512162208557
+    },
+    {
+      "id": "0090_gamma1.2200000286",
+      "vrmse": 0.091061070561409,
+      "vrmse_chmean": 0.09906360507011414,
+      "vrmse_density": 0.10854052752256393,
+      "vrmse_momentum_x": 0.06950584053993225,
+      "vrmse_momentum_y": 0.09902680665254593,
+      "vrmse_pressure": 0.11918123811483383
+    },
+    {
+      "id": "0091_gamma1.2200000286",
+      "vrmse": 0.06375535577535629,
+      "vrmse_chmean": 0.08474218100309372,
+      "vrmse_density": 0.0655374825000763,
+      "vrmse_momentum_x": 0.07048546522855759,
+      "vrmse_momentum_y": 0.0798119604587555,
+      "vrmse_pressure": 0.12313380092382431
+    },
+    {
+      "id": "0092_gamma1.2200000286",
+      "vrmse": 0.06544752418994904,
+      "vrmse_chmean": 0.09989771991968155,
+      "vrmse_density": 0.06787421554327011,
+      "vrmse_momentum_x": 0.1227993369102478,
+      "vrmse_momentum_y": 0.06417035311460495,
+      "vrmse_pressure": 0.14474697411060333
+    },
+    {
+      "id": "0093_gamma1.2200000286",
+      "vrmse": 0.07749568670988083,
+      "vrmse_chmean": 0.08674386143684387,
+      "vrmse_density": 0.07969235628843307,
+      "vrmse_momentum_x": 0.06933781504631042,
+      "vrmse_momentum_y": 0.08573851734399796,
+      "vrmse_pressure": 0.11220676451921463
+    },
+    {
+      "id": "0094_gamma1.2200000286",
+      "vrmse": 0.10813602805137634,
+      "vrmse_chmean": 0.1293194741010666,
+      "vrmse_density": 0.11597178876399994,
+      "vrmse_momentum_x": 0.12974748015403748,
+      "vrmse_momentum_y": 0.0948508232831955,
+      "vrmse_pressure": 0.17670780420303345
+    },
+    {
+      "id": "0095_gamma1.2200000286",
+      "vrmse": 0.029690144583582878,
+      "vrmse_chmean": 0.061455581337213516,
+      "vrmse_density": 0.05925936996936798,
+      "vrmse_momentum_x": 0.06450264155864716,
+      "vrmse_momentum_y": 0.056120432913303375,
+      "vrmse_pressure": 0.06593988090753555
+    },
+    {
+      "id": "0096_gamma1.2200000286",
+      "vrmse": 0.11978065967559814,
+      "vrmse_chmean": 0.1526661515235901,
+      "vrmse_density": 0.16069763898849487,
+      "vrmse_momentum_x": 0.12511666119098663,
+      "vrmse_momentum_y": 0.1362076699733734,
+      "vrmse_pressure": 0.18864266574382782
+    },
+    {
+      "id": "0097_gamma1.2200000286",
+      "vrmse": 0.13690081238746643,
+      "vrmse_chmean": 0.1620030403137207,
+      "vrmse_density": 0.10545150190591812,
+      "vrmse_momentum_x": 0.14629724621772766,
+      "vrmse_momentum_y": 0.17497211694717407,
+      "vrmse_pressure": 0.22129130363464355
+    },
+    {
+      "id": "0098_gamma1.2200000286",
+      "vrmse": 0.07315699756145477,
+      "vrmse_chmean": 0.10980971157550812,
+      "vrmse_density": 0.08813686668872833,
+      "vrmse_momentum_x": 0.10384706407785416,
+      "vrmse_momentum_y": 0.11583451926708221,
+      "vrmse_pressure": 0.13142037391662598
+    },
+    {
+      "id": "0099_gamma1.2200000286",
+      "vrmse": 0.0481480248272419,
+      "vrmse_chmean": 0.060373108834028244,
+      "vrmse_density": 0.0620047003030777,
+      "vrmse_momentum_x": 0.05082867667078972,
+      "vrmse_momentum_y": 0.04725770279765129,
+      "vrmse_pressure": 0.08140135556459427
+    },
+    {
+      "id": "0100_gamma1.2999999523",
+      "vrmse": 0.04977952688932419,
+      "vrmse_chmean": 0.06968992203474045,
+      "vrmse_density": 0.05225037783384323,
+      "vrmse_momentum_x": 0.03811836615204811,
+      "vrmse_momentum_y": 0.08180761337280273,
+      "vrmse_pressure": 0.10658333450555801
+    },
+    {
+      "id": "0101_gamma1.2999999523",
+      "vrmse": 0.039537299424409866,
+      "vrmse_chmean": 0.08320916444063187,
+      "vrmse_density": 0.058762237429618835,
+      "vrmse_momentum_x": 0.06988496333360672,
+      "vrmse_momentum_y": 0.04550468549132347,
+      "vrmse_pressure": 0.15868476033210754
+    },
+    {
+      "id": "0102_gamma1.2999999523",
+      "vrmse": 0.05500767007470131,
+      "vrmse_chmean": 0.08305873721837997,
+      "vrmse_density": 0.06557361036539078,
+      "vrmse_momentum_x": 0.06837914884090424,
+      "vrmse_momentum_y": 0.06830529123544693,
+      "vrmse_pressure": 0.12997689843177795
+    },
+    {
+      "id": "0103_gamma1.2999999523",
+      "vrmse": 0.08232337981462479,
+      "vrmse_chmean": 0.09600996971130371,
+      "vrmse_density": 0.07497429847717285,
+      "vrmse_momentum_x": 0.0846012681722641,
+      "vrmse_momentum_y": 0.082394540309906,
+      "vrmse_pressure": 0.1420697718858719
+    },
+    {
+      "id": "0104_gamma1.2999999523",
+      "vrmse": 0.04397614672780037,
+      "vrmse_chmean": 0.06707763671875,
+      "vrmse_density": 0.06894789636135101,
+      "vrmse_momentum_x": 0.04277472943067551,
+      "vrmse_momentum_y": 0.05508876219391823,
+      "vrmse_pressure": 0.10149917006492615
+    },
+    {
+      "id": "0105_gamma1.2999999523",
+      "vrmse": 0.05420682951807976,
+      "vrmse_chmean": 0.1021140068769455,
+      "vrmse_density": 0.10169946402311325,
+      "vrmse_momentum_x": 0.10340739786624908,
+      "vrmse_momentum_y": 0.06988991051912308,
+      "vrmse_pressure": 0.13345925509929657
+    },
+    {
+      "id": "0106_gamma1.2999999523",
+      "vrmse": 0.10901077091693878,
+      "vrmse_chmean": 0.13623234629631042,
+      "vrmse_density": 0.1373891830444336,
+      "vrmse_momentum_x": 0.11348408460617065,
+      "vrmse_momentum_y": 0.1068575531244278,
+      "vrmse_pressure": 0.18719856441020966
+    },
+    {
+      "id": "0107_gamma1.2999999523",
+      "vrmse": 0.07366721332073212,
+      "vrmse_chmean": 0.0967700332403183,
+      "vrmse_density": 0.08245070278644562,
+      "vrmse_momentum_x": 0.1048172265291214,
+      "vrmse_momentum_y": 0.06809505820274353,
+      "vrmse_pressure": 0.13171713054180145
+    },
+    {
+      "id": "0108_gamma1.2999999523",
+      "vrmse": 0.11091558635234833,
+      "vrmse_chmean": 0.13142108917236328,
+      "vrmse_density": 0.14554037153720856,
+      "vrmse_momentum_x": 0.11910375207662582,
+      "vrmse_momentum_y": 0.09693131595849991,
+      "vrmse_pressure": 0.16410896182060242
+    },
+    {
+      "id": "0109_gamma1.2999999523",
+      "vrmse": 0.07162059843540192,
+      "vrmse_chmean": 0.08674361556768417,
+      "vrmse_density": 0.06996473670005798,
+      "vrmse_momentum_x": 0.06818393617868423,
+      "vrmse_momentum_y": 0.07345844060182571,
+      "vrmse_pressure": 0.13536736369132996
+    },
+    {
+      "id": "0110_gamma1.2999999523",
+      "vrmse": 0.05598284676671028,
+      "vrmse_chmean": 0.0745958611369133,
+      "vrmse_density": 0.05589829385280609,
+      "vrmse_momentum_x": 0.0652477815747261,
+      "vrmse_momentum_y": 0.07611342519521713,
+      "vrmse_pressure": 0.10112392902374268
+    },
+    {
+      "id": "0111_gamma1.2999999523",
+      "vrmse": 0.039038173854351044,
+      "vrmse_chmean": 0.07101011276245117,
+      "vrmse_density": 0.08604593575000763,
+      "vrmse_momentum_x": 0.0590357631444931,
+      "vrmse_momentum_y": 0.05052638798952103,
+      "vrmse_pressure": 0.08843237906694412
+    },
+    {
+      "id": "0112_gamma1.2999999523",
+      "vrmse": 0.06417149305343628,
+      "vrmse_chmean": 0.11202757060527802,
+      "vrmse_density": 0.10045437514781952,
+      "vrmse_momentum_x": 0.08035092055797577,
+      "vrmse_momentum_y": 0.11257795244455338,
+      "vrmse_pressure": 0.1547270268201828
+    },
+    {
+      "id": "0113_gamma1.2999999523",
+      "vrmse": 0.03323911130428314,
+      "vrmse_chmean": 0.07226178050041199,
+      "vrmse_density": 0.04783184453845024,
+      "vrmse_momentum_x": 0.03322649374604225,
+      "vrmse_momentum_y": 0.11249439418315887,
+      "vrmse_pressure": 0.09549438208341599
+    },
+    {
+      "id": "0114_gamma1.2999999523",
+      "vrmse": 0.1072017103433609,
+      "vrmse_chmean": 0.18083009123802185,
+      "vrmse_density": 0.1412358433008194,
+      "vrmse_momentum_x": 0.11111821234226227,
+      "vrmse_momentum_y": 0.34074094891548157,
+      "vrmse_pressure": 0.13022537529468536
+    },
+    {
+      "id": "0115_gamma1.2999999523",
+      "vrmse": 0.034772638231515884,
+      "vrmse_chmean": 0.08176063001155853,
+      "vrmse_density": 0.06122908741235733,
+      "vrmse_momentum_x": 0.04746157303452492,
+      "vrmse_momentum_y": 0.06404560059309006,
+      "vrmse_pressure": 0.15430623292922974
+    },
+    {
+      "id": "0116_gamma1.2999999523",
+      "vrmse": 0.09563521295785904,
+      "vrmse_chmean": 0.11643867194652557,
+      "vrmse_density": 0.1205122247338295,
+      "vrmse_momentum_x": 0.07253004610538483,
+      "vrmse_momentum_y": 0.0978357195854187,
+      "vrmse_pressure": 0.17487668991088867
+    },
+    {
+      "id": "0117_gamma1.2999999523",
+      "vrmse": 0.04285608232021332,
+      "vrmse_chmean": 0.0697895884513855,
+      "vrmse_density": 0.06845804303884506,
+      "vrmse_momentum_x": 0.05382756143808365,
+      "vrmse_momentum_y": 0.06759276986122131,
+      "vrmse_pressure": 0.08927998691797256
+    },
+    {
+      "id": "0118_gamma1.2999999523",
+      "vrmse": 0.04830218851566315,
+      "vrmse_chmean": 0.08909633010625839,
+      "vrmse_density": 0.09129206836223602,
+      "vrmse_momentum_x": 0.08340417593717575,
+      "vrmse_momentum_y": 0.10093241184949875,
+      "vrmse_pressure": 0.08075667172670364
+    },
+    {
+      "id": "0119_gamma1.2999999523",
+      "vrmse": 0.11405026167631149,
+      "vrmse_chmean": 0.1798468828201294,
+      "vrmse_density": 0.22498784959316254,
+      "vrmse_momentum_x": 0.16013070940971375,
+      "vrmse_momentum_y": 0.19217798113822937,
+      "vrmse_pressure": 0.14209100604057312
+    },
+    {
+      "id": "0120_gamma1.2999999523",
+      "vrmse": 0.11876653879880905,
+      "vrmse_chmean": 0.1286860853433609,
+      "vrmse_density": 0.09264708310365677,
+      "vrmse_momentum_x": 0.14036667346954346,
+      "vrmse_momentum_y": 0.1208052784204483,
+      "vrmse_pressure": 0.16092529892921448
+    },
+    {
+      "id": "0121_gamma1.2999999523",
+      "vrmse": 0.04662970080971718,
+      "vrmse_chmean": 0.0893028974533081,
+      "vrmse_density": 0.09089096635580063,
+      "vrmse_momentum_x": 0.06001459062099457,
+      "vrmse_momentum_y": 0.08557528257369995,
+      "vrmse_pressure": 0.12073074281215668
+    },
+    {
+      "id": "0122_gamma1.2999999523",
+      "vrmse": 0.043405745178461075,
+      "vrmse_chmean": 0.07270503044128418,
+      "vrmse_density": 0.04886702448129654,
+      "vrmse_momentum_x": 0.09983211010694504,
+      "vrmse_momentum_y": 0.033580753952264786,
+      "vrmse_pressure": 0.10854023694992065
+    },
+    {
+      "id": "0123_gamma1.2999999523",
+      "vrmse": 0.04775271192193031,
+      "vrmse_chmean": 0.07961191236972809,
+      "vrmse_density": 0.076991967856884,
+      "vrmse_momentum_x": 0.08698086440563202,
+      "vrmse_momentum_y": 0.07723581045866013,
+      "vrmse_pressure": 0.077239029109478
+    },
+    {
+      "id": "0124_gamma1.2999999523",
+      "vrmse": 0.11451632529497147,
+      "vrmse_chmean": 0.14488227665424347,
+      "vrmse_density": 0.10255000740289688,
+      "vrmse_momentum_x": 0.2038118541240692,
+      "vrmse_momentum_y": 0.10909760743379593,
+      "vrmse_pressure": 0.16406965255737305
+    },
+    {
+      "id": "0125_gamma1.2999999523",
+      "vrmse": 0.037039581686258316,
+      "vrmse_chmean": 0.08296302706003189,
+      "vrmse_density": 0.06432344019412994,
+      "vrmse_momentum_x": 0.07458002865314484,
+      "vrmse_momentum_y": 0.09815089404582977,
+      "vrmse_pressure": 0.09479774534702301
+    },
+    {
+      "id": "0126_gamma1.2999999523",
+      "vrmse": 0.03384941443800926,
+      "vrmse_chmean": 0.042633529752492905,
+      "vrmse_density": 0.034600868821144104,
+      "vrmse_momentum_x": 0.0360899344086647,
+      "vrmse_momentum_y": 0.028747187927365303,
+      "vrmse_pressure": 0.07109612971544266
+    },
+    {
+      "id": "0127_gamma1.2999999523",
+      "vrmse": 0.05899076908826828,
+      "vrmse_chmean": 0.11524678766727448,
+      "vrmse_density": 0.12136365473270416,
+      "vrmse_momentum_x": 0.09833519160747528,
+      "vrmse_momentum_y": 0.11360200494527817,
+      "vrmse_pressure": 0.1276862919330597
+    },
+    {
+      "id": "0128_gamma1.2999999523",
+      "vrmse": 0.1355920135974884,
+      "vrmse_chmean": 0.15742942690849304,
+      "vrmse_density": 0.15030300617218018,
+      "vrmse_momentum_x": 0.15920786559581757,
+      "vrmse_momentum_y": 0.15585123002529144,
+      "vrmse_pressure": 0.1643555611371994
+    },
+    {
+      "id": "0129_gamma1.2999999523",
+      "vrmse": 0.0530509352684021,
+      "vrmse_chmean": 0.0845164954662323,
+      "vrmse_density": 0.08648189157247543,
+      "vrmse_momentum_x": 0.08363453298807144,
+      "vrmse_momentum_y": 0.08400394022464752,
+      "vrmse_pressure": 0.0839456245303154
+    },
+    {
+      "id": "0130_gamma1.2999999523",
+      "vrmse": 0.0854438915848732,
+      "vrmse_chmean": 0.11141346395015717,
+      "vrmse_density": 0.0856328010559082,
+      "vrmse_momentum_x": 0.10645784437656403,
+      "vrmse_momentum_y": 0.08343081921339035,
+      "vrmse_pressure": 0.17013239860534668
+    },
+    {
+      "id": "0131_gamma1.2999999523",
+      "vrmse": 0.04535825923085213,
+      "vrmse_chmean": 0.06562099605798721,
+      "vrmse_density": 0.04156271368265152,
+      "vrmse_momentum_x": 0.07842479646205902,
+      "vrmse_momentum_y": 0.039981719106435776,
+      "vrmse_pressure": 0.10251476615667343
+    },
+    {
+      "id": "0132_gamma1.2999999523",
+      "vrmse": 0.03903462365269661,
+      "vrmse_chmean": 0.07744014263153076,
+      "vrmse_density": 0.06386629492044449,
+      "vrmse_momentum_x": 0.07446011900901794,
+      "vrmse_momentum_y": 0.058038026094436646,
+      "vrmse_pressure": 0.11339615285396576
+    },
+    {
+      "id": "0133_gamma1.2999999523",
+      "vrmse": 0.12206148356199265,
+      "vrmse_chmean": 0.19080378115177155,
+      "vrmse_density": 0.17685450613498688,
+      "vrmse_momentum_x": 0.21043863892555237,
+      "vrmse_momentum_y": 0.18318477272987366,
+      "vrmse_pressure": 0.19273720681667328
+    },
+    {
+      "id": "0134_gamma1.2999999523",
+      "vrmse": 0.06978589296340942,
+      "vrmse_chmean": 0.07511445134878159,
+      "vrmse_density": 0.08070743829011917,
+      "vrmse_momentum_x": 0.05825262889266014,
+      "vrmse_momentum_y": 0.06845952570438385,
+      "vrmse_pressure": 0.09303820878267288
+    },
+    {
+      "id": "0135_gamma1.2999999523",
+      "vrmse": 0.07698513567447662,
+      "vrmse_chmean": 0.11720927804708481,
+      "vrmse_density": 0.09556666761636734,
+      "vrmse_momentum_x": 0.12521976232528687,
+      "vrmse_momentum_y": 0.09486634284257889,
+      "vrmse_pressure": 0.15318435430526733
+    },
+    {
+      "id": "0136_gamma1.2999999523",
+      "vrmse": 0.0922919288277626,
+      "vrmse_chmean": 0.14590215682983398,
+      "vrmse_density": 0.16242748498916626,
+      "vrmse_momentum_x": 0.14626739919185638,
+      "vrmse_momentum_y": 0.13820523023605347,
+      "vrmse_pressure": 0.13670852780342102
+    },
+    {
+      "id": "0137_gamma1.2999999523",
+      "vrmse": 0.061590828001499176,
+      "vrmse_chmean": 0.07312177121639252,
+      "vrmse_density": 0.06664397567510605,
+      "vrmse_momentum_x": 0.07216417789459229,
+      "vrmse_momentum_y": 0.04979458078742027,
+      "vrmse_pressure": 0.10388433188199997
+    },
+    {
+      "id": "0138_gamma1.2999999523",
+      "vrmse": 0.10310760140419006,
+      "vrmse_chmean": 0.10863975435495377,
+      "vrmse_density": 0.1165093258023262,
+      "vrmse_momentum_x": 0.08422860503196716,
+      "vrmse_momentum_y": 0.11047941446304321,
+      "vrmse_pressure": 0.12334167957305908
+    },
+    {
+      "id": "0139_gamma1.2999999523",
+      "vrmse": 0.0669916495680809,
+      "vrmse_chmean": 0.08818110078573227,
+      "vrmse_density": 0.06976013630628586,
+      "vrmse_momentum_x": 0.11462683230638504,
+      "vrmse_momentum_y": 0.047616295516490936,
+      "vrmse_pressure": 0.12072113156318665
+    },
+    {
+      "id": "0140_gamma1.2999999523",
+      "vrmse": 0.04014066234230995,
+      "vrmse_chmean": 0.0671815574169159,
+      "vrmse_density": 0.057450857013463974,
+      "vrmse_momentum_x": 0.0849175900220871,
+      "vrmse_momentum_y": 0.049808140844106674,
+      "vrmse_pressure": 0.07654962688684464
+    },
+    {
+      "id": "0141_gamma1.2999999523",
+      "vrmse": 0.10803890973329544,
+      "vrmse_chmean": 0.13423198461532593,
+      "vrmse_density": 0.14088086783885956,
+      "vrmse_momentum_x": 0.10258868336677551,
+      "vrmse_momentum_y": 0.10874781012535095,
+      "vrmse_pressure": 0.18471060693264008
+    },
+    {
+      "id": "0142_gamma1.2999999523",
+      "vrmse": 0.06262782961130142,
+      "vrmse_chmean": 0.07978731393814087,
+      "vrmse_density": 0.07721725851297379,
+      "vrmse_momentum_x": 0.07878321409225464,
+      "vrmse_momentum_y": 0.06952983140945435,
+      "vrmse_pressure": 0.0936189740896225
+    },
+    {
+      "id": "0143_gamma1.2999999523",
+      "vrmse": 0.03664370998740196,
+      "vrmse_chmean": 0.05356962978839874,
+      "vrmse_density": 0.06557208299636841,
+      "vrmse_momentum_x": 0.04429695010185242,
+      "vrmse_momentum_y": 0.032191094011068344,
+      "vrmse_pressure": 0.0722183957695961
+    },
+    {
+      "id": "0144_gamma1.2999999523",
+      "vrmse": 0.06281740218400955,
+      "vrmse_chmean": 0.09090884029865265,
+      "vrmse_density": 0.0653659999370575,
+      "vrmse_momentum_x": 0.09952592849731445,
+      "vrmse_momentum_y": 0.06777150183916092,
+      "vrmse_pressure": 0.13097193837165833
+    },
+    {
+      "id": "0145_gamma1.2999999523",
+      "vrmse": 0.10831311345100403,
+      "vrmse_chmean": 0.14820849895477295,
+      "vrmse_density": 0.10754095762968063,
+      "vrmse_momentum_x": 0.15171293914318085,
+      "vrmse_momentum_y": 0.16297969222068787,
+      "vrmse_pressure": 0.17060045897960663
+    },
+    {
+      "id": "0146_gamma1.2999999523",
+      "vrmse": 0.10448484867811203,
+      "vrmse_chmean": 0.15219534933567047,
+      "vrmse_density": 0.1569061279296875,
+      "vrmse_momentum_x": 0.17080996930599213,
+      "vrmse_momentum_y": 0.1545870453119278,
+      "vrmse_pressure": 0.12647825479507446
+    },
+    {
+      "id": "0147_gamma1.2999999523",
+      "vrmse": 0.1113169714808464,
+      "vrmse_chmean": 0.15427279472351074,
+      "vrmse_density": 0.12806978821754456,
+      "vrmse_momentum_x": 0.16900715231895447,
+      "vrmse_momentum_y": 0.17339538037776947,
+      "vrmse_pressure": 0.14661884307861328
+    },
+    {
+      "id": "0148_gamma1.2999999523",
+      "vrmse": 0.12325182557106018,
+      "vrmse_chmean": 0.13687068223953247,
+      "vrmse_density": 0.17216823995113373,
+      "vrmse_momentum_x": 0.12066499888896942,
+      "vrmse_momentum_y": 0.10320315510034561,
+      "vrmse_pressure": 0.15144629776477814
+    },
+    {
+      "id": "0149_gamma1.2999999523",
+      "vrmse": 0.056321870535612106,
+      "vrmse_chmean": 0.07972829043865204,
+      "vrmse_density": 0.07430265098810196,
+      "vrmse_momentum_x": 0.07745726406574249,
+      "vrmse_momentum_y": 0.06573798507452011,
+      "vrmse_pressure": 0.101415254175663
+    },
+    {
+      "id": "0150_gamma1.3300000429",
+      "vrmse": 0.06991561502218246,
+      "vrmse_chmean": 0.10964559763669968,
+      "vrmse_density": 0.10721298307180405,
+      "vrmse_momentum_x": 0.12643201649188995,
+      "vrmse_momentum_y": 0.10328235477209091,
+      "vrmse_pressure": 0.1016550362110138
+    },
+    {
+      "id": "0151_gamma1.3300000429",
+      "vrmse": 0.11011220514774323,
+      "vrmse_chmean": 0.13504812121391296,
+      "vrmse_density": 0.1426316648721695,
+      "vrmse_momentum_x": 0.10927261412143707,
+      "vrmse_momentum_y": 0.11461593210697174,
+      "vrmse_pressure": 0.17367227375507355
+    },
+    {
+      "id": "0152_gamma1.3300000429",
+      "vrmse": 0.04202742129564285,
+      "vrmse_chmean": 0.08864016830921173,
+      "vrmse_density": 0.0996004045009613,
+      "vrmse_momentum_x": 0.09525428712368011,
+      "vrmse_momentum_y": 0.04857051745057106,
+      "vrmse_pressure": 0.11113545298576355
+    },
+    {
+      "id": "0153_gamma1.3300000429",
+      "vrmse": 0.09800330549478531,
+      "vrmse_chmean": 0.10416404902935028,
+      "vrmse_density": 0.12428148835897446,
+      "vrmse_momentum_x": 0.09152045100927353,
+      "vrmse_momentum_y": 0.08333985507488251,
+      "vrmse_pressure": 0.11751437932252884
+    },
+    {
+      "id": "0154_gamma1.3300000429",
+      "vrmse": 0.08055508881807327,
+      "vrmse_chmean": 0.10353492200374603,
+      "vrmse_density": 0.09589001536369324,
+      "vrmse_momentum_x": 0.12029201537370682,
+      "vrmse_momentum_y": 0.054645366966724396,
+      "vrmse_pressure": 0.14331230521202087
+    },
+    {
+      "id": "0155_gamma1.3300000429",
+      "vrmse": 0.0890045315027237,
+      "vrmse_chmean": 0.11301286518573761,
+      "vrmse_density": 0.0949118509888649,
+      "vrmse_momentum_x": 0.1026950478553772,
+      "vrmse_momentum_y": 0.10285012423992157,
+      "vrmse_pressure": 0.15159444510936737
+    },
+    {
+      "id": "0156_gamma1.3300000429",
+      "vrmse": 0.05690988525748253,
+      "vrmse_chmean": 0.08050297200679779,
+      "vrmse_density": 0.07313299924135208,
+      "vrmse_momentum_x": 0.07882854342460632,
+      "vrmse_momentum_y": 0.06580884009599686,
+      "vrmse_pressure": 0.1042415052652359
+    },
+    {
+      "id": "0157_gamma1.3300000429",
+      "vrmse": 0.03350520506501198,
+      "vrmse_chmean": 0.06330513954162598,
+      "vrmse_density": 0.03741490840911865,
+      "vrmse_momentum_x": 0.043421532958745956,
+      "vrmse_momentum_y": 0.09199753403663635,
+      "vrmse_pressure": 0.08038657903671265
+    },
+    {
+      "id": "0158_gamma1.3300000429",
+      "vrmse": 0.02594512328505516,
+      "vrmse_chmean": 0.13457494974136353,
+      "vrmse_density": 0.06433383375406265,
+      "vrmse_momentum_x": 0.10333578288555145,
+      "vrmse_momentum_y": 0.2260175496339798,
+      "vrmse_pressure": 0.14461258053779602
+    },
+    {
+      "id": "0159_gamma1.3300000429",
+      "vrmse": 0.04084319621324539,
+      "vrmse_chmean": 0.11064256727695465,
+      "vrmse_density": 0.12701058387756348,
+      "vrmse_momentum_x": 0.08171724528074265,
+      "vrmse_momentum_y": 0.12861643731594086,
+      "vrmse_pressure": 0.10522601008415222
+    },
+    {
+      "id": "0160_gamma1.3300000429",
+      "vrmse": 0.07614115625619888,
+      "vrmse_chmean": 0.09800294041633606,
+      "vrmse_density": 0.07772627472877502,
+      "vrmse_momentum_x": 0.09692513942718506,
+      "vrmse_momentum_y": 0.06641732156276703,
+      "vrmse_pressure": 0.15094304084777832
+    },
+    {
+      "id": "0161_gamma1.3300000429",
+      "vrmse": 0.08041664958000183,
+      "vrmse_chmean": 0.08867210149765015,
+      "vrmse_density": 0.08725492656230927,
+      "vrmse_momentum_x": 0.08223909139633179,
+      "vrmse_momentum_y": 0.06936914473772049,
+      "vrmse_pressure": 0.11582522839307785
+    },
+    {
+      "id": "0162_gamma1.3300000429",
+      "vrmse": 0.030205925926566124,
+      "vrmse_chmean": 0.07214862108230591,
+      "vrmse_density": 0.05705289915204048,
+      "vrmse_momentum_x": 0.08086477220058441,
+      "vrmse_momentum_y": 0.0469227060675621,
+      "vrmse_pressure": 0.10375411063432693
+    },
+    {
+      "id": "0163_gamma1.3300000429",
+      "vrmse": 0.12204362452030182,
+      "vrmse_chmean": 0.1473345011472702,
+      "vrmse_density": 0.12255110591650009,
+      "vrmse_momentum_x": 0.1417500078678131,
+      "vrmse_momentum_y": 0.12192736566066742,
+      "vrmse_pressure": 0.2031095325946808
+    },
+    {
+      "id": "0164_gamma1.3300000429",
+      "vrmse": 0.08728419989347458,
+      "vrmse_chmean": 0.11705929040908813,
+      "vrmse_density": 0.099856436252594,
+      "vrmse_momentum_x": 0.11273199319839478,
+      "vrmse_momentum_y": 0.07928068190813065,
+      "vrmse_pressure": 0.17636805772781372
+    },
+    {
+      "id": "0165_gamma1.3300000429",
+      "vrmse": 0.10594622790813446,
+      "vrmse_chmean": 0.13174566626548767,
+      "vrmse_density": 0.11567630618810654,
+      "vrmse_momentum_x": 0.12477357685565948,
+      "vrmse_momentum_y": 0.10194245725870132,
+      "vrmse_pressure": 0.18459032475948334
+    },
+    {
+      "id": "0166_gamma1.3300000429",
+      "vrmse": 0.07255515456199646,
+      "vrmse_chmean": 0.09248112142086029,
+      "vrmse_density": 0.07490716874599457,
+      "vrmse_momentum_x": 0.12014157325029373,
+      "vrmse_momentum_y": 0.05622582510113716,
+      "vrmse_pressure": 0.11864989250898361
+    },
+    {
+      "id": "0167_gamma1.3300000429",
+      "vrmse": 0.11561138927936554,
+      "vrmse_chmean": 0.14100803434848785,
+      "vrmse_density": 0.17759376764297485,
+      "vrmse_momentum_x": 0.1154683381319046,
+      "vrmse_momentum_y": 0.13263964653015137,
+      "vrmse_pressure": 0.1383303850889206
+    },
+    {
+      "id": "0168_gamma1.3300000429",
+      "vrmse": 0.04696206748485565,
+      "vrmse_chmean": 0.08825749158859253,
+      "vrmse_density": 0.07381995767354965,
+      "vrmse_momentum_x": 0.07454760372638702,
+      "vrmse_momentum_y": 0.08306866139173508,
+      "vrmse_pressure": 0.12159375101327896
+    },
+    {
+      "id": "0169_gamma1.3300000429",
+      "vrmse": 0.14387568831443787,
+      "vrmse_chmean": 0.15570081770420074,
+      "vrmse_density": 0.13750065863132477,
+      "vrmse_momentum_x": 0.1394505351781845,
+      "vrmse_momentum_y": 0.16216954588890076,
+      "vrmse_pressure": 0.18368254601955414
+    },
+    {
+      "id": "0170_gamma1.3300000429",
+      "vrmse": 0.09237109124660492,
+      "vrmse_chmean": 0.10933278501033783,
+      "vrmse_density": 0.11610506474971771,
+      "vrmse_momentum_x": 0.09307601302862167,
+      "vrmse_momentum_y": 0.088518887758255,
+      "vrmse_pressure": 0.13963116705417633
+    },
+    {
+      "id": "0171_gamma1.3300000429",
+      "vrmse": 0.06967195868492126,
+      "vrmse_chmean": 0.10454690456390381,
+      "vrmse_density": 0.11741038411855698,
+      "vrmse_momentum_x": 0.12558823823928833,
+      "vrmse_momentum_y": 0.08909138292074203,
+      "vrmse_pressure": 0.0860976055264473
+    },
+    {
+      "id": "0172_gamma1.3300000429",
+      "vrmse": 0.09771636873483658,
+      "vrmse_chmean": 0.12111428380012512,
+      "vrmse_density": 0.11857261508703232,
+      "vrmse_momentum_x": 0.12031671404838562,
+      "vrmse_momentum_y": 0.11232221126556396,
+      "vrmse_pressure": 0.13324560225009918
+    },
+    {
+      "id": "0173_gamma1.3300000429",
+      "vrmse": 0.08526573330163956,
+      "vrmse_chmean": 0.10864460468292236,
+      "vrmse_density": 0.12295803427696228,
+      "vrmse_momentum_x": 0.08153726905584335,
+      "vrmse_momentum_y": 0.08537882566452026,
+      "vrmse_pressure": 0.14470426738262177
+    },
+    {
+      "id": "0174_gamma1.3300000429",
+      "vrmse": 0.06720785796642303,
+      "vrmse_chmean": 0.08866536617279053,
+      "vrmse_density": 0.06895912438631058,
+      "vrmse_momentum_x": 0.05709587410092354,
+      "vrmse_momentum_y": 0.08110365271568298,
+      "vrmse_pressure": 0.1475028097629547
+    },
+    {
+      "id": "0175_gamma1.3300000429",
+      "vrmse": 0.024039816111326218,
+      "vrmse_chmean": 0.13359279930591583,
+      "vrmse_density": 0.05316973477602005,
+      "vrmse_momentum_x": 0.35291939973831177,
+      "vrmse_momentum_y": 0.055478163063526154,
+      "vrmse_pressure": 0.07280389964580536
+    },
+    {
+      "id": "0176_gamma1.3300000429",
+      "vrmse": 0.15533849596977234,
+      "vrmse_chmean": 0.19886262714862823,
+      "vrmse_density": 0.18894769251346588,
+      "vrmse_momentum_x": 0.19423504173755646,
+      "vrmse_momentum_y": 0.20473246276378632,
+      "vrmse_pressure": 0.20753531157970428
+    },
+    {
+      "id": "0177_gamma1.3300000429",
+      "vrmse": 0.10753366351127625,
+      "vrmse_chmean": 0.13512888550758362,
+      "vrmse_density": 0.11520776897668839,
+      "vrmse_momentum_x": 0.1312742531299591,
+      "vrmse_momentum_y": 0.09207252413034439,
+      "vrmse_pressure": 0.2019609957933426
+    },
+    {
+      "id": "0178_gamma1.3300000429",
+      "vrmse": 0.05963890254497528,
+      "vrmse_chmean": 0.07472113519906998,
+      "vrmse_density": 0.06526175141334534,
+      "vrmse_momentum_x": 0.04866194725036621,
+      "vrmse_momentum_y": 0.07823409885168076,
+      "vrmse_pressure": 0.106726735830307
+    },
+    {
+      "id": "0179_gamma1.3300000429",
+      "vrmse": 0.03529980406165123,
+      "vrmse_chmean": 0.07519596815109253,
+      "vrmse_density": 0.04267876222729683,
+      "vrmse_momentum_x": 0.10540135204792023,
+      "vrmse_momentum_y": 0.05155135691165924,
+      "vrmse_pressure": 0.10115242004394531
+    },
+    {
+      "id": "0180_gamma1.3300000429",
+      "vrmse": 0.08403775095939636,
+      "vrmse_chmean": 0.09219751507043839,
+      "vrmse_density": 0.08889205753803253,
+      "vrmse_momentum_x": 0.0739956945180893,
+      "vrmse_momentum_y": 0.08683693408966064,
+      "vrmse_pressure": 0.11906536668539047
+    },
+    {
+      "id": "0181_gamma1.3300000429",
+      "vrmse": 0.0509512685239315,
+      "vrmse_chmean": 0.06864408403635025,
+      "vrmse_density": 0.046142578125,
+      "vrmse_momentum_x": 0.08418824523687363,
+      "vrmse_momentum_y": 0.05182958021759987,
+      "vrmse_pressure": 0.09241592884063721
+    },
+    {
+      "id": "0182_gamma1.3300000429",
+      "vrmse": 0.04976731166243553,
+      "vrmse_chmean": 0.07665540277957916,
+      "vrmse_density": 0.07714743912220001,
+      "vrmse_momentum_x": 0.04082706943154335,
+      "vrmse_momentum_y": 0.08020708709955215,
+      "vrmse_pressure": 0.10844004154205322
+    },
+    {
+      "id": "0183_gamma1.3300000429",
+      "vrmse": 0.06626559793949127,
+      "vrmse_chmean": 0.07692251354455948,
+      "vrmse_density": 0.06993314623832703,
+      "vrmse_momentum_x": 0.0606040433049202,
+      "vrmse_momentum_y": 0.07037617266178131,
+      "vrmse_pressure": 0.10677669197320938
+    },
+    {
+      "id": "0184_gamma1.3300000429",
+      "vrmse": 0.058621663600206375,
+      "vrmse_chmean": 0.07820086181163788,
+      "vrmse_density": 0.06843861192464828,
+      "vrmse_momentum_x": 0.0665488988161087,
+      "vrmse_momentum_y": 0.0542730875313282,
+      "vrmse_pressure": 0.12354287505149841
+    },
+    {
+      "id": "0185_gamma1.3300000429",
+      "vrmse": 0.06769611686468124,
+      "vrmse_chmean": 0.09609347581863403,
+      "vrmse_density": 0.07981458306312561,
+      "vrmse_momentum_x": 0.05517952889204025,
+      "vrmse_momentum_y": 0.09423519670963287,
+      "vrmse_pressure": 0.155144602060318
+    },
+    {
+      "id": "0186_gamma1.3300000429",
+      "vrmse": 0.0741119235754013,
+      "vrmse_chmean": 0.09561482816934586,
+      "vrmse_density": 0.08335704356431961,
+      "vrmse_momentum_x": 0.06723593920469284,
+      "vrmse_momentum_y": 0.09574095904827118,
+      "vrmse_pressure": 0.1361253708600998
+    },
+    {
+      "id": "0187_gamma1.3300000429",
+      "vrmse": 0.08433325588703156,
+      "vrmse_chmean": 0.09184296429157257,
+      "vrmse_density": 0.1107514500617981,
+      "vrmse_momentum_x": 0.07517950236797333,
+      "vrmse_momentum_y": 0.06606283783912659,
+      "vrmse_pressure": 0.11537805944681168
+    },
+    {
+      "id": "0188_gamma1.3300000429",
+      "vrmse": 0.024673672392964363,
+      "vrmse_chmean": 0.04800096154212952,
+      "vrmse_density": 0.03665724769234657,
+      "vrmse_momentum_x": 0.05594029277563095,
+      "vrmse_momentum_y": 0.05076674744486809,
+      "vrmse_pressure": 0.048639554530382156
+    },
+    {
+      "id": "0189_gamma1.3300000429",
+      "vrmse": 0.05396798253059387,
+      "vrmse_chmean": 0.09810110926628113,
+      "vrmse_density": 0.08276566863059998,
+      "vrmse_momentum_x": 0.09343724697828293,
+      "vrmse_momentum_y": 0.10865814983844757,
+      "vrmse_pressure": 0.10754336416721344
+    },
+    {
+      "id": "0190_gamma1.3300000429",
+      "vrmse": 0.12226741015911102,
+      "vrmse_chmean": 0.1513954997062683,
+      "vrmse_density": 0.12880104780197144,
+      "vrmse_momentum_x": 0.09547100961208344,
+      "vrmse_momentum_y": 0.15837420523166656,
+      "vrmse_pressure": 0.2229357361793518
+    },
+    {
+      "id": "0191_gamma1.3300000429",
+      "vrmse": 0.07091067731380463,
+      "vrmse_chmean": 0.09225456416606903,
+      "vrmse_density": 0.10730747878551483,
+      "vrmse_momentum_x": 0.06215187907218933,
+      "vrmse_momentum_y": 0.0904584601521492,
+      "vrmse_pressure": 0.10910043865442276
+    },
+    {
+      "id": "0192_gamma1.3300000429",
+      "vrmse": 0.09408357739448547,
+      "vrmse_chmean": 0.1177230030298233,
+      "vrmse_density": 0.10597549378871918,
+      "vrmse_momentum_x": 0.08508974313735962,
+      "vrmse_momentum_y": 0.12051781266927719,
+      "vrmse_pressure": 0.15930895507335663
+    },
+    {
+      "id": "0193_gamma1.3300000429",
+      "vrmse": 0.04358869418501854,
+      "vrmse_chmean": 0.06168932467699051,
+      "vrmse_density": 0.04403402656316757,
+      "vrmse_momentum_x": 0.07043391466140747,
+      "vrmse_momentum_y": 0.04196080565452576,
+      "vrmse_pressure": 0.09032853692770004
+    },
+    {
+      "id": "0194_gamma1.3300000429",
+      "vrmse": 0.06767335534095764,
+      "vrmse_chmean": 0.09275485575199127,
+      "vrmse_density": 0.0751112848520279,
+      "vrmse_momentum_x": 0.08654290437698364,
+      "vrmse_momentum_y": 0.06488490849733353,
+      "vrmse_pressure": 0.14448034763336182
+    },
+    {
+      "id": "0195_gamma1.3300000429",
+      "vrmse": 0.07768549025058746,
+      "vrmse_chmean": 0.08619542419910431,
+      "vrmse_density": 0.06327430158853531,
+      "vrmse_momentum_x": 0.08609148114919662,
+      "vrmse_momentum_y": 0.10497405380010605,
+      "vrmse_pressure": 0.09044187515974045
+    },
+    {
+      "id": "0196_gamma1.3300000429",
+      "vrmse": 0.06526660174131393,
+      "vrmse_chmean": 0.10066373646259308,
+      "vrmse_density": 0.09411393105983734,
+      "vrmse_momentum_x": 0.09064358472824097,
+      "vrmse_momentum_y": 0.09891247749328613,
+      "vrmse_pressure": 0.11898497492074966
+    },
+    {
+      "id": "0197_gamma1.3300000429",
+      "vrmse": 0.06972899287939072,
+      "vrmse_chmean": 0.08804615586996078,
+      "vrmse_density": 0.06875144690275192,
+      "vrmse_momentum_x": 0.06907771527767181,
+      "vrmse_momentum_y": 0.07910501211881638,
+      "vrmse_pressure": 0.13525044918060303
+    },
+    {
+      "id": "0198_gamma1.3300000429",
+      "vrmse": 0.05910096690058708,
+      "vrmse_chmean": 0.07909879833459854,
+      "vrmse_density": 0.08584875613451004,
+      "vrmse_momentum_x": 0.07112842798233032,
+      "vrmse_momentum_y": 0.0640731006860733,
+      "vrmse_pressure": 0.0953449234366417
+    },
+    {
+      "id": "0199_gamma1.3300000429",
+      "vrmse": 0.04367293417453766,
+      "vrmse_chmean": 0.0867387056350708,
+      "vrmse_density": 0.09476128965616226,
+      "vrmse_momentum_x": 0.09902125597000122,
+      "vrmse_momentum_y": 0.05748077481985092,
+      "vrmse_pressure": 0.0956914946436882
+    },
+    {
+      "id": "0200_gamma1.3650000095",
+      "vrmse": 0.0772334486246109,
+      "vrmse_chmean": 0.08141698688268661,
+      "vrmse_density": 0.05717511102557182,
+      "vrmse_momentum_x": 0.10259021818637848,
+      "vrmse_momentum_y": 0.08331041038036346,
+      "vrmse_pressure": 0.0825921967625618
+    },
+    {
+      "id": "0201_gamma1.3650000095",
+      "vrmse": 0.03724868223071098,
+      "vrmse_chmean": 0.07750818878412247,
+      "vrmse_density": 0.0536545068025589,
+      "vrmse_momentum_x": 0.05760626122355461,
+      "vrmse_momentum_y": 0.0553555004298687,
+      "vrmse_pressure": 0.14341647922992706
+    },
+    {
+      "id": "0202_gamma1.3650000095",
+      "vrmse": 0.08885002136230469,
+      "vrmse_chmean": 0.11384522169828415,
+      "vrmse_density": 0.11463756859302521,
+      "vrmse_momentum_x": 0.091494120657444,
+      "vrmse_momentum_y": 0.10016050189733505,
+      "vrmse_pressure": 0.14908868074417114
+    },
+    {
+      "id": "0203_gamma1.3650000095",
+      "vrmse": 0.09399320930242538,
+      "vrmse_chmean": 0.12405478209257126,
+      "vrmse_density": 0.1273336410522461,
+      "vrmse_momentum_x": 0.08340468257665634,
+      "vrmse_momentum_y": 0.11188831925392151,
+      "vrmse_pressure": 0.1735924631357193
+    },
+    {
+      "id": "0204_gamma1.3650000095",
+      "vrmse": 0.06632938981056213,
+      "vrmse_chmean": 0.08329896628856659,
+      "vrmse_density": 0.07394716888666153,
+      "vrmse_momentum_x": 0.08375794440507889,
+      "vrmse_momentum_y": 0.0527321957051754,
+      "vrmse_pressure": 0.12275854498147964
+    },
+    {
+      "id": "0205_gamma1.3650000095",
+      "vrmse": 0.06934094429016113,
+      "vrmse_chmean": 0.0912720263004303,
+      "vrmse_density": 0.08646439015865326,
+      "vrmse_momentum_x": 0.07161455601453781,
+      "vrmse_momentum_y": 0.07980787754058838,
+      "vrmse_pressure": 0.12720128893852234
+    },
+    {
+      "id": "0206_gamma1.3650000095",
+      "vrmse": 0.07528124004602432,
+      "vrmse_chmean": 0.09104759991168976,
+      "vrmse_density": 0.10592082887887955,
+      "vrmse_momentum_x": 0.05505774915218353,
+      "vrmse_momentum_y": 0.08293595910072327,
+      "vrmse_pressure": 0.1202758401632309
+    },
+    {
+      "id": "0207_gamma1.3650000095",
+      "vrmse": 0.11685539036989212,
+      "vrmse_chmean": 0.1448894888162613,
+      "vrmse_density": 0.1492500752210617,
+      "vrmse_momentum_x": 0.13845862448215485,
+      "vrmse_momentum_y": 0.09755642712116241,
+      "vrmse_pressure": 0.1942928433418274
+    },
+    {
+      "id": "0208_gamma1.3650000095",
+      "vrmse": 0.053191810846328735,
+      "vrmse_chmean": 0.08971676975488663,
+      "vrmse_density": 0.0847713053226471,
+      "vrmse_momentum_x": 0.049946434795856476,
+      "vrmse_momentum_y": 0.08034787327051163,
+      "vrmse_pressure": 0.1438014805316925
+    },
+    {
+      "id": "0209_gamma1.3650000095",
+      "vrmse": 0.03715357556939125,
+      "vrmse_chmean": 0.08026216924190521,
+      "vrmse_density": 0.08411938697099686,
+      "vrmse_momentum_x": 0.08260694891214371,
+      "vrmse_momentum_y": 0.06449369341135025,
+      "vrmse_pressure": 0.08982866257429123
+    },
+    {
+      "id": "0210_gamma1.3650000095",
+      "vrmse": 0.09286855906248093,
+      "vrmse_chmean": 0.1301542967557907,
+      "vrmse_density": 0.10503517836332321,
+      "vrmse_momentum_x": 0.12591250240802765,
+      "vrmse_momentum_y": 0.15784621238708496,
+      "vrmse_pressure": 0.13182328641414642
+    },
+    {
+      "id": "0211_gamma1.3650000095",
+      "vrmse": 0.08887021243572235,
+      "vrmse_chmean": 0.11164196580648422,
+      "vrmse_density": 0.09653319418430328,
+      "vrmse_momentum_x": 0.09516604989767075,
+      "vrmse_momentum_y": 0.08741838485002518,
+      "vrmse_pressure": 0.16745023429393768
+    },
+    {
+      "id": "0212_gamma1.3650000095",
+      "vrmse": 0.065675288438797,
+      "vrmse_chmean": 0.07961494475603104,
+      "vrmse_density": 0.09156957268714905,
+      "vrmse_momentum_x": 0.058212365955114365,
+      "vrmse_momentum_y": 0.06707100570201874,
+      "vrmse_pressure": 0.1016068309545517
+    },
+    {
+      "id": "0213_gamma1.3650000095",
+      "vrmse": 0.06580101698637009,
+      "vrmse_chmean": 0.08163829147815704,
+      "vrmse_density": 0.0665898248553276,
+      "vrmse_momentum_x": 0.070302814245224,
+      "vrmse_momentum_y": 0.07504799216985703,
+      "vrmse_pressure": 0.11461252719163895
+    },
+    {
+      "id": "0214_gamma1.3650000095",
+      "vrmse": 0.06671205908060074,
+      "vrmse_chmean": 0.0784406065940857,
+      "vrmse_density": 0.07054005563259125,
+      "vrmse_momentum_x": 0.05954783782362938,
+      "vrmse_momentum_y": 0.07376591116189957,
+      "vrmse_pressure": 0.10990859568119049
+    },
+    {
+      "id": "0215_gamma1.3650000095",
+      "vrmse": 0.04337029531598091,
+      "vrmse_chmean": 0.09790999442338943,
+      "vrmse_density": 0.06528384238481522,
+      "vrmse_momentum_x": 0.17020399868488312,
+      "vrmse_momentum_y": 0.0705021321773529,
+      "vrmse_pressure": 0.0856499895453453
+    },
+    {
+      "id": "0216_gamma1.3650000095",
+      "vrmse": 0.0384090319275856,
+      "vrmse_chmean": 0.07669021934270859,
+      "vrmse_density": 0.09111524373292923,
+      "vrmse_momentum_x": 0.04715978354215622,
+      "vrmse_momentum_y": 0.06567314267158508,
+      "vrmse_pressure": 0.10281270742416382
+    },
+    {
+      "id": "0217_gamma1.3650000095",
+      "vrmse": 0.12240143120288849,
+      "vrmse_chmean": 0.15733203291893005,
+      "vrmse_density": 0.1275663822889328,
+      "vrmse_momentum_x": 0.20536400377750397,
+      "vrmse_momentum_y": 0.12798352539539337,
+      "vrmse_pressure": 0.16841420531272888
+    },
+    {
+      "id": "0218_gamma1.3650000095",
+      "vrmse": 0.1502462476491928,
+      "vrmse_chmean": 0.16407769918441772,
+      "vrmse_density": 0.139431431889534,
+      "vrmse_momentum_x": 0.16073797643184662,
+      "vrmse_momentum_y": 0.13759371638298035,
+      "vrmse_pressure": 0.21854767203330994
+    },
+    {
+      "id": "0219_gamma1.3650000095",
+      "vrmse": 0.03457942232489586,
+      "vrmse_chmean": 0.05234318971633911,
+      "vrmse_density": 0.03261696174740791,
+      "vrmse_momentum_x": 0.048337504267692566,
+      "vrmse_momentum_y": 0.047715235501527786,
+      "vrmse_pressure": 0.08070305734872818
+    },
+    {
+      "id": "0220_gamma1.3650000095",
+      "vrmse": 0.07020249962806702,
+      "vrmse_chmean": 0.08754250407218933,
+      "vrmse_density": 0.0711522325873375,
+      "vrmse_momentum_x": 0.05418970808386803,
+      "vrmse_momentum_y": 0.10615050047636032,
+      "vrmse_pressure": 0.11867758631706238
+    },
+    {
+      "id": "0221_gamma1.3650000095",
+      "vrmse": 0.0399923250079155,
+      "vrmse_chmean": 0.14910012483596802,
+      "vrmse_density": 0.04662025719881058,
+      "vrmse_momentum_x": 0.06823506206274033,
+      "vrmse_momentum_y": 0.3526843190193176,
+      "vrmse_pressure": 0.12886089086532593
+    },
+    {
+      "id": "0222_gamma1.3650000095",
+      "vrmse": 0.05153963714838028,
+      "vrmse_chmean": 0.08105777204036713,
+      "vrmse_density": 0.06280434131622314,
+      "vrmse_momentum_x": 0.10759618133306503,
+      "vrmse_momentum_y": 0.06356558948755264,
+      "vrmse_pressure": 0.0902649536728859
+    },
+    {
+      "id": "0223_gamma1.3650000095",
+      "vrmse": 0.053107358515262604,
+      "vrmse_chmean": 0.0812457799911499,
+      "vrmse_density": 0.06878160685300827,
+      "vrmse_momentum_x": 0.08875271677970886,
+      "vrmse_momentum_y": 0.06654110550880432,
+      "vrmse_pressure": 0.10090766847133636
+    },
+    {
+      "id": "0224_gamma1.3650000095",
+      "vrmse": 0.06303539872169495,
+      "vrmse_chmean": 0.10155205428600311,
+      "vrmse_density": 0.08397426456212997,
+      "vrmse_momentum_x": 0.08010531216859818,
+      "vrmse_momentum_y": 0.1025262102484703,
+      "vrmse_pressure": 0.1396024227142334
+    },
+    {
+      "id": "0225_gamma1.3650000095",
+      "vrmse": 0.03798137232661247,
+      "vrmse_chmean": 0.06839025020599365,
+      "vrmse_density": 0.06987818330526352,
+      "vrmse_momentum_x": 0.05870810151100159,
+      "vrmse_momentum_y": 0.04329906776547432,
+      "vrmse_pressure": 0.10167565196752548
+    },
+    {
+      "id": "0226_gamma1.3650000095",
+      "vrmse": 0.15896353125572205,
+      "vrmse_chmean": 0.17042480409145355,
+      "vrmse_density": 0.170362651348114,
+      "vrmse_momentum_x": 0.16808520257472992,
+      "vrmse_momentum_y": 0.13831371068954468,
+      "vrmse_pressure": 0.2049376368522644
+    },
+    {
+      "id": "0227_gamma1.3650000095",
+      "vrmse": 0.035181593149900436,
+      "vrmse_chmean": 0.0666113942861557,
+      "vrmse_density": 0.07094287872314453,
+      "vrmse_momentum_x": 0.041283681988716125,
+      "vrmse_momentum_y": 0.07361102849245071,
+      "vrmse_pressure": 0.08060799539089203
+    },
+    {
+      "id": "0228_gamma1.3650000095",
+      "vrmse": 0.07726934552192688,
+      "vrmse_chmean": 0.09495779871940613,
+      "vrmse_density": 0.09339994192123413,
+      "vrmse_momentum_x": 0.0778348445892334,
+      "vrmse_momentum_y": 0.08062653243541718,
+      "vrmse_pressure": 0.1279698759317398
+    },
+    {
+      "id": "0229_gamma1.3650000095",
+      "vrmse": 0.0485544316470623,
+      "vrmse_chmean": 0.0723438560962677,
+      "vrmse_density": 0.050108082592487335,
+      "vrmse_momentum_x": 0.0437377467751503,
+      "vrmse_momentum_y": 0.06549748033285141,
+      "vrmse_pressure": 0.13003212213516235
+    },
+    {
+      "id": "0230_gamma1.3650000095",
+      "vrmse": 0.06977207958698273,
+      "vrmse_chmean": 0.0953153595328331,
+      "vrmse_density": 0.11400514096021652,
+      "vrmse_momentum_x": 0.06538376212120056,
+      "vrmse_momentum_y": 0.06963951140642166,
+      "vrmse_pressure": 0.13223302364349365
+    },
+    {
+      "id": "0231_gamma1.3650000095",
+      "vrmse": 0.09534326195716858,
+      "vrmse_chmean": 0.11285772919654846,
+      "vrmse_density": 0.09067671000957489,
+      "vrmse_momentum_x": 0.10985299944877625,
+      "vrmse_momentum_y": 0.09984704107046127,
+      "vrmse_pressure": 0.15105415880680084
+    },
+    {
+      "id": "0232_gamma1.3650000095",
+      "vrmse": 0.054497964680194855,
+      "vrmse_chmean": 0.09078510105609894,
+      "vrmse_density": 0.08108633756637573,
+      "vrmse_momentum_x": 0.1208651140332222,
+      "vrmse_momentum_y": 0.07092984020709991,
+      "vrmse_pressure": 0.0902591124176979
+    },
+    {
+      "id": "0233_gamma1.3650000095",
+      "vrmse": 0.07417583465576172,
+      "vrmse_chmean": 0.13206195831298828,
+      "vrmse_density": 0.1346016228199005,
+      "vrmse_momentum_x": 0.10993371903896332,
+      "vrmse_momentum_y": 0.1304924190044403,
+      "vrmse_pressure": 0.153220072388649
+    },
+    {
+      "id": "0234_gamma1.3650000095",
+      "vrmse": 0.10811477899551392,
+      "vrmse_chmean": 0.12896513938903809,
+      "vrmse_density": 0.12062909454107285,
+      "vrmse_momentum_x": 0.12175744771957397,
+      "vrmse_momentum_y": 0.11472474783658981,
+      "vrmse_pressure": 0.15874925255775452
+    },
+    {
+      "id": "0235_gamma1.3650000095",
+      "vrmse": 0.07279515266418457,
+      "vrmse_chmean": 0.09347169101238251,
+      "vrmse_density": 0.11231254786252975,
+      "vrmse_momentum_x": 0.07492347806692123,
+      "vrmse_momentum_y": 0.06600229442119598,
+      "vrmse_pressure": 0.12064842879772186
+    },
+    {
+      "id": "0236_gamma1.3650000095",
+      "vrmse": 0.07145004719495773,
+      "vrmse_chmean": 0.08611883223056793,
+      "vrmse_density": 0.10269396007061005,
+      "vrmse_momentum_x": 0.0742550939321518,
+      "vrmse_momentum_y": 0.07250016927719116,
+      "vrmse_pressure": 0.09502612054347992
+    },
+    {
+      "id": "0237_gamma1.3650000095",
+      "vrmse": 0.058054838329553604,
+      "vrmse_chmean": 0.08837958425283432,
+      "vrmse_density": 0.07532495260238647,
+      "vrmse_momentum_x": 0.06478137522935867,
+      "vrmse_momentum_y": 0.09510009735822678,
+      "vrmse_pressure": 0.11831191927194595
+    },
+    {
+      "id": "0238_gamma1.3650000095",
+      "vrmse": 0.08311542123556137,
+      "vrmse_chmean": 0.11317624151706696,
+      "vrmse_density": 0.10098941624164581,
+      "vrmse_momentum_x": 0.09152016043663025,
+      "vrmse_momentum_y": 0.1047142893075943,
+      "vrmse_pressure": 0.15548111498355865
+    },
+    {
+      "id": "0239_gamma1.3650000095",
+      "vrmse": 0.04966454952955246,
+      "vrmse_chmean": 0.05863427370786667,
+      "vrmse_density": 0.05976519733667374,
+      "vrmse_momentum_x": 0.054123345762491226,
+      "vrmse_momentum_y": 0.037756264209747314,
+      "vrmse_pressure": 0.0828922837972641
+    },
+    {
+      "id": "0240_gamma1.3650000095",
+      "vrmse": 0.06344317644834518,
+      "vrmse_chmean": 0.12170284986495972,
+      "vrmse_density": 0.10126256942749023,
+      "vrmse_momentum_x": 0.13250067830085754,
+      "vrmse_momentum_y": 0.12623700499534607,
+      "vrmse_pressure": 0.12681114673614502
+    },
+    {
+      "id": "0241_gamma1.3650000095",
+      "vrmse": 0.034423306584358215,
+      "vrmse_chmean": 0.0653705894947052,
+      "vrmse_density": 0.0481254905462265,
+      "vrmse_momentum_x": 0.04451116919517517,
+      "vrmse_momentum_y": 0.09766638278961182,
+      "vrmse_pressure": 0.07117931544780731
+    },
+    {
+      "id": "0242_gamma1.3650000095",
+      "vrmse": 0.06041526421904564,
+      "vrmse_chmean": 0.0842999741435051,
+      "vrmse_density": 0.08095437288284302,
+      "vrmse_momentum_x": 0.050499893724918365,
+      "vrmse_momentum_y": 0.08627939224243164,
+      "vrmse_pressure": 0.11946625262498856
+    },
+    {
+      "id": "0243_gamma1.3650000095",
+      "vrmse": 0.09331922978162766,
+      "vrmse_chmean": 0.10960181057453156,
+      "vrmse_density": 0.1431630253791809,
+      "vrmse_momentum_x": 0.07655736804008484,
+      "vrmse_momentum_y": 0.08772778511047363,
+      "vrmse_pressure": 0.13095906376838684
+    },
+    {
+      "id": "0244_gamma1.3650000095",
+      "vrmse": 0.09620247036218643,
+      "vrmse_chmean": 0.12102478742599487,
+      "vrmse_density": 0.11082784086465836,
+      "vrmse_momentum_x": 0.11293771117925644,
+      "vrmse_momentum_y": 0.13012567162513733,
+      "vrmse_pressure": 0.13020791113376617
+    },
+    {
+      "id": "0245_gamma1.3650000095",
+      "vrmse": 0.07566288113594055,
+      "vrmse_chmean": 0.0887293890118599,
+      "vrmse_density": 0.08169907331466675,
+      "vrmse_momentum_x": 0.06160924583673477,
+      "vrmse_momentum_y": 0.0831059068441391,
+      "vrmse_pressure": 0.12850333750247955
+    },
+    {
+      "id": "0246_gamma1.3650000095",
+      "vrmse": 0.048732940107584,
+      "vrmse_chmean": 0.21684789657592773,
+      "vrmse_density": 0.04917871952056885,
+      "vrmse_momentum_x": 0.5271066427230835,
+      "vrmse_momentum_y": 0.0976572334766388,
+      "vrmse_pressure": 0.1934489607810974
+    },
+    {
+      "id": "0247_gamma1.3650000095",
+      "vrmse": 0.11735040694475174,
+      "vrmse_chmean": 0.12771248817443848,
+      "vrmse_density": 0.1268763691186905,
+      "vrmse_momentum_x": 0.1219475045800209,
+      "vrmse_momentum_y": 0.1102806106209755,
+      "vrmse_pressure": 0.15174543857574463
+    },
+    {
+      "id": "0248_gamma1.3650000095",
+      "vrmse": 0.052876006811857224,
+      "vrmse_chmean": 0.0703960657119751,
+      "vrmse_density": 0.060323238372802734,
+      "vrmse_momentum_x": 0.06038416177034378,
+      "vrmse_momentum_y": 0.056569404900074005,
+      "vrmse_pressure": 0.10430746525526047
+    },
+    {
+      "id": "0249_gamma1.3650000095",
+      "vrmse": 0.08342815935611725,
+      "vrmse_chmean": 0.10312197357416153,
+      "vrmse_density": 0.11218041181564331,
+      "vrmse_momentum_x": 0.08164411038160324,
+      "vrmse_momentum_y": 0.07070315629243851,
+      "vrmse_pressure": 0.14796020090579987
+    },
+    {
+      "id": "0250_gamma1.3999999762",
+      "vrmse": 0.052081093192100525,
+      "vrmse_chmean": 0.06766069680452347,
+      "vrmse_density": 0.08149189502000809,
+      "vrmse_momentum_x": 0.06570635735988617,
+      "vrmse_momentum_y": 0.050362665206193924,
+      "vrmse_pressure": 0.0730818584561348
+    },
+    {
+      "id": "0251_gamma1.3999999762",
+      "vrmse": 0.14070360362529755,
+      "vrmse_chmean": 0.1649840921163559,
+      "vrmse_density": 0.12504224479198456,
+      "vrmse_momentum_x": 0.1776072382926941,
+      "vrmse_momentum_y": 0.16942332684993744,
+      "vrmse_pressure": 0.1878635287284851
+    },
+    {
+      "id": "0252_gamma1.3999999762",
+      "vrmse": 0.06471224874258041,
+      "vrmse_chmean": 0.07030098140239716,
+      "vrmse_density": 0.05842265114188194,
+      "vrmse_momentum_x": 0.07248318195343018,
+      "vrmse_momentum_y": 0.05940350145101547,
+      "vrmse_pressure": 0.09089459478855133
+    },
+    {
+      "id": "0253_gamma1.3999999762",
+      "vrmse": 0.055088333785533905,
+      "vrmse_chmean": 0.08036716282367706,
+      "vrmse_density": 0.09758310765028,
+      "vrmse_momentum_x": 0.06012873724102974,
+      "vrmse_momentum_y": 0.05045544356107712,
+      "vrmse_pressure": 0.1133013442158699
+    },
+    {
+      "id": "0254_gamma1.3999999762",
+      "vrmse": 0.047786906361579895,
+      "vrmse_chmean": 0.07211028039455414,
+      "vrmse_density": 0.08014842122793198,
+      "vrmse_momentum_x": 0.05590727552771568,
+      "vrmse_momentum_y": 0.060759518295526505,
+      "vrmse_pressure": 0.09162591397762299
+    },
+    {
+      "id": "0255_gamma1.3999999762",
+      "vrmse": 0.04829106479883194,
+      "vrmse_chmean": 0.07618637382984161,
+      "vrmse_density": 0.05585246905684471,
+      "vrmse_momentum_x": 0.07573635131120682,
+      "vrmse_momentum_y": 0.057197608053684235,
+      "vrmse_pressure": 0.11595908552408218
+    },
+    {
+      "id": "0256_gamma1.3999999762",
+      "vrmse": 0.1138434112071991,
+      "vrmse_chmean": 0.13504981994628906,
+      "vrmse_density": 0.130269393324852,
+      "vrmse_momentum_x": 0.08551639318466187,
+      "vrmse_momentum_y": 0.13237334787845612,
+      "vrmse_pressure": 0.19204013049602509
+    },
+    {
+      "id": "0257_gamma1.3999999762",
+      "vrmse": 0.10257081687450409,
+      "vrmse_chmean": 0.12158200144767761,
+      "vrmse_density": 0.12879107892513275,
+      "vrmse_momentum_x": 0.08992543071508408,
+      "vrmse_momentum_y": 0.11549825221300125,
+      "vrmse_pressure": 0.15211325883865356
+    },
+    {
+      "id": "0258_gamma1.3999999762",
+      "vrmse": 0.03416597843170166,
+      "vrmse_chmean": 0.07485441863536835,
+      "vrmse_density": 0.07075865566730499,
+      "vrmse_momentum_x": 0.06989637762308121,
+      "vrmse_momentum_y": 0.05691937357187271,
+      "vrmse_pressure": 0.10184327512979507
+    },
+    {
+      "id": "0259_gamma1.3999999762",
+      "vrmse": 0.08943670243024826,
+      "vrmse_chmean": 0.09924843162298203,
+      "vrmse_density": 0.09915101528167725,
+      "vrmse_momentum_x": 0.08734351396560669,
+      "vrmse_momentum_y": 0.08657481521368027,
+      "vrmse_pressure": 0.1239243745803833
+    },
+    {
+      "id": "0260_gamma1.3999999762",
+      "vrmse": 0.06917016208171844,
+      "vrmse_chmean": 0.08571924269199371,
+      "vrmse_density": 0.07532667368650436,
+      "vrmse_momentum_x": 0.09550298005342484,
+      "vrmse_momentum_y": 0.05461466684937477,
+      "vrmse_pressure": 0.11743263155221939
+    },
+    {
+      "id": "0261_gamma1.3999999762",
+      "vrmse": 0.05066598206758499,
+      "vrmse_chmean": 0.08823668956756592,
+      "vrmse_density": 0.05319933593273163,
+      "vrmse_momentum_x": 0.10481083393096924,
+      "vrmse_momentum_y": 0.06982593983411789,
+      "vrmse_pressure": 0.12511064112186432
+    },
+    {
+      "id": "0262_gamma1.3999999762",
+      "vrmse": 0.0642089694738388,
+      "vrmse_chmean": 0.07837031036615372,
+      "vrmse_density": 0.0701836422085762,
+      "vrmse_momentum_x": 0.08924136310815811,
+      "vrmse_momentum_y": 0.05989260599017143,
+      "vrmse_pressure": 0.09416362643241882
+    },
+    {
+      "id": "0263_gamma1.3999999762",
+      "vrmse": 0.0556839220225811,
+      "vrmse_chmean": 0.07365235686302185,
+      "vrmse_density": 0.08286074548959732,
+      "vrmse_momentum_x": 0.05982309207320213,
+      "vrmse_momentum_y": 0.06836975365877151,
+      "vrmse_pressure": 0.08355583250522614
+    },
+    {
+      "id": "0264_gamma1.3999999762",
+      "vrmse": 0.08224768936634064,
+      "vrmse_chmean": 0.08976351469755173,
+      "vrmse_density": 0.10128402709960938,
+      "vrmse_momentum_x": 0.07310378551483154,
+      "vrmse_momentum_y": 0.07653211802244186,
+      "vrmse_pressure": 0.10813412815332413
+    },
+    {
+      "id": "0265_gamma1.3999999762",
+      "vrmse": 0.0635443702340126,
+      "vrmse_chmean": 0.091682069003582,
+      "vrmse_density": 0.07996658235788345,
+      "vrmse_momentum_x": 0.07852238416671753,
+      "vrmse_momentum_y": 0.09822852164506912,
+      "vrmse_pressure": 0.1100107878446579
+    },
+    {
+      "id": "0266_gamma1.3999999762",
+      "vrmse": 0.0688815489411354,
+      "vrmse_chmean": 0.07903026044368744,
+      "vrmse_density": 0.05975954234600067,
+      "vrmse_momentum_x": 0.06662271916866302,
+      "vrmse_momentum_y": 0.0738285630941391,
+      "vrmse_pressure": 0.11591020226478577
+    },
+    {
+      "id": "0267_gamma1.3999999762",
+      "vrmse": 0.0787910670042038,
+      "vrmse_chmean": 0.09625114500522614,
+      "vrmse_density": 0.11518311500549316,
+      "vrmse_momentum_x": 0.05933680012822151,
+      "vrmse_momentum_y": 0.09147707372903824,
+      "vrmse_pressure": 0.11900761723518372
+    },
+    {
+      "id": "0268_gamma1.3999999762",
+      "vrmse": 0.060167331248521805,
+      "vrmse_chmean": 0.09560160338878632,
+      "vrmse_density": 0.07221420109272003,
+      "vrmse_momentum_x": 0.13106919825077057,
+      "vrmse_momentum_y": 0.04799626022577286,
+      "vrmse_pressure": 0.1311267465353012
+    },
+    {
+      "id": "0269_gamma1.3999999762",
+      "vrmse": 0.11279729753732681,
+      "vrmse_chmean": 0.16437405347824097,
+      "vrmse_density": 0.17580676078796387,
+      "vrmse_momentum_x": 0.1644349843263626,
+      "vrmse_momentum_y": 0.15616469085216522,
+      "vrmse_pressure": 0.16108980774879456
+    },
+    {
+      "id": "0270_gamma1.3999999762",
+      "vrmse": 0.07218049466609955,
+      "vrmse_chmean": 0.10956819355487823,
+      "vrmse_density": 0.12487353384494781,
+      "vrmse_momentum_x": 0.09295246750116348,
+      "vrmse_momentum_y": 0.07220067828893661,
+      "vrmse_pressure": 0.14824607968330383
+    },
+    {
+      "id": "0271_gamma1.3999999762",
+      "vrmse": 0.14922469854354858,
+      "vrmse_chmean": 0.16502565145492554,
+      "vrmse_density": 0.16691356897354126,
+      "vrmse_momentum_x": 0.13304640352725983,
+      "vrmse_momentum_y": 0.13269542157649994,
+      "vrmse_pressure": 0.22744719684123993
+    },
+    {
+      "id": "0272_gamma1.3999999762",
+      "vrmse": 0.06717415899038315,
+      "vrmse_chmean": 0.09389441460371017,
+      "vrmse_density": 0.08398478478193283,
+      "vrmse_momentum_x": 0.0881316065788269,
+      "vrmse_momentum_y": 0.09131010621786118,
+      "vrmse_pressure": 0.1121511459350586
+    },
+    {
+      "id": "0273_gamma1.3999999762",
+      "vrmse": 0.05619920790195465,
+      "vrmse_chmean": 0.07851092517375946,
+      "vrmse_density": 0.05493432655930519,
+      "vrmse_momentum_x": 0.09656694531440735,
+      "vrmse_momentum_y": 0.047237325459718704,
+      "vrmse_pressure": 0.1153051108121872
+    },
+    {
+      "id": "0274_gamma1.3999999762",
+      "vrmse": 0.04947829991579056,
+      "vrmse_chmean": 0.07054123282432556,
+      "vrmse_density": 0.06342903524637222,
+      "vrmse_momentum_x": 0.07218079268932343,
+      "vrmse_momentum_y": 0.058058127760887146,
+      "vrmse_pressure": 0.08849697560071945
+    },
+    {
+      "id": "0275_gamma1.3999999762",
+      "vrmse": 0.07477698475122452,
+      "vrmse_chmean": 0.09326189756393433,
+      "vrmse_density": 0.09144039452075958,
+      "vrmse_momentum_x": 0.09157480299472809,
+      "vrmse_momentum_y": 0.06784971058368683,
+      "vrmse_pressure": 0.1221826896071434
+    },
+    {
+      "id": "0276_gamma1.3999999762",
+      "vrmse": 0.050968728959560394,
+      "vrmse_chmean": 0.06918970495462418,
+      "vrmse_density": 0.07677453011274338,
+      "vrmse_momentum_x": 0.05133310332894325,
+      "vrmse_momentum_y": 0.07160894572734833,
+      "vrmse_pressure": 0.07704224437475204
+    },
+    {
+      "id": "0277_gamma1.3999999762",
+      "vrmse": 0.13727258145809174,
+      "vrmse_chmean": 0.14458230137825012,
+      "vrmse_density": 0.16457851231098175,
+      "vrmse_momentum_x": 0.1307857632637024,
+      "vrmse_momentum_y": 0.11351245641708374,
+      "vrmse_pressure": 0.1694524884223938
+    },
+    {
+      "id": "0278_gamma1.3999999762",
+      "vrmse": 0.05801885575056076,
+      "vrmse_chmean": 0.07610213756561279,
+      "vrmse_density": 0.07815077900886536,
+      "vrmse_momentum_x": 0.07569761574268341,
+      "vrmse_momentum_y": 0.06597671657800674,
+      "vrmse_pressure": 0.08458343148231506
+    },
+    {
+      "id": "0279_gamma1.3999999762",
+      "vrmse": 0.09314148873090744,
+      "vrmse_chmean": 0.1223778948187828,
+      "vrmse_density": 0.11990272253751755,
+      "vrmse_momentum_x": 0.08530367165803909,
+      "vrmse_momentum_y": 0.12863445281982422,
+      "vrmse_pressure": 0.15567073225975037
+    },
+    {
+      "id": "0280_gamma1.3999999762",
+      "vrmse": 0.09499873220920563,
+      "vrmse_chmean": 0.11326128989458084,
+      "vrmse_density": 0.12928277254104614,
+      "vrmse_momentum_x": 0.11300572752952576,
+      "vrmse_momentum_y": 0.08092432469129562,
+      "vrmse_pressure": 0.12983234226703644
+    },
+    {
+      "id": "0281_gamma1.3999999762",
+      "vrmse": 0.05009790509939194,
+      "vrmse_chmean": 0.07923924922943115,
+      "vrmse_density": 0.08378247171640396,
+      "vrmse_momentum_x": 0.07111289352178574,
+      "vrmse_momentum_y": 0.051033563911914825,
+      "vrmse_pressure": 0.11102806031703949
+    },
+    {
+      "id": "0282_gamma1.3999999762",
+      "vrmse": 0.11224714666604996,
+      "vrmse_chmean": 0.13100415468215942,
+      "vrmse_density": 0.10278555750846863,
+      "vrmse_momentum_x": 0.10777514427900314,
+      "vrmse_momentum_y": 0.1010168194770813,
+      "vrmse_pressure": 0.21243906021118164
+    },
+    {
+      "id": "0283_gamma1.3999999762",
+      "vrmse": 0.06673873960971832,
+      "vrmse_chmean": 0.10382452607154846,
+      "vrmse_density": 0.12132003903388977,
+      "vrmse_momentum_x": 0.10224901139736176,
+      "vrmse_momentum_y": 0.11104193329811096,
+      "vrmse_pressure": 0.08068714290857315
+    },
+    {
+      "id": "0284_gamma1.3999999762",
+      "vrmse": 0.03341027721762657,
+      "vrmse_chmean": 0.07359291613101959,
+      "vrmse_density": 0.0648340955376625,
+      "vrmse_momentum_x": 0.07205134630203247,
+      "vrmse_momentum_y": 0.07834956049919128,
+      "vrmse_pressure": 0.0791366696357727
+    },
+    {
+      "id": "0285_gamma1.3999999762",
+      "vrmse": 0.06912697851657867,
+      "vrmse_chmean": 0.10617592930793762,
+      "vrmse_density": 0.08346700668334961,
+      "vrmse_momentum_x": 0.11515339463949203,
+      "vrmse_momentum_y": 0.07432404160499573,
+      "vrmse_pressure": 0.15175925195217133
+    },
+    {
+      "id": "0286_gamma1.3999999762",
+      "vrmse": 0.05487700551748276,
+      "vrmse_chmean": 0.07640978693962097,
+      "vrmse_density": 0.05827642232179642,
+      "vrmse_momentum_x": 0.04154814034700394,
+      "vrmse_momentum_y": 0.07913754880428314,
+      "vrmse_pressure": 0.1266770213842392
+    },
+    {
+      "id": "0287_gamma1.3999999762",
+      "vrmse": 0.09121809154748917,
+      "vrmse_chmean": 0.12634393572807312,
+      "vrmse_density": 0.06991898268461227,
+      "vrmse_momentum_x": 0.11251429468393326,
+      "vrmse_momentum_y": 0.1096121072769165,
+      "vrmse_pressure": 0.21333037316799164
+    },
+    {
+      "id": "0288_gamma1.3999999762",
+      "vrmse": 0.04732806235551834,
+      "vrmse_chmean": 0.2239278107881546,
+      "vrmse_density": 0.04663047194480896,
+      "vrmse_momentum_x": 0.0907687097787857,
+      "vrmse_momentum_y": 0.562130868434906,
+      "vrmse_pressure": 0.19618116319179535
+    },
+    {
+      "id": "0289_gamma1.3999999762",
+      "vrmse": 0.05856415629386902,
+      "vrmse_chmean": 0.08033303916454315,
+      "vrmse_density": 0.05649906024336815,
+      "vrmse_momentum_x": 0.08849544823169708,
+      "vrmse_momentum_y": 0.08717386424541473,
+      "vrmse_pressure": 0.08916380256414413
+    },
+    {
+      "id": "0290_gamma1.3999999762",
+      "vrmse": 0.030339453369379044,
+      "vrmse_chmean": 0.05158203840255737,
+      "vrmse_density": 0.03311939537525177,
+      "vrmse_momentum_x": 0.048151545226573944,
+      "vrmse_momentum_y": 0.03642933815717697,
+      "vrmse_pressure": 0.0886278748512268
+    },
+    {
+      "id": "0291_gamma1.3999999762",
+      "vrmse": 0.0885368138551712,
+      "vrmse_chmean": 0.11188087612390518,
+      "vrmse_density": 0.08908442407846451,
+      "vrmse_momentum_x": 0.11573939025402069,
+      "vrmse_momentum_y": 0.0796327069401741,
+      "vrmse_pressure": 0.16306696832180023
+    },
+    {
+      "id": "0292_gamma1.3999999762",
+      "vrmse": 0.09835813194513321,
+      "vrmse_chmean": 0.12498943507671356,
+      "vrmse_density": 0.09851893037557602,
+      "vrmse_momentum_x": 0.09405754506587982,
+      "vrmse_momentum_y": 0.13826532661914825,
+      "vrmse_pressure": 0.16911596059799194
+    },
+    {
+      "id": "0293_gamma1.3999999762",
+      "vrmse": 0.11747109889984131,
+      "vrmse_chmean": 0.12821991741657257,
+      "vrmse_density": 0.14071312546730042,
+      "vrmse_momentum_x": 0.11307302862405777,
+      "vrmse_momentum_y": 0.10118286311626434,
+      "vrmse_pressure": 0.15791067481040955
+    },
+    {
+      "id": "0294_gamma1.3999999762",
+      "vrmse": 0.05595843121409416,
+      "vrmse_chmean": 0.06397166103124619,
+      "vrmse_density": 0.05585664510726929,
+      "vrmse_momentum_x": 0.06165507063269615,
+      "vrmse_momentum_y": 0.05412514880299568,
+      "vrmse_pressure": 0.08424977958202362
+    },
+    {
+      "id": "0295_gamma1.3999999762",
+      "vrmse": 0.10213712602853775,
+      "vrmse_chmean": 0.12539128959178925,
+      "vrmse_density": 0.09955856204032898,
+      "vrmse_momentum_x": 0.09848393499851227,
+      "vrmse_momentum_y": 0.12739378213882446,
+      "vrmse_pressure": 0.17612884938716888
+    },
+    {
+      "id": "0296_gamma1.3999999762",
+      "vrmse": 0.05399347096681595,
+      "vrmse_chmean": 0.08862259984016418,
+      "vrmse_density": 0.05811133608222008,
+      "vrmse_momentum_x": 0.08203993737697601,
+      "vrmse_momentum_y": 0.07363718003034592,
+      "vrmse_pressure": 0.14070191979408264
+    },
+    {
+      "id": "0297_gamma1.3999999762",
+      "vrmse": 0.09034799784421921,
+      "vrmse_chmean": 0.11081577092409134,
+      "vrmse_density": 0.09964825958013535,
+      "vrmse_momentum_x": 0.08462846279144287,
+      "vrmse_momentum_y": 0.09749171137809753,
+      "vrmse_pressure": 0.161494642496109
+    },
+    {
+      "id": "0298_gamma1.3999999762",
+      "vrmse": 0.11371481418609619,
+      "vrmse_chmean": 0.12943688035011292,
+      "vrmse_density": 0.14782799780368805,
+      "vrmse_momentum_x": 0.10002654790878296,
+      "vrmse_momentum_y": 0.09203282743692398,
+      "vrmse_pressure": 0.17786017060279846
+    },
+    {
+      "id": "0299_gamma1.3999999762",
+      "vrmse": 0.05446336045861244,
+      "vrmse_chmean": 0.0778597891330719,
+      "vrmse_density": 0.09080686420202255,
+      "vrmse_momentum_x": 0.07155583798885345,
+      "vrmse_momentum_y": 0.05586238205432892,
+      "vrmse_pressure": 0.09321407228708267
+    },
+    {
+      "id": "0300_gamma1.4040000439",
+      "vrmse": 0.05908165127038956,
+      "vrmse_chmean": 0.06886651366949081,
+      "vrmse_density": 0.05700603500008583,
+      "vrmse_momentum_x": 0.05872561037540436,
+      "vrmse_momentum_y": 0.06333113461732864,
+      "vrmse_pressure": 0.09640327841043472
+    },
+    {
+      "id": "0301_gamma1.4040000439",
+      "vrmse": 0.05130568519234657,
+      "vrmse_chmean": 0.07475610077381134,
+      "vrmse_density": 0.06594464182853699,
+      "vrmse_momentum_x": 0.06687259674072266,
+      "vrmse_momentum_y": 0.06553154438734055,
+      "vrmse_pressure": 0.10067562758922577
+    },
+    {
+      "id": "0302_gamma1.4040000439",
+      "vrmse": 0.12288369983434677,
+      "vrmse_chmean": 0.1540461927652359,
+      "vrmse_density": 0.1261848360300064,
+      "vrmse_momentum_x": 0.12968449294567108,
+      "vrmse_momentum_y": 0.14263445138931274,
+      "vrmse_pressure": 0.21768099069595337
+    },
+    {
+      "id": "0303_gamma1.4040000439",
+      "vrmse": 0.058221448212862015,
+      "vrmse_chmean": 0.08576147258281708,
+      "vrmse_density": 0.0767315998673439,
+      "vrmse_momentum_x": 0.07793984562158585,
+      "vrmse_momentum_y": 0.06731857359409332,
+      "vrmse_pressure": 0.12105587124824524
+    },
+    {
+      "id": "0304_gamma1.4040000439",
+      "vrmse": 0.040338002145290375,
+      "vrmse_chmean": 0.06661132723093033,
+      "vrmse_density": 0.07530038803815842,
+      "vrmse_momentum_x": 0.06314951926469803,
+      "vrmse_momentum_y": 0.04243854433298111,
+      "vrmse_pressure": 0.08555684983730316
+    },
+    {
+      "id": "0305_gamma1.4040000439",
+      "vrmse": 0.03270748630166054,
+      "vrmse_chmean": 0.05842285603284836,
+      "vrmse_density": 0.05888078361749649,
+      "vrmse_momentum_x": 0.05848067253828049,
+      "vrmse_momentum_y": 0.04603605344891548,
+      "vrmse_pressure": 0.07029391080141068
+    },
+    {
+      "id": "0306_gamma1.4040000439",
+      "vrmse": 0.10011525452136993,
+      "vrmse_chmean": 0.1229846253991127,
+      "vrmse_density": 0.14621907472610474,
+      "vrmse_momentum_x": 0.1038493737578392,
+      "vrmse_momentum_y": 0.09365297853946686,
+      "vrmse_pressure": 0.1482170671224594
+    },
+    {
+      "id": "0307_gamma1.4040000439",
+      "vrmse": 0.07147058844566345,
+      "vrmse_chmean": 0.09827253222465515,
+      "vrmse_density": 0.11556190997362137,
+      "vrmse_momentum_x": 0.07973453402519226,
+      "vrmse_momentum_y": 0.07464122772216797,
+      "vrmse_pressure": 0.1231524646282196
+    },
+    {
+      "id": "0308_gamma1.4040000439",
+      "vrmse": 0.06068256124854088,
+      "vrmse_chmean": 0.07292698323726654,
+      "vrmse_density": 0.08155497163534164,
+      "vrmse_momentum_x": 0.0675777718424797,
+      "vrmse_momentum_y": 0.06007158011198044,
+      "vrmse_pressure": 0.08250361680984497
+    },
+    {
+      "id": "0309_gamma1.4040000439",
+      "vrmse": 0.061445459723472595,
+      "vrmse_chmean": 0.10009737312793732,
+      "vrmse_density": 0.08994464576244354,
+      "vrmse_momentum_x": 0.09652666747570038,
+      "vrmse_momentum_y": 0.08083046972751617,
+      "vrmse_pressure": 0.13308769464492798
+    },
+    {
+      "id": "0310_gamma1.4040000439",
+      "vrmse": 0.045720960944890976,
+      "vrmse_chmean": 0.08811767399311066,
+      "vrmse_density": 0.05021798238158226,
+      "vrmse_momentum_x": 0.035082243382930756,
+      "vrmse_momentum_y": 0.12633411586284637,
+      "vrmse_pressure": 0.14083634316921234
+    },
+    {
+      "id": "0311_gamma1.4040000439",
+      "vrmse": 0.05860699713230133,
+      "vrmse_chmean": 0.07410798966884613,
+      "vrmse_density": 0.06551175564527512,
+      "vrmse_momentum_x": 0.05979100987315178,
+      "vrmse_momentum_y": 0.06684573739767075,
+      "vrmse_pressure": 0.10428345203399658
+    },
+    {
+      "id": "0312_gamma1.4040000439",
+      "vrmse": 0.04423016309738159,
+      "vrmse_chmean": 0.08192168176174164,
+      "vrmse_density": 0.07489298284053802,
+      "vrmse_momentum_x": 0.07407758384943008,
+      "vrmse_momentum_y": 0.07455173879861832,
+      "vrmse_pressure": 0.10416442900896072
+    },
+    {
+      "id": "0313_gamma1.4040000439",
+      "vrmse": 0.1014205738902092,
+      "vrmse_chmean": 0.11319023370742798,
+      "vrmse_density": 0.11356741935014725,
+      "vrmse_momentum_x": 0.11021700501441956,
+      "vrmse_momentum_y": 0.0821865126490593,
+      "vrmse_pressure": 0.14678999781608582
+    },
+    {
+      "id": "0314_gamma1.4040000439",
+      "vrmse": 0.1067172959446907,
+      "vrmse_chmean": 0.16353453695774078,
+      "vrmse_density": 0.13463979959487915,
+      "vrmse_momentum_x": 0.196838840842247,
+      "vrmse_momentum_y": 0.13084813952445984,
+      "vrmse_pressure": 0.19181135296821594
+    },
+    {
+      "id": "0315_gamma1.4040000439",
+      "vrmse": 0.048693541437387466,
+      "vrmse_chmean": 0.05919827148318291,
+      "vrmse_density": 0.060456473380327225,
+      "vrmse_momentum_x": 0.039492033421993256,
+      "vrmse_momentum_y": 0.05628557503223419,
+      "vrmse_pressure": 0.08055900037288666
+    },
+    {
+      "id": "0316_gamma1.4040000439",
+      "vrmse": 0.02973887510597706,
+      "vrmse_chmean": 0.08308497071266174,
+      "vrmse_density": 0.05934488773345947,
+      "vrmse_momentum_x": 0.08020661771297455,
+      "vrmse_momentum_y": 0.09362879395484924,
+      "vrmse_pressure": 0.09915956109762192
+    },
+    {
+      "id": "0317_gamma1.4040000439",
+      "vrmse": 0.04613761603832245,
+      "vrmse_chmean": 0.06464246660470963,
+      "vrmse_density": 0.06436076760292053,
+      "vrmse_momentum_x": 0.061057813465595245,
+      "vrmse_momentum_y": 0.046397607773542404,
+      "vrmse_pressure": 0.08675368875265121
+    },
+    {
+      "id": "0318_gamma1.4040000439",
+      "vrmse": 0.05747085064649582,
+      "vrmse_chmean": 0.07423317432403564,
+      "vrmse_density": 0.05821073427796364,
+      "vrmse_momentum_x": 0.06572495400905609,
+      "vrmse_momentum_y": 0.06917165219783783,
+      "vrmse_pressure": 0.10382538288831711
+    },
+    {
+      "id": "0319_gamma1.4040000439",
+      "vrmse": 0.11683515459299088,
+      "vrmse_chmean": 0.13830730319023132,
+      "vrmse_density": 0.12031258642673492,
+      "vrmse_momentum_x": 0.11857409030199051,
+      "vrmse_momentum_y": 0.12937647104263306,
+      "vrmse_pressure": 0.1849660873413086
+    },
+    {
+      "id": "0320_gamma1.4040000439",
+      "vrmse": 0.041111450642347336,
+      "vrmse_chmean": 0.06615893542766571,
+      "vrmse_density": 0.0718316063284874,
+      "vrmse_momentum_x": 0.06918175518512726,
+      "vrmse_momentum_y": 0.03771784156560898,
+      "vrmse_pressure": 0.0859045460820198
+    },
+    {
+      "id": "0321_gamma1.4040000439",
+      "vrmse": 0.10715773701667786,
+      "vrmse_chmean": 0.1206633597612381,
+      "vrmse_density": 0.09344589710235596,
+      "vrmse_momentum_x": 0.14533106982707977,
+      "vrmse_momentum_y": 0.09169847518205643,
+      "vrmse_pressure": 0.15217801928520203
+    },
+    {
+      "id": "0322_gamma1.4040000439",
+      "vrmse": 0.04315223544836044,
+      "vrmse_chmean": 0.0583106204867363,
+      "vrmse_density": 0.04921893775463104,
+      "vrmse_momentum_x": 0.06007812172174454,
+      "vrmse_momentum_y": 0.03875783458352089,
+      "vrmse_pressure": 0.08518758416175842
+    },
+    {
+      "id": "0323_gamma1.4040000439",
+      "vrmse": 0.15415836870670319,
+      "vrmse_chmean": 0.16326186060905457,
+      "vrmse_density": 0.1772213727235794,
+      "vrmse_momentum_x": 0.13234761357307434,
+      "vrmse_momentum_y": 0.14960142970085144,
+      "vrmse_pressure": 0.19387699663639069
+    },
+    {
+      "id": "0324_gamma1.4040000439",
+      "vrmse": 0.10719471424818039,
+      "vrmse_chmean": 0.11945725977420807,
+      "vrmse_density": 0.11696533858776093,
+      "vrmse_momentum_x": 0.11939459294080734,
+      "vrmse_momentum_y": 0.11793989688158035,
+      "vrmse_pressure": 0.12352921068668365
+    },
+    {
+      "id": "0325_gamma1.4040000439",
+      "vrmse": 0.083271324634552,
+      "vrmse_chmean": 0.10685649514198303,
+      "vrmse_density": 0.10144253075122833,
+      "vrmse_momentum_x": 0.11482290178537369,
+      "vrmse_momentum_y": 0.0680350810289383,
+      "vrmse_pressure": 0.14312544465065002
+    },
+    {
+      "id": "0326_gamma1.4040000439",
+      "vrmse": 0.0794283077120781,
+      "vrmse_chmean": 0.12324261665344238,
+      "vrmse_density": 0.09512986987829208,
+      "vrmse_momentum_x": 0.21773207187652588,
+      "vrmse_momentum_y": 0.0745568573474884,
+      "vrmse_pressure": 0.10555166751146317
+    },
+    {
+      "id": "0327_gamma1.4040000439",
+      "vrmse": 0.13663393259048462,
+      "vrmse_chmean": 0.15889406204223633,
+      "vrmse_density": 0.15919387340545654,
+      "vrmse_momentum_x": 0.14528943598270416,
+      "vrmse_momentum_y": 0.1804775446653366,
+      "vrmse_pressure": 0.1506154090166092
+    },
+    {
+      "id": "0328_gamma1.4040000439",
+      "vrmse": 0.09806352853775024,
+      "vrmse_chmean": 0.11634544283151627,
+      "vrmse_density": 0.08681032806634903,
+      "vrmse_momentum_x": 0.1207382082939148,
+      "vrmse_momentum_y": 0.08742921054363251,
+      "vrmse_pressure": 0.17040404677391052
+    },
+    {
+      "id": "0329_gamma1.4040000439",
+      "vrmse": 0.09845492243766785,
+      "vrmse_chmean": 0.10951252281665802,
+      "vrmse_density": 0.09569134563207626,
+      "vrmse_momentum_x": 0.08767768740653992,
+      "vrmse_momentum_y": 0.11212370544672012,
+      "vrmse_pressure": 0.14255735278129578
+    },
+    {
+      "id": "0330_gamma1.4040000439",
+      "vrmse": 0.07758228480815887,
+      "vrmse_chmean": 0.09992827475070953,
+      "vrmse_density": 0.09126997739076614,
+      "vrmse_momentum_x": 0.08807936310768127,
+      "vrmse_momentum_y": 0.07972552627325058,
+      "vrmse_pressure": 0.14063823223114014
+    },
+    {
+      "id": "0331_gamma1.4040000439",
+      "vrmse": 0.0993511900305748,
+      "vrmse_chmean": 0.11246554553508759,
+      "vrmse_density": 0.11891384422779083,
+      "vrmse_momentum_x": 0.10315003991127014,
+      "vrmse_momentum_y": 0.08267637342214584,
+      "vrmse_pressure": 0.14512193202972412
+    },
+    {
+      "id": "0332_gamma1.4040000439",
+      "vrmse": 0.12107589095830917,
+      "vrmse_chmean": 0.14470893144607544,
+      "vrmse_density": 0.1391262412071228,
+      "vrmse_momentum_x": 0.14468199014663696,
+      "vrmse_momentum_y": 0.11858370900154114,
+      "vrmse_pressure": 0.17644375562667847
+    },
+    {
+      "id": "0333_gamma1.4040000439",
+      "vrmse": 0.12729543447494507,
+      "vrmse_chmean": 0.14226119220256805,
+      "vrmse_density": 0.13566656410694122,
+      "vrmse_momentum_x": 0.15906637907028198,
+      "vrmse_momentum_y": 0.11939309537410736,
+      "vrmse_pressure": 0.15491876006126404
+    },
+    {
+      "id": "0334_gamma1.4040000439",
+      "vrmse": 0.05411861464381218,
+      "vrmse_chmean": 0.07537136226892471,
+      "vrmse_density": 0.07567352801561356,
+      "vrmse_momentum_x": 0.054179634898900986,
+      "vrmse_momentum_y": 0.08016998320817947,
+      "vrmse_pressure": 0.09146229922771454
+    },
+    {
+      "id": "0335_gamma1.4040000439",
+      "vrmse": 0.045347947627305984,
+      "vrmse_chmean": 0.1156013235449791,
+      "vrmse_density": 0.11447867751121521,
+      "vrmse_momentum_x": 0.1269703507423401,
+      "vrmse_momentum_y": 0.13080619275569916,
+      "vrmse_pressure": 0.09015007317066193
+    },
+    {
+      "id": "0336_gamma1.4040000439",
+      "vrmse": 0.09798344224691391,
+      "vrmse_chmean": 0.11558516323566437,
+      "vrmse_density": 0.11223550885915756,
+      "vrmse_momentum_x": 0.09538190066814423,
+      "vrmse_momentum_y": 0.08334693312644958,
+      "vrmse_pressure": 0.1713763028383255
+    },
+    {
+      "id": "0337_gamma1.4040000439",
+      "vrmse": 0.07255390286445618,
+      "vrmse_chmean": 0.0935579389333725,
+      "vrmse_density": 0.08210142701864243,
+      "vrmse_momentum_x": 0.07610752433538437,
+      "vrmse_momentum_y": 0.08081191778182983,
+      "vrmse_pressure": 0.13521087169647217
+    },
+    {
+      "id": "0338_gamma1.4040000439",
+      "vrmse": 0.08676683157682419,
+      "vrmse_chmean": 0.09234146773815155,
+      "vrmse_density": 0.10056024044752121,
+      "vrmse_momentum_x": 0.07614784687757492,
+      "vrmse_momentum_y": 0.08067489415407181,
+      "vrmse_pressure": 0.11198291182518005
+    },
+    {
+      "id": "0339_gamma1.4040000439",
+      "vrmse": 0.05199673771858215,
+      "vrmse_chmean": 0.07673320174217224,
+      "vrmse_density": 0.0786651149392128,
+      "vrmse_momentum_x": 0.06595901399850845,
+      "vrmse_momentum_y": 0.05849428102374077,
+      "vrmse_pressure": 0.10381440073251724
+    },
+    {
+      "id": "0340_gamma1.4040000439",
+      "vrmse": 0.05711648240685463,
+      "vrmse_chmean": 0.0771050751209259,
+      "vrmse_density": 0.07659713178873062,
+      "vrmse_momentum_x": 0.06187376752495766,
+      "vrmse_momentum_y": 0.06355251371860504,
+      "vrmse_pressure": 0.10639688372612
+    },
+    {
+      "id": "0341_gamma1.4040000439",
+      "vrmse": 0.05740165710449219,
+      "vrmse_chmean": 0.07610946893692017,
+      "vrmse_density": 0.05992108955979347,
+      "vrmse_momentum_x": 0.0657481774687767,
+      "vrmse_momentum_y": 0.09176437556743622,
+      "vrmse_pressure": 0.08700422942638397
+    },
+    {
+      "id": "0342_gamma1.4040000439",
+      "vrmse": 0.08821776509284973,
+      "vrmse_chmean": 0.11108295619487762,
+      "vrmse_density": 0.13483493030071259,
+      "vrmse_momentum_x": 0.07264329493045807,
+      "vrmse_momentum_y": 0.08974200487136841,
+      "vrmse_pressure": 0.14711157977581024
+    },
+    {
+      "id": "0343_gamma1.4040000439",
+      "vrmse": 0.1239677220582962,
+      "vrmse_chmean": 0.13585741817951202,
+      "vrmse_density": 0.11890781670808792,
+      "vrmse_momentum_x": 0.14192059636116028,
+      "vrmse_momentum_y": 0.11912563443183899,
+      "vrmse_pressure": 0.1634756326675415
+    },
+    {
+      "id": "0344_gamma1.4040000439",
+      "vrmse": 0.06504153460264206,
+      "vrmse_chmean": 0.0773884654045105,
+      "vrmse_density": 0.08704546093940735,
+      "vrmse_momentum_x": 0.062321264296770096,
+      "vrmse_momentum_y": 0.05653652176260948,
+      "vrmse_pressure": 0.10365061461925507
+    },
+    {
+      "id": "0345_gamma1.4040000439",
+      "vrmse": 0.09796009212732315,
+      "vrmse_chmean": 0.11283527314662933,
+      "vrmse_density": 0.11750565469264984,
+      "vrmse_momentum_x": 0.09470226615667343,
+      "vrmse_momentum_y": 0.08598154038190842,
+      "vrmse_pressure": 0.15315163135528564
+    },
+    {
+      "id": "0346_gamma1.4040000439",
+      "vrmse": 0.09471301734447479,
+      "vrmse_chmean": 0.1218186616897583,
+      "vrmse_density": 0.12534406781196594,
+      "vrmse_momentum_x": 0.10081802308559418,
+      "vrmse_momentum_y": 0.08924649655818939,
+      "vrmse_pressure": 0.17186608910560608
+    },
+    {
+      "id": "0347_gamma1.4040000439",
+      "vrmse": 0.06691442430019379,
+      "vrmse_chmean": 0.07367083430290222,
+      "vrmse_density": 0.08808360993862152,
+      "vrmse_momentum_x": 0.05971582978963852,
+      "vrmse_momentum_y": 0.06662014126777649,
+      "vrmse_pressure": 0.08026375621557236
+    },
+    {
+      "id": "0348_gamma1.4040000439",
+      "vrmse": 0.04330788180232048,
+      "vrmse_chmean": 0.07779213786125183,
+      "vrmse_density": 0.07500142604112625,
+      "vrmse_momentum_x": 0.05110923573374748,
+      "vrmse_momentum_y": 0.06201886385679245,
+      "vrmse_pressure": 0.12303903698921204
+    },
+    {
+      "id": "0349_gamma1.4040000439",
+      "vrmse": 0.07276269048452377,
+      "vrmse_chmean": 0.09121648967266083,
+      "vrmse_density": 0.07384961098432541,
+      "vrmse_momentum_x": 0.08079010993242264,
+      "vrmse_momentum_y": 0.09004450589418411,
+      "vrmse_pressure": 0.12018173933029175
+    },
+    {
+      "id": "0350_gamma1.4529999495",
+      "vrmse": 0.07631943374872208,
+      "vrmse_chmean": 0.09958475828170776,
+      "vrmse_density": 0.08575332909822464,
+      "vrmse_momentum_x": 0.109193816781044,
+      "vrmse_momentum_y": 0.06714347749948502,
+      "vrmse_pressure": 0.1362483948469162
+    },
+    {
+      "id": "0351_gamma1.4529999495",
+      "vrmse": 0.04459565132856369,
+      "vrmse_chmean": 0.07887879759073257,
+      "vrmse_density": 0.06158442422747612,
+      "vrmse_momentum_x": 0.07661883533000946,
+      "vrmse_momentum_y": 0.08409029990434647,
+      "vrmse_pressure": 0.09322161972522736
+    },
+    {
+      "id": "0352_gamma1.4529999495",
+      "vrmse": 0.09367167204618454,
+      "vrmse_chmean": 0.11368495970964432,
+      "vrmse_density": 0.09577935189008713,
+      "vrmse_momentum_x": 0.10403035581111908,
+      "vrmse_momentum_y": 0.09140993654727936,
+      "vrmse_pressure": 0.1635201871395111
+    },
+    {
+      "id": "0353_gamma1.4529999495",
+      "vrmse": 0.07582602649927139,
+      "vrmse_chmean": 0.09137837588787079,
+      "vrmse_density": 0.0792454332113266,
+      "vrmse_momentum_x": 0.06292210519313812,
+      "vrmse_momentum_y": 0.09020213037729263,
+      "vrmse_pressure": 0.1331438273191452
+    },
+    {
+      "id": "0354_gamma1.4529999495",
+      "vrmse": 0.03069307468831539,
+      "vrmse_chmean": 0.06888104975223541,
+      "vrmse_density": 0.0713287740945816,
+      "vrmse_momentum_x": 0.055673450231552124,
+      "vrmse_momentum_y": 0.06466718018054962,
+      "vrmse_pressure": 0.0838547796010971
+    },
+    {
+      "id": "0355_gamma1.4529999495",
+      "vrmse": 0.043453969061374664,
+      "vrmse_chmean": 0.05684599280357361,
+      "vrmse_density": 0.04826274514198303,
+      "vrmse_momentum_x": 0.057429615408182144,
+      "vrmse_momentum_y": 0.038806475698947906,
+      "vrmse_pressure": 0.08288514614105225
+    },
+    {
+      "id": "0356_gamma1.4529999495",
+      "vrmse": 0.11355134099721909,
+      "vrmse_chmean": 0.1364559531211853,
+      "vrmse_density": 0.12506912648677826,
+      "vrmse_momentum_x": 0.11437495797872543,
+      "vrmse_momentum_y": 0.12205597758293152,
+      "vrmse_pressure": 0.1843237280845642
+    },
+    {
+      "id": "0357_gamma1.4529999495",
+      "vrmse": 0.044290632009506226,
+      "vrmse_chmean": 0.06340629607439041,
+      "vrmse_density": 0.059754643589258194,
+      "vrmse_momentum_x": 0.05361378192901611,
+      "vrmse_momentum_y": 0.0600159615278244,
+      "vrmse_pressure": 0.08024080842733383
+    },
+    {
+      "id": "0358_gamma1.4529999495",
+      "vrmse": 0.0986468493938446,
+      "vrmse_chmean": 0.11023680865764618,
+      "vrmse_density": 0.11727041751146317,
+      "vrmse_momentum_x": 0.08938676118850708,
+      "vrmse_momentum_y": 0.09180842339992523,
+      "vrmse_pressure": 0.14248163998126984
+    },
+    {
+      "id": "0359_gamma1.4529999495",
+      "vrmse": 0.11475624889135361,
+      "vrmse_chmean": 0.13863500952720642,
+      "vrmse_density": 0.12448113411664963,
+      "vrmse_momentum_x": 0.12427376955747604,
+      "vrmse_momentum_y": 0.13452868163585663,
+      "vrmse_pressure": 0.17125645279884338
+    },
+    {
+      "id": "0360_gamma1.4529999495",
+      "vrmse": 0.11579826474189758,
+      "vrmse_chmean": 0.12709546089172363,
+      "vrmse_density": 0.1190018579363823,
+      "vrmse_momentum_x": 0.10308689624071121,
+      "vrmse_momentum_y": 0.10776349902153015,
+      "vrmse_pressure": 0.17852962017059326
+    },
+    {
+      "id": "0361_gamma1.4529999495",
+      "vrmse": 0.0996847003698349,
+      "vrmse_chmean": 0.11687159538269043,
+      "vrmse_density": 0.0969499722123146,
+      "vrmse_momentum_x": 0.11704887449741364,
+      "vrmse_momentum_y": 0.09066709131002426,
+      "vrmse_pressure": 0.16282042860984802
+    },
+    {
+      "id": "0362_gamma1.4529999495",
+      "vrmse": 0.05598539486527443,
+      "vrmse_chmean": 0.08176028728485107,
+      "vrmse_density": 0.07784011960029602,
+      "vrmse_momentum_x": 0.08811578899621964,
+      "vrmse_momentum_y": 0.06596352905035019,
+      "vrmse_pressure": 0.09512171149253845
+    },
+    {
+      "id": "0363_gamma1.4529999495",
+      "vrmse": 0.030424386262893677,
+      "vrmse_chmean": 0.0631338581442833,
+      "vrmse_density": 0.06098948419094086,
+      "vrmse_momentum_x": 0.06018947809934616,
+      "vrmse_momentum_y": 0.05871375650167465,
+      "vrmse_pressure": 0.0726427212357521
+    },
+    {
+      "id": "0364_gamma1.4529999495",
+      "vrmse": 0.06933942437171936,
+      "vrmse_chmean": 0.09299259632825851,
+      "vrmse_density": 0.09917569905519485,
+      "vrmse_momentum_x": 0.0799587070941925,
+      "vrmse_momentum_y": 0.07108156383037567,
+      "vrmse_pressure": 0.12175443023443222
+    },
+    {
+      "id": "0365_gamma1.4529999495",
+      "vrmse": 0.07432015985250473,
+      "vrmse_chmean": 0.09853211045265198,
+      "vrmse_density": 0.11478783190250397,
+      "vrmse_momentum_x": 0.06992588192224503,
+      "vrmse_momentum_y": 0.09147372096776962,
+      "vrmse_pressure": 0.11794101446866989
+    },
+    {
+      "id": "0366_gamma1.4529999495",
+      "vrmse": 0.032621074467897415,
+      "vrmse_chmean": 0.07092778384685516,
+      "vrmse_density": 0.05437610298395157,
+      "vrmse_momentum_x": 0.08025993406772614,
+      "vrmse_momentum_y": 0.07289227098226547,
+      "vrmse_pressure": 0.07618283480405807
+    },
+    {
+      "id": "0367_gamma1.4529999495",
+      "vrmse": 0.02880220301449299,
+      "vrmse_chmean": 0.03703056275844574,
+      "vrmse_density": 0.029616348445415497,
+      "vrmse_momentum_x": 0.026474013924598694,
+      "vrmse_momentum_y": 0.0313420295715332,
+      "vrmse_pressure": 0.06068985536694527
+    },
+    {
+      "id": "0368_gamma1.4529999495",
+      "vrmse": 0.07045850902795792,
+      "vrmse_chmean": 0.0872657299041748,
+      "vrmse_density": 0.09421492367982864,
+      "vrmse_momentum_x": 0.08957727998495102,
+      "vrmse_momentum_y": 0.049073513597249985,
+      "vrmse_pressure": 0.11619722098112106
+    },
+    {
+      "id": "0369_gamma1.4529999495",
+      "vrmse": 0.05635485798120499,
+      "vrmse_chmean": 0.07573580741882324,
+      "vrmse_density": 0.06318789720535278,
+      "vrmse_momentum_x": 0.07141076773405075,
+      "vrmse_momentum_y": 0.0522015206515789,
+      "vrmse_pressure": 0.11614301800727844
+    },
+    {
+      "id": "0370_gamma1.4529999495",
+      "vrmse": 0.049306947737932205,
+      "vrmse_chmean": 0.09045640379190445,
+      "vrmse_density": 0.06024584174156189,
+      "vrmse_momentum_x": 0.08607552200555801,
+      "vrmse_momentum_y": 0.08013983815908432,
+      "vrmse_pressure": 0.13536442816257477
+    },
+    {
+      "id": "0371_gamma1.4529999495",
+      "vrmse": 0.06052272394299507,
+      "vrmse_chmean": 0.08256329596042633,
+      "vrmse_density": 0.07117387652397156,
+      "vrmse_momentum_x": 0.0809730738401413,
+      "vrmse_momentum_y": 0.050175681710243225,
+      "vrmse_pressure": 0.12793055176734924
+    },
+    {
+      "id": "0372_gamma1.4529999495",
+      "vrmse": 0.06782965362071991,
+      "vrmse_chmean": 0.07492116093635559,
+      "vrmse_density": 0.09429685026407242,
+      "vrmse_momentum_x": 0.05629735440015793,
+      "vrmse_momentum_y": 0.06691005080938339,
+      "vrmse_pressure": 0.08218038827180862
+    },
+    {
+      "id": "0373_gamma1.4529999495",
+      "vrmse": 0.09463388472795486,
+      "vrmse_chmean": 0.12111122161149979,
+      "vrmse_density": 0.08705694228410721,
+      "vrmse_momentum_x": 0.11092516779899597,
+      "vrmse_momentum_y": 0.1464209258556366,
+      "vrmse_pressure": 0.14004184305667877
+    },
+    {
+      "id": "0374_gamma1.4529999495",
+      "vrmse": 0.03628423810005188,
+      "vrmse_chmean": 0.07580415159463882,
+      "vrmse_density": 0.0919167622923851,
+      "vrmse_momentum_x": 0.060456544160842896,
+      "vrmse_momentum_y": 0.053294744342565536,
+      "vrmse_pressure": 0.09754854440689087
+    },
+    {
+      "id": "0375_gamma1.4529999495",
+      "vrmse": 0.1067674309015274,
+      "vrmse_chmean": 0.12857002019882202,
+      "vrmse_density": 0.11533667147159576,
+      "vrmse_momentum_x": 0.10845599323511124,
+      "vrmse_momentum_y": 0.11549670249223709,
+      "vrmse_pressure": 0.17499074339866638
+    },
+    {
+      "id": "0376_gamma1.4529999495",
+      "vrmse": 0.10695300996303558,
+      "vrmse_chmean": 0.12427935004234314,
+      "vrmse_density": 0.09747215360403061,
+      "vrmse_momentum_x": 0.10867592692375183,
+      "vrmse_momentum_y": 0.12148252129554749,
+      "vrmse_pressure": 0.16948680579662323
+    },
+    {
+      "id": "0377_gamma1.4529999495",
+      "vrmse": 0.08881296217441559,
+      "vrmse_chmean": 0.10083558410406113,
+      "vrmse_density": 0.10934920608997345,
+      "vrmse_momentum_x": 0.06718546897172928,
+      "vrmse_momentum_y": 0.09105349332094193,
+      "vrmse_pressure": 0.13575416803359985
+    },
+    {
+      "id": "0378_gamma1.4529999495",
+      "vrmse": 0.10590598732233047,
+      "vrmse_chmean": 0.12271390855312347,
+      "vrmse_density": 0.13530251383781433,
+      "vrmse_momentum_x": 0.09553271532058716,
+      "vrmse_momentum_y": 0.09185861796140671,
+      "vrmse_pressure": 0.1681617945432663
+    },
+    {
+      "id": "0379_gamma1.4529999495",
+      "vrmse": 0.09637446701526642,
+      "vrmse_chmean": 0.10820257663726807,
+      "vrmse_density": 0.11431234329938889,
+      "vrmse_momentum_x": 0.09036465734243393,
+      "vrmse_momentum_y": 0.08496083319187164,
+      "vrmse_pressure": 0.1431724578142166
+    },
+    {
+      "id": "0380_gamma1.4529999495",
+      "vrmse": 0.053092192858457565,
+      "vrmse_chmean": 0.09159274399280548,
+      "vrmse_density": 0.07572782039642334,
+      "vrmse_momentum_x": 0.06536414474248886,
+      "vrmse_momentum_y": 0.0857795923948288,
+      "vrmse_pressure": 0.13949939608573914
+    },
+    {
+      "id": "0381_gamma1.4529999495",
+      "vrmse": 0.07050614804029465,
+      "vrmse_chmean": 0.09080443531274796,
+      "vrmse_density": 0.06748845428228378,
+      "vrmse_momentum_x": 0.08518040925264359,
+      "vrmse_momentum_y": 0.0719975158572197,
+      "vrmse_pressure": 0.13855135440826416
+    },
+    {
+      "id": "0382_gamma1.4529999495",
+      "vrmse": 0.11660441756248474,
+      "vrmse_chmean": 0.1268279254436493,
+      "vrmse_density": 0.13095629215240479,
+      "vrmse_momentum_x": 0.12199113517999649,
+      "vrmse_momentum_y": 0.1012801006436348,
+      "vrmse_pressure": 0.15308421850204468
+    },
+    {
+      "id": "0383_gamma1.4529999495",
+      "vrmse": 0.127921462059021,
+      "vrmse_chmean": 0.14919516444206238,
+      "vrmse_density": 0.13471020758152008,
+      "vrmse_momentum_x": 0.1404593139886856,
+      "vrmse_momentum_y": 0.1090911254286766,
+      "vrmse_pressure": 0.21251997351646423
+    },
+    {
+      "id": "0384_gamma1.4529999495",
+      "vrmse": 0.07630418241024017,
+      "vrmse_chmean": 0.10673917829990387,
+      "vrmse_density": 0.1224842518568039,
+      "vrmse_momentum_x": 0.07766855508089066,
+      "vrmse_momentum_y": 0.09293776750564575,
+      "vrmse_pressure": 0.13386613130569458
+    },
+    {
+      "id": "0385_gamma1.4529999495",
+      "vrmse": 0.046347200870513916,
+      "vrmse_chmean": 0.06939536333084106,
+      "vrmse_density": 0.0475567989051342,
+      "vrmse_momentum_x": 0.08574683964252472,
+      "vrmse_momentum_y": 0.05350543558597565,
+      "vrmse_pressure": 0.09077237546443939
+    },
+    {
+      "id": "0386_gamma1.4529999495",
+      "vrmse": 0.06269443035125732,
+      "vrmse_chmean": 0.13748355209827423,
+      "vrmse_density": 0.1407955288887024,
+      "vrmse_momentum_x": 0.16722886264324188,
+      "vrmse_momentum_y": 0.1322018802165985,
+      "vrmse_pressure": 0.10970792919397354
+    },
+    {
+      "id": "0387_gamma1.4529999495",
+      "vrmse": 0.0769311860203743,
+      "vrmse_chmean": 0.0824270024895668,
+      "vrmse_density": 0.07883644104003906,
+      "vrmse_momentum_x": 0.08438953012228012,
+      "vrmse_momentum_y": 0.06953471153974533,
+      "vrmse_pressure": 0.0969473123550415
+    },
+    {
+      "id": "0388_gamma1.4529999495",
+      "vrmse": 0.09307289123535156,
+      "vrmse_chmean": 0.12116222083568573,
+      "vrmse_density": 0.11809417605400085,
+      "vrmse_momentum_x": 0.09836424887180328,
+      "vrmse_momentum_y": 0.08460162580013275,
+      "vrmse_pressure": 0.18358880281448364
+    },
+    {
+      "id": "0389_gamma1.4529999495",
+      "vrmse": 0.07753141969442368,
+      "vrmse_chmean": 0.09489084780216217,
+      "vrmse_density": 0.08431215584278107,
+      "vrmse_momentum_x": 0.06902537494897842,
+      "vrmse_momentum_y": 0.07691029459238052,
+      "vrmse_pressure": 0.14931555092334747
+    },
+    {
+      "id": "0390_gamma1.4529999495",
+      "vrmse": 0.040427614003419876,
+      "vrmse_chmean": 0.048316337168216705,
+      "vrmse_density": 0.045134082436561584,
+      "vrmse_momentum_x": 0.03584323078393936,
+      "vrmse_momentum_y": 0.03816983103752136,
+      "vrmse_pressure": 0.07411819696426392
+    },
+    {
+      "id": "0391_gamma1.4529999495",
+      "vrmse": 0.13982036709785461,
+      "vrmse_chmean": 0.15471214056015015,
+      "vrmse_density": 0.16208487749099731,
+      "vrmse_momentum_x": 0.12634937465190887,
+      "vrmse_momentum_y": 0.12678782641887665,
+      "vrmse_pressure": 0.20362643897533417
+    },
+    {
+      "id": "0392_gamma1.4529999495",
+      "vrmse": 0.0961846262216568,
+      "vrmse_chmean": 0.1252378672361374,
+      "vrmse_density": 0.11640528589487076,
+      "vrmse_momentum_x": 0.08238577842712402,
+      "vrmse_momentum_y": 0.09655482321977615,
+      "vrmse_pressure": 0.20560559630393982
+    },
+    {
+      "id": "0393_gamma1.4529999495",
+      "vrmse": 0.14115813374519348,
+      "vrmse_chmean": 0.1875886619091034,
+      "vrmse_density": 0.1677791327238083,
+      "vrmse_momentum_x": 0.18864072859287262,
+      "vrmse_momentum_y": 0.21278393268585205,
+      "vrmse_pressure": 0.18115083873271942
+    },
+    {
+      "id": "0394_gamma1.4529999495",
+      "vrmse": 0.04062719643115997,
+      "vrmse_chmean": 0.08327843993902206,
+      "vrmse_density": 0.07328565418720245,
+      "vrmse_momentum_x": 0.0786132961511612,
+      "vrmse_momentum_y": 0.0819745734333992,
+      "vrmse_pressure": 0.09924022853374481
+    },
+    {
+      "id": "0395_gamma1.4529999495",
+      "vrmse": 0.049655523151159286,
+      "vrmse_chmean": 0.06460168957710266,
+      "vrmse_density": 0.05677541717886925,
+      "vrmse_momentum_x": 0.057328127324581146,
+      "vrmse_momentum_y": 0.06283976882696152,
+      "vrmse_pressure": 0.08146344870328903
+    },
+    {
+      "id": "0396_gamma1.4529999495",
+      "vrmse": 0.0867369994521141,
+      "vrmse_chmean": 0.10824352502822876,
+      "vrmse_density": 0.13158740103244781,
+      "vrmse_momentum_x": 0.07827630639076233,
+      "vrmse_momentum_y": 0.07767733186483383,
+      "vrmse_pressure": 0.14543308317661285
+    },
+    {
+      "id": "0397_gamma1.4529999495",
+      "vrmse": 0.08146379888057709,
+      "vrmse_chmean": 0.09032003581523895,
+      "vrmse_density": 0.09446081519126892,
+      "vrmse_momentum_x": 0.07125721871852875,
+      "vrmse_momentum_y": 0.07686885446310043,
+      "vrmse_pressure": 0.11869324743747711
+    },
+    {
+      "id": "0398_gamma1.4529999495",
+      "vrmse": 0.07692831009626389,
+      "vrmse_chmean": 0.09609547257423401,
+      "vrmse_density": 0.085355743765831,
+      "vrmse_momentum_x": 0.0677666887640953,
+      "vrmse_momentum_y": 0.11098899692296982,
+      "vrmse_pressure": 0.12027047574520111
+    },
+    {
+      "id": "0399_gamma1.4529999495",
+      "vrmse": 0.12920530140399933,
+      "vrmse_chmean": 0.15803366899490356,
+      "vrmse_density": 0.13486701250076294,
+      "vrmse_momentum_x": 0.15818096697330475,
+      "vrmse_momentum_y": 0.15810856223106384,
+      "vrmse_pressure": 0.1809781789779663
+    },
+    {
+      "id": "0400_gamma1.5970000029",
+      "vrmse": 0.12004787474870682,
+      "vrmse_chmean": 0.1447426676750183,
+      "vrmse_density": 0.10861226916313171,
+      "vrmse_momentum_x": 0.10131735354661942,
+      "vrmse_momentum_y": 0.1773800253868103,
+      "vrmse_pressure": 0.191661074757576
+    },
+    {
+      "id": "0401_gamma1.5970000029",
+      "vrmse": 0.08780425786972046,
+      "vrmse_chmean": 0.09664943814277649,
+      "vrmse_density": 0.0827598050236702,
+      "vrmse_momentum_x": 0.08828939497470856,
+      "vrmse_momentum_y": 0.08709744364023209,
+      "vrmse_pressure": 0.12845110893249512
+    },
+    {
+      "id": "0402_gamma1.5970000029",
+      "vrmse": 0.04544069990515709,
+      "vrmse_chmean": 0.06646919250488281,
+      "vrmse_density": 0.05135192722082138,
+      "vrmse_momentum_x": 0.031038783490657806,
+      "vrmse_momentum_y": 0.08716089278459549,
+      "vrmse_pressure": 0.09632514417171478
+    },
+    {
+      "id": "0403_gamma1.5970000029",
+      "vrmse": 0.09300541877746582,
+      "vrmse_chmean": 0.1169283464550972,
+      "vrmse_density": 0.11440316587686539,
+      "vrmse_momentum_x": 0.10221724957227707,
+      "vrmse_momentum_y": 0.09333012998104095,
+      "vrmse_pressure": 0.15776285529136658
+    },
+    {
+      "id": "0404_gamma1.5970000029",
+      "vrmse": 0.0468921922147274,
+      "vrmse_chmean": 0.06820150464773178,
+      "vrmse_density": 0.05555059015750885,
+      "vrmse_momentum_x": 0.05803663656115532,
+      "vrmse_momentum_y": 0.04927650839090347,
+      "vrmse_pressure": 0.10994228720664978
+    },
+    {
+      "id": "0405_gamma1.5970000029",
+      "vrmse": 0.08205687254667282,
+      "vrmse_chmean": 0.10025277733802795,
+      "vrmse_density": 0.1035170704126358,
+      "vrmse_momentum_x": 0.08571477979421616,
+      "vrmse_momentum_y": 0.06887803971767426,
+      "vrmse_pressure": 0.1429012417793274
+    },
+    {
+      "id": "0406_gamma1.5970000029",
+      "vrmse": 0.07796003669500351,
+      "vrmse_chmean": 0.09240113943815231,
+      "vrmse_density": 0.07769002765417099,
+      "vrmse_momentum_x": 0.0758819580078125,
+      "vrmse_momentum_y": 0.08372653275728226,
+      "vrmse_pressure": 0.1323060393333435
+    },
+    {
+      "id": "0407_gamma1.5970000029",
+      "vrmse": 0.14884378015995026,
+      "vrmse_chmean": 0.1590360552072525,
+      "vrmse_density": 0.13983775675296783,
+      "vrmse_momentum_x": 0.13331077992916107,
+      "vrmse_momentum_y": 0.14536401629447937,
+      "vrmse_pressure": 0.21763166785240173
+    },
+    {
+      "id": "0408_gamma1.5970000029",
+      "vrmse": 0.06281555444002151,
+      "vrmse_chmean": 0.08731429278850555,
+      "vrmse_density": 0.061528224498033524,
+      "vrmse_momentum_x": 0.08207046985626221,
+      "vrmse_momentum_y": 0.09112586826086044,
+      "vrmse_pressure": 0.11453261971473694
+    },
+    {
+      "id": "0409_gamma1.5970000029",
+      "vrmse": 0.10138285160064697,
+      "vrmse_chmean": 0.12191569060087204,
+      "vrmse_density": 0.11368498206138611,
+      "vrmse_momentum_x": 0.10022968053817749,
+      "vrmse_momentum_y": 0.09973563998937607,
+      "vrmse_pressure": 0.1740124523639679
+    },
+    {
+      "id": "0410_gamma1.5970000029",
+      "vrmse": 0.10312770307064056,
+      "vrmse_chmean": 0.1819492131471634,
+      "vrmse_density": 0.19730070233345032,
+      "vrmse_momentum_x": 0.18484683334827423,
+      "vrmse_momentum_y": 0.17728374898433685,
+      "vrmse_pressure": 0.16836556792259216
+    },
+    {
+      "id": "0411_gamma1.5970000029",
+      "vrmse": 0.03597847744822502,
+      "vrmse_chmean": 0.06083232909440994,
+      "vrmse_density": 0.06612752377986908,
+      "vrmse_momentum_x": 0.04565081745386124,
+      "vrmse_momentum_y": 0.04324215650558472,
+      "vrmse_pressure": 0.08830882608890533
+    },
+    {
+      "id": "0412_gamma1.5970000029",
+      "vrmse": 0.038170330226421356,
+      "vrmse_chmean": 0.061349064111709595,
+      "vrmse_density": 0.07427331805229187,
+      "vrmse_momentum_x": 0.044450487941503525,
+      "vrmse_momentum_y": 0.052931785583496094,
+      "vrmse_pressure": 0.07374066114425659
+    },
+    {
+      "id": "0413_gamma1.5970000029",
+      "vrmse": 0.0391155369579792,
+      "vrmse_chmean": 0.07131904363632202,
+      "vrmse_density": 0.059417057782411575,
+      "vrmse_momentum_x": 0.0672827735543251,
+      "vrmse_momentum_y": 0.07689593732357025,
+      "vrmse_pressure": 0.08168038725852966
+    },
+    {
+      "id": "0414_gamma1.5970000029",
+      "vrmse": 0.06541521102190018,
+      "vrmse_chmean": 0.0919593870639801,
+      "vrmse_density": 0.09397818148136139,
+      "vrmse_momentum_x": 0.08575185388326645,
+      "vrmse_momentum_y": 0.06172860041260719,
+      "vrmse_pressure": 0.12637893855571747
+    },
+    {
+      "id": "0415_gamma1.5970000029",
+      "vrmse": 0.0713982880115509,
+      "vrmse_chmean": 0.10291025042533875,
+      "vrmse_density": 0.07751679420471191,
+      "vrmse_momentum_x": 0.0694103091955185,
+      "vrmse_momentum_y": 0.10189364850521088,
+      "vrmse_pressure": 0.1628202497959137
+    },
+    {
+      "id": "0416_gamma1.5970000029",
+      "vrmse": 0.09040277451276779,
+      "vrmse_chmean": 0.11536499857902527,
+      "vrmse_density": 0.10047215968370438,
+      "vrmse_momentum_x": 0.10637355595827103,
+      "vrmse_momentum_y": 0.08677845448255539,
+      "vrmse_pressure": 0.16783583164215088
+    },
+    {
+      "id": "0417_gamma1.5970000029",
+      "vrmse": 0.06716401875019073,
+      "vrmse_chmean": 0.09044159948825836,
+      "vrmse_density": 0.11799679696559906,
+      "vrmse_momentum_x": 0.05347577854990959,
+      "vrmse_momentum_y": 0.07033123821020126,
+      "vrmse_pressure": 0.11996258050203323
+    },
+    {
+      "id": "0418_gamma1.5970000029",
+      "vrmse": 0.13514107465744019,
+      "vrmse_chmean": 0.15789711475372314,
+      "vrmse_density": 0.1741587519645691,
+      "vrmse_momentum_x": 0.11377763748168945,
+      "vrmse_momentum_y": 0.1445750743150711,
+      "vrmse_pressure": 0.19907696545124054
+    },
+    {
+      "id": "0419_gamma1.5970000029",
+      "vrmse": 0.08946976065635681,
+      "vrmse_chmean": 0.1206340566277504,
+      "vrmse_density": 0.10083841532468796,
+      "vrmse_momentum_x": 0.12443913519382477,
+      "vrmse_momentum_y": 0.1331174373626709,
+      "vrmse_pressure": 0.12414124608039856
+    },
+    {
+      "id": "0420_gamma1.5970000029",
+      "vrmse": 0.04432071000337601,
+      "vrmse_chmean": 0.06603771448135376,
+      "vrmse_density": 0.0569903589785099,
+      "vrmse_momentum_x": 0.044826023280620575,
+      "vrmse_momentum_y": 0.058763571083545685,
+      "vrmse_pressure": 0.10357088595628738
+    },
+    {
+      "id": "0421_gamma1.5970000029",
+      "vrmse": 0.09545004367828369,
+      "vrmse_chmean": 0.16014444828033447,
+      "vrmse_density": 0.18197719752788544,
+      "vrmse_momentum_x": 0.14278092980384827,
+      "vrmse_momentum_y": 0.13332520425319672,
+      "vrmse_pressure": 0.18249447643756866
+    },
+    {
+      "id": "0422_gamma1.5970000029",
+      "vrmse": 0.08690761774778366,
+      "vrmse_chmean": 0.09722325950860977,
+      "vrmse_density": 0.11467274278402328,
+      "vrmse_momentum_x": 0.06299496442079544,
+      "vrmse_momentum_y": 0.09765365719795227,
+      "vrmse_pressure": 0.11357168108224869
+    },
+    {
+      "id": "0423_gamma1.5970000029",
+      "vrmse": 0.037137676030397415,
+      "vrmse_chmean": 0.11492061614990234,
+      "vrmse_density": 0.1139383465051651,
+      "vrmse_momentum_x": 0.09686551243066788,
+      "vrmse_momentum_y": 0.13559922575950623,
+      "vrmse_pressure": 0.11327938735485077
+    },
+    {
+      "id": "0424_gamma1.5970000029",
+      "vrmse": 0.09783033281564713,
+      "vrmse_chmean": 0.12265081703662872,
+      "vrmse_density": 0.10184907168149948,
+      "vrmse_momentum_x": 0.10819428414106369,
+      "vrmse_momentum_y": 0.09530168771743774,
+      "vrmse_pressure": 0.1852581948041916
+    },
+    {
+      "id": "0425_gamma1.5970000029",
+      "vrmse": 0.03916032239794731,
+      "vrmse_chmean": 0.057562634348869324,
+      "vrmse_density": 0.05315714702010155,
+      "vrmse_momentum_x": 0.04335658624768257,
+      "vrmse_momentum_y": 0.054896507412195206,
+      "vrmse_pressure": 0.07884030044078827
+    },
+    {
+      "id": "0426_gamma1.5970000029",
+      "vrmse": 0.04903698340058327,
+      "vrmse_chmean": 0.07869058847427368,
+      "vrmse_density": 0.058157749474048615,
+      "vrmse_momentum_x": 0.08112050592899323,
+      "vrmse_momentum_y": 0.058424316346645355,
+      "vrmse_pressure": 0.11705977469682693
+    },
+    {
+      "id": "0427_gamma1.5970000029",
+      "vrmse": 0.0654691681265831,
+      "vrmse_chmean": 0.10239169001579285,
+      "vrmse_density": 0.11025527119636536,
+      "vrmse_momentum_x": 0.10251637548208237,
+      "vrmse_momentum_y": 0.06830795854330063,
+      "vrmse_pressure": 0.12848715484142303
+    },
+    {
+      "id": "0428_gamma1.5970000029",
+      "vrmse": 0.08077428489923477,
+      "vrmse_chmean": 0.09746348857879639,
+      "vrmse_density": 0.08549122512340546,
+      "vrmse_momentum_x": 0.08709017932415009,
+      "vrmse_momentum_y": 0.0968724712729454,
+      "vrmse_pressure": 0.1204000860452652
+    },
+    {
+      "id": "0429_gamma1.5970000029",
+      "vrmse": 0.08112400025129318,
+      "vrmse_chmean": 0.10441242158412933,
+      "vrmse_density": 0.11427944153547287,
+      "vrmse_momentum_x": 0.07099197059869766,
+      "vrmse_momentum_y": 0.09411846846342087,
+      "vrmse_pressure": 0.13825979828834534
+    },
+    {
+      "id": "0430_gamma1.5970000029",
+      "vrmse": 0.07666027545928955,
+      "vrmse_chmean": 0.1140061765909195,
+      "vrmse_density": 0.09497803449630737,
+      "vrmse_momentum_x": 0.09019650518894196,
+      "vrmse_momentum_y": 0.08890818059444427,
+      "vrmse_pressure": 0.18194201588630676
+    },
+    {
+      "id": "0431_gamma1.5970000029",
+      "vrmse": 0.1324319988489151,
+      "vrmse_chmean": 0.15022355318069458,
+      "vrmse_density": 0.16295133531093597,
+      "vrmse_momentum_x": 0.15554089844226837,
+      "vrmse_momentum_y": 0.12252700328826904,
+      "vrmse_pressure": 0.15987496078014374
+    },
+    {
+      "id": "0432_gamma1.5970000029",
+      "vrmse": 0.0955425277352333,
+      "vrmse_chmean": 0.11515934020280838,
+      "vrmse_density": 0.10264565050601959,
+      "vrmse_momentum_x": 0.10067654401063919,
+      "vrmse_momentum_y": 0.10354974120855331,
+      "vrmse_pressure": 0.15376542508602142
+    },
+    {
+      "id": "0433_gamma1.5970000029",
+      "vrmse": 0.0946427583694458,
+      "vrmse_chmean": 0.1087585911154747,
+      "vrmse_density": 0.11674428731203079,
+      "vrmse_momentum_x": 0.08173920214176178,
+      "vrmse_momentum_y": 0.10132396966218948,
+      "vrmse_pressure": 0.13522689044475555
+    },
+    {
+      "id": "0434_gamma1.5970000029",
+      "vrmse": 0.059635039418935776,
+      "vrmse_chmean": 0.08890847861766815,
+      "vrmse_density": 0.08282564580440521,
+      "vrmse_momentum_x": 0.0836462453007698,
+      "vrmse_momentum_y": 0.09184382110834122,
+      "vrmse_pressure": 0.09731818735599518
+    },
+    {
+      "id": "0435_gamma1.5970000029",
+      "vrmse": 0.05798359960317612,
+      "vrmse_chmean": 0.08443602174520493,
+      "vrmse_density": 0.08040574193000793,
+      "vrmse_momentum_x": 0.08324192464351654,
+      "vrmse_momentum_y": 0.049896832555532455,
+      "vrmse_pressure": 0.12419958412647247
+    },
+    {
+      "id": "0436_gamma1.5970000029",
+      "vrmse": 0.04796874150633812,
+      "vrmse_chmean": 0.058596935123205185,
+      "vrmse_density": 0.04912511259317398,
+      "vrmse_momentum_x": 0.053207073360681534,
+      "vrmse_momentum_y": 0.041736356914043427,
+      "vrmse_pressure": 0.0903191938996315
+    },
+    {
+      "id": "0437_gamma1.5970000029",
+      "vrmse": 0.1167556643486023,
+      "vrmse_chmean": 0.13155290484428406,
+      "vrmse_density": 0.13643737137317657,
+      "vrmse_momentum_x": 0.10966809093952179,
+      "vrmse_momentum_y": 0.10238566249608994,
+      "vrmse_pressure": 0.17772047221660614
+    },
+    {
+      "id": "0438_gamma1.5970000029",
+      "vrmse": 0.04241117089986801,
+      "vrmse_chmean": 0.06476429104804993,
+      "vrmse_density": 0.06842680275440216,
+      "vrmse_momentum_x": 0.04039794206619263,
+      "vrmse_momentum_y": 0.07288941740989685,
+      "vrmse_pressure": 0.07734297960996628
+    },
+    {
+      "id": "0439_gamma1.5970000029",
+      "vrmse": 0.07132503390312195,
+      "vrmse_chmean": 0.09041903167963028,
+      "vrmse_density": 0.09253732115030289,
+      "vrmse_momentum_x": 0.08435714989900589,
+      "vrmse_momentum_y": 0.07822182774543762,
+      "vrmse_pressure": 0.10655982792377472
+    },
+    {
+      "id": "0440_gamma1.5970000029",
+      "vrmse": 0.07743629813194275,
+      "vrmse_chmean": 0.15335553884506226,
+      "vrmse_density": 0.18796832859516144,
+      "vrmse_momentum_x": 0.1358633041381836,
+      "vrmse_momentum_y": 0.15380902588367462,
+      "vrmse_pressure": 0.13578148186206818
+    },
+    {
+      "id": "0441_gamma1.5970000029",
+      "vrmse": 0.09105274081230164,
+      "vrmse_chmean": 0.12134651839733124,
+      "vrmse_density": 0.156381294131279,
+      "vrmse_momentum_x": 0.08968731760978699,
+      "vrmse_momentum_y": 0.08321456611156464,
+      "vrmse_pressure": 0.15610291063785553
+    },
+    {
+      "id": "0442_gamma1.5970000029",
+      "vrmse": 0.04123242571949959,
+      "vrmse_chmean": 0.06221041455864906,
+      "vrmse_density": 0.03849755972623825,
+      "vrmse_momentum_x": 0.04059167578816414,
+      "vrmse_momentum_y": 0.04609519988298416,
+      "vrmse_pressure": 0.1236572191119194
+    },
+    {
+      "id": "0443_gamma1.5970000029",
+      "vrmse": 0.05396838113665581,
+      "vrmse_chmean": 0.0735316127538681,
+      "vrmse_density": 0.07181017845869064,
+      "vrmse_momentum_x": 0.06442543119192123,
+      "vrmse_momentum_y": 0.062255922704935074,
+      "vrmse_pressure": 0.09563490748405457
+    },
+    {
+      "id": "0444_gamma1.5970000029",
+      "vrmse": 0.12246046960353851,
+      "vrmse_chmean": 0.14837408065795898,
+      "vrmse_density": 0.12945322692394257,
+      "vrmse_momentum_x": 0.10784167796373367,
+      "vrmse_momentum_y": 0.17816060781478882,
+      "vrmse_pressure": 0.1780407875776291
+    },
+    {
+      "id": "0445_gamma1.5970000029",
+      "vrmse": 0.05731254816055298,
+      "vrmse_chmean": 0.08112303912639618,
+      "vrmse_density": 0.0882796198129654,
+      "vrmse_momentum_x": 0.07460351288318634,
+      "vrmse_momentum_y": 0.07328400760889053,
+      "vrmse_pressure": 0.08832502365112305
+    },
+    {
+      "id": "0446_gamma1.5970000029",
+      "vrmse": 0.05200823023915291,
+      "vrmse_chmean": 0.08847183734178543,
+      "vrmse_density": 0.06612612307071686,
+      "vrmse_momentum_x": 0.0472455658018589,
+      "vrmse_momentum_y": 0.0734439343214035,
+      "vrmse_pressure": 0.16707172989845276
+    },
+    {
+      "id": "0447_gamma1.5970000029",
+      "vrmse": 0.05909067764878273,
+      "vrmse_chmean": 0.08578824251890182,
+      "vrmse_density": 0.09374888241291046,
+      "vrmse_momentum_x": 0.08799849450588226,
+      "vrmse_momentum_y": 0.06776046007871628,
+      "vrmse_pressure": 0.0936451330780983
+    },
+    {
+      "id": "0448_gamma1.5970000029",
+      "vrmse": 0.04239054396748543,
+      "vrmse_chmean": 0.10986599326133728,
+      "vrmse_density": 0.08945726603269577,
+      "vrmse_momentum_x": 0.10815422981977463,
+      "vrmse_momentum_y": 0.12231425940990448,
+      "vrmse_pressure": 0.11953823268413544
+    },
+    {
+      "id": "0449_gamma1.5970000029",
+      "vrmse": 0.09505056589841843,
+      "vrmse_chmean": 0.13478656113147736,
+      "vrmse_density": 0.12816143035888672,
+      "vrmse_momentum_x": 0.11361926048994064,
+      "vrmse_momentum_y": 0.12015170603990555,
+      "vrmse_pressure": 0.17721383273601532
+    },
+    {
+      "id": "0450_gamma1.7599999905",
+      "vrmse": 0.14027780294418335,
+      "vrmse_chmean": 0.16427379846572876,
+      "vrmse_density": 0.1614689975976944,
+      "vrmse_momentum_x": 0.16462595760822296,
+      "vrmse_momentum_y": 0.14446407556533813,
+      "vrmse_pressure": 0.18653611838817596
+    },
+    {
+      "id": "0451_gamma1.7599999905",
+      "vrmse": 0.08416751772165298,
+      "vrmse_chmean": 0.10974607616662979,
+      "vrmse_density": 0.10023908317089081,
+      "vrmse_momentum_x": 0.06672892719507217,
+      "vrmse_momentum_y": 0.10671407729387283,
+      "vrmse_pressure": 0.16530221700668335
+    },
+    {
+      "id": "0452_gamma1.7599999905",
+      "vrmse": 0.09314989298582077,
+      "vrmse_chmean": 0.11267275363206863,
+      "vrmse_density": 0.1540134996175766,
+      "vrmse_momentum_x": 0.07312866300344467,
+      "vrmse_momentum_y": 0.08490627259016037,
+      "vrmse_pressure": 0.1386425942182541
+    },
+    {
+      "id": "0453_gamma1.7599999905",
+      "vrmse": 0.060741472989320755,
+      "vrmse_chmean": 0.08332646638154984,
+      "vrmse_density": 0.06313136965036392,
+      "vrmse_momentum_x": 0.07127134501934052,
+      "vrmse_momentum_y": 0.07574418932199478,
+      "vrmse_pressure": 0.12315895408391953
+    },
+    {
+      "id": "0454_gamma1.7599999905",
+      "vrmse": 0.1140567883849144,
+      "vrmse_chmean": 0.1701490581035614,
+      "vrmse_density": 0.1974656879901886,
+      "vrmse_momentum_x": 0.13488571345806122,
+      "vrmse_momentum_y": 0.15832169353961945,
+      "vrmse_pressure": 0.18992316722869873
+    },
+    {
+      "id": "0455_gamma1.7599999905",
+      "vrmse": 0.0659799873828888,
+      "vrmse_chmean": 0.06709021329879761,
+      "vrmse_density": 0.050271086394786835,
+      "vrmse_momentum_x": 0.0723724514245987,
+      "vrmse_momentum_y": 0.06687328219413757,
+      "vrmse_pressure": 0.07884403318166733
+    },
+    {
+      "id": "0456_gamma1.7599999905",
+      "vrmse": 0.05719662457704544,
+      "vrmse_chmean": 0.093824602663517,
+      "vrmse_density": 0.06741566956043243,
+      "vrmse_momentum_x": 0.0678975060582161,
+      "vrmse_momentum_y": 0.08910783380270004,
+      "vrmse_pressure": 0.15087740123271942
+    },
+    {
+      "id": "0457_gamma1.7599999905",
+      "vrmse": 0.05158255994319916,
+      "vrmse_chmean": 0.07360734045505524,
+      "vrmse_density": 0.0804118812084198,
+      "vrmse_momentum_x": 0.055187005549669266,
+      "vrmse_momentum_y": 0.07735513150691986,
+      "vrmse_pressure": 0.08147532492876053
+    },
+    {
+      "id": "0458_gamma1.7599999905",
+      "vrmse": 0.06595390290021896,
+      "vrmse_chmean": 0.09719373285770416,
+      "vrmse_density": 0.0869031623005867,
+      "vrmse_momentum_x": 0.08972985297441483,
+      "vrmse_momentum_y": 0.06667288392782211,
+      "vrmse_pressure": 0.1454690396785736
+    },
+    {
+      "id": "0459_gamma1.7599999905",
+      "vrmse": 0.05299069732427597,
+      "vrmse_chmean": 0.06932446360588074,
+      "vrmse_density": 0.06412675976753235,
+      "vrmse_momentum_x": 0.039076391607522964,
+      "vrmse_momentum_y": 0.06264286488294601,
+      "vrmse_pressure": 0.11145184934139252
+    },
+    {
+      "id": "0460_gamma1.7599999905",
+      "vrmse": 0.06671701371669769,
+      "vrmse_chmean": 0.08514460921287537,
+      "vrmse_density": 0.07197603583335876,
+      "vrmse_momentum_x": 0.0698404461145401,
+      "vrmse_momentum_y": 0.0934264212846756,
+      "vrmse_pressure": 0.1053355485200882
+    },
+    {
+      "id": "0461_gamma1.7599999905",
+      "vrmse": 0.09532120078802109,
+      "vrmse_chmean": 0.12535050511360168,
+      "vrmse_density": 0.09549029916524887,
+      "vrmse_momentum_x": 0.16156741976737976,
+      "vrmse_momentum_y": 0.11343220621347427,
+      "vrmse_pressure": 0.13091211020946503
+    },
+    {
+      "id": "0462_gamma1.7599999905",
+      "vrmse": 0.08983942121267319,
+      "vrmse_chmean": 0.09752804785966873,
+      "vrmse_density": 0.11592435091733932,
+      "vrmse_momentum_x": 0.06686067581176758,
+      "vrmse_momentum_y": 0.09486059844493866,
+      "vrmse_pressure": 0.11246655136346817
+    },
+    {
+      "id": "0463_gamma1.7599999905",
+      "vrmse": 0.07882804423570633,
+      "vrmse_chmean": 0.0920935720205307,
+      "vrmse_density": 0.09170389175415039,
+      "vrmse_momentum_x": 0.0734042078256607,
+      "vrmse_momentum_y": 0.0812293067574501,
+      "vrmse_pressure": 0.1220368891954422
+    },
+    {
+      "id": "0464_gamma1.7599999905",
+      "vrmse": 0.12293832004070282,
+      "vrmse_chmean": 0.13847628235816956,
+      "vrmse_density": 0.14979785680770874,
+      "vrmse_momentum_x": 0.14621669054031372,
+      "vrmse_momentum_y": 0.12967146933078766,
+      "vrmse_pressure": 0.1282191127538681
+    },
+    {
+      "id": "0465_gamma1.7599999905",
+      "vrmse": 0.08548376709222794,
+      "vrmse_chmean": 0.0981287956237793,
+      "vrmse_density": 0.09081240743398666,
+      "vrmse_momentum_x": 0.07442647963762283,
+      "vrmse_momentum_y": 0.09641354531049728,
+      "vrmse_pressure": 0.130862757563591
+    },
+    {
+      "id": "0466_gamma1.7599999905",
+      "vrmse": 0.08154261112213135,
+      "vrmse_chmean": 0.10317445546388626,
+      "vrmse_density": 0.10997988283634186,
+      "vrmse_momentum_x": 0.08543664962053299,
+      "vrmse_momentum_y": 0.08468079566955566,
+      "vrmse_pressure": 0.13260048627853394
+    },
+    {
+      "id": "0467_gamma1.7599999905",
+      "vrmse": 0.033849913626909256,
+      "vrmse_chmean": 0.06745213270187378,
+      "vrmse_density": 0.05283857509493828,
+      "vrmse_momentum_x": 0.050533805042505264,
+      "vrmse_momentum_y": 0.051943812519311905,
+      "vrmse_pressure": 0.11449235677719116
+    },
+    {
+      "id": "0468_gamma1.7599999905",
+      "vrmse": 0.11022664606571198,
+      "vrmse_chmean": 0.14075994491577148,
+      "vrmse_density": 0.10399482399225235,
+      "vrmse_momentum_x": 0.15190279483795166,
+      "vrmse_momentum_y": 0.11160697788000107,
+      "vrmse_pressure": 0.19553518295288086
+    },
+    {
+      "id": "0469_gamma1.7599999905",
+      "vrmse": 0.04995971918106079,
+      "vrmse_chmean": 0.09866294264793396,
+      "vrmse_density": 0.12449692189693451,
+      "vrmse_momentum_x": 0.0634869635105133,
+      "vrmse_momentum_y": 0.07935094088315964,
+      "vrmse_pressure": 0.12731696665287018
+    },
+    {
+      "id": "0470_gamma1.7599999905",
+      "vrmse": 0.08637692034244537,
+      "vrmse_chmean": 0.11627347767353058,
+      "vrmse_density": 0.14092746376991272,
+      "vrmse_momentum_x": 0.08535073697566986,
+      "vrmse_momentum_y": 0.07008863985538483,
+      "vrmse_pressure": 0.1687270551919937
+    },
+    {
+      "id": "0471_gamma1.7599999905",
+      "vrmse": 0.11345093697309494,
+      "vrmse_chmean": 0.13500544428825378,
+      "vrmse_density": 0.13214905560016632,
+      "vrmse_momentum_x": 0.11984410881996155,
+      "vrmse_momentum_y": 0.11354623734951019,
+      "vrmse_pressure": 0.17448237538337708
+    },
+    {
+      "id": "0472_gamma1.7599999905",
+      "vrmse": 0.039586786180734634,
+      "vrmse_chmean": 0.06376786530017853,
+      "vrmse_density": 0.0499015748500824,
+      "vrmse_momentum_x": 0.053780607879161835,
+      "vrmse_momentum_y": 0.048486460000276566,
+      "vrmse_pressure": 0.10290282219648361
+    },
+    {
+      "id": "0473_gamma1.7599999905",
+      "vrmse": 0.13973022997379303,
+      "vrmse_chmean": 0.1520722508430481,
+      "vrmse_density": 0.14500033855438232,
+      "vrmse_momentum_x": 0.12921737134456635,
+      "vrmse_momentum_y": 0.14587436616420746,
+      "vrmse_pressure": 0.18819692730903625
+    },
+    {
+      "id": "0474_gamma1.7599999905",
+      "vrmse": 0.04385882243514061,
+      "vrmse_chmean": 0.070534348487854,
+      "vrmse_density": 0.04355674609541893,
+      "vrmse_momentum_x": 0.0775262862443924,
+      "vrmse_momentum_y": 0.06316819041967392,
+      "vrmse_pressure": 0.09788618981838226
+    },
+    {
+      "id": "0475_gamma1.7599999905",
+      "vrmse": 0.06253238022327423,
+      "vrmse_chmean": 0.07926903665065765,
+      "vrmse_density": 0.05820295959711075,
+      "vrmse_momentum_x": 0.05869848281145096,
+      "vrmse_momentum_y": 0.0807492658495903,
+      "vrmse_pressure": 0.1194254606962204
+    },
+    {
+      "id": "0476_gamma1.7599999905",
+      "vrmse": 0.04865776747465134,
+      "vrmse_chmean": 0.06705614924430847,
+      "vrmse_density": 0.04321363940834999,
+      "vrmse_momentum_x": 0.05722140520811081,
+      "vrmse_momentum_y": 0.0603652223944664,
+      "vrmse_pressure": 0.10742432624101639
+    },
+    {
+      "id": "0477_gamma1.7599999905",
+      "vrmse": 0.06231389939785004,
+      "vrmse_chmean": 0.10076629370450974,
+      "vrmse_density": 0.09284914284944534,
+      "vrmse_momentum_x": 0.09004468470811844,
+      "vrmse_momentum_y": 0.08369855582714081,
+      "vrmse_pressure": 0.13647279143333435
+    },
+    {
+      "id": "0478_gamma1.7599999905",
+      "vrmse": 0.037348031997680664,
+      "vrmse_chmean": 0.06174013018608093,
+      "vrmse_density": 0.039262622594833374,
+      "vrmse_momentum_x": 0.06450711935758591,
+      "vrmse_momentum_y": 0.06915819644927979,
+      "vrmse_pressure": 0.07403256744146347
+    },
+    {
+      "id": "0479_gamma1.7599999905",
+      "vrmse": 0.09994104504585266,
+      "vrmse_chmean": 0.11575280129909515,
+      "vrmse_density": 0.12365418672561646,
+      "vrmse_momentum_x": 0.09696462005376816,
+      "vrmse_momentum_y": 0.09651100635528564,
+      "vrmse_pressure": 0.14588138461112976
+    },
+    {
+      "id": "0480_gamma1.7599999905",
+      "vrmse": 0.056504085659980774,
+      "vrmse_chmean": 0.09969556331634521,
+      "vrmse_density": 0.11667381227016449,
+      "vrmse_momentum_x": 0.07185453921556473,
+      "vrmse_momentum_y": 0.08615458756685257,
+      "vrmse_pressure": 0.12409929931163788
+    },
+    {
+      "id": "0481_gamma1.7599999905",
+      "vrmse": 0.06709738075733185,
+      "vrmse_chmean": 0.0813487097620964,
+      "vrmse_density": 0.054487310349941254,
+      "vrmse_momentum_x": 0.06860308349132538,
+      "vrmse_momentum_y": 0.08914973586797714,
+      "vrmse_pressure": 0.11315471678972244
+    },
+    {
+      "id": "0482_gamma1.7599999905",
+      "vrmse": 0.03174033761024475,
+      "vrmse_chmean": 0.07219657301902771,
+      "vrmse_density": 0.04359390586614609,
+      "vrmse_momentum_x": 0.062119077891111374,
+      "vrmse_momentum_y": 0.08388767391443253,
+      "vrmse_pressure": 0.09918563812971115
+    },
+    {
+      "id": "0483_gamma1.7599999905",
+      "vrmse": 0.06842199712991714,
+      "vrmse_chmean": 0.09218630194664001,
+      "vrmse_density": 0.06900618970394135,
+      "vrmse_momentum_x": 0.09080030024051666,
+      "vrmse_momentum_y": 0.09452952444553375,
+      "vrmse_pressure": 0.1144091784954071
+    },
+    {
+      "id": "0484_gamma1.7599999905",
+      "vrmse": 0.049422815442085266,
+      "vrmse_chmean": 0.09215474873781204,
+      "vrmse_density": 0.10960868746042252,
+      "vrmse_momentum_x": 0.07098673284053802,
+      "vrmse_momentum_y": 0.06728964298963547,
+      "vrmse_pressure": 0.12073393166065216
+    },
+    {
+      "id": "0485_gamma1.7599999905",
+      "vrmse": 0.07978742569684982,
+      "vrmse_chmean": 0.11635890603065491,
+      "vrmse_density": 0.07290074974298477,
+      "vrmse_momentum_x": 0.09439484030008316,
+      "vrmse_momentum_y": 0.06807247549295425,
+      "vrmse_pressure": 0.23006755113601685
+    },
+    {
+      "id": "0486_gamma1.7599999905",
+      "vrmse": 0.061710767447948456,
+      "vrmse_chmean": 0.09516603499650955,
+      "vrmse_density": 0.1150229275226593,
+      "vrmse_momentum_x": 0.07265619188547134,
+      "vrmse_momentum_y": 0.06365511566400528,
+      "vrmse_pressure": 0.12932990491390228
+    },
+    {
+      "id": "0487_gamma1.7599999905",
+      "vrmse": 0.07953282445669174,
+      "vrmse_chmean": 0.09811148047447205,
+      "vrmse_density": 0.09515541046857834,
+      "vrmse_momentum_x": 0.07772326469421387,
+      "vrmse_momentum_y": 0.09800370037555695,
+      "vrmse_pressure": 0.12156353145837784
+    },
+    {
+      "id": "0488_gamma1.7599999905",
+      "vrmse": 0.062334392219781876,
+      "vrmse_chmean": 0.10747677087783813,
+      "vrmse_density": 0.09516271203756332,
+      "vrmse_momentum_x": 0.11418003588914871,
+      "vrmse_momentum_y": 0.12026384472846985,
+      "vrmse_pressure": 0.10030047595500946
+    },
+    {
+      "id": "0489_gamma1.7599999905",
+      "vrmse": 0.08449488133192062,
+      "vrmse_chmean": 0.12121276557445526,
+      "vrmse_density": 0.12208577990531921,
+      "vrmse_momentum_x": 0.09799207746982574,
+      "vrmse_momentum_y": 0.11157691478729248,
+      "vrmse_pressure": 0.15319626033306122
+    },
+    {
+      "id": "0490_gamma1.7599999905",
+      "vrmse": 0.06208425760269165,
+      "vrmse_chmean": 0.09806041419506073,
+      "vrmse_density": 0.08492855727672577,
+      "vrmse_momentum_x": 0.08008082956075668,
+      "vrmse_momentum_y": 0.11250828951597214,
+      "vrmse_pressure": 0.11472397297620773
+    },
+    {
+      "id": "0491_gamma1.7599999905",
+      "vrmse": 0.09239999204874039,
+      "vrmse_chmean": 0.14766445755958557,
+      "vrmse_density": 0.1504860520362854,
+      "vrmse_momentum_x": 0.16395048797130585,
+      "vrmse_momentum_y": 0.12191896140575409,
+      "vrmse_pressure": 0.15430228412151337
+    },
+    {
+      "id": "0492_gamma1.7599999905",
+      "vrmse": 0.05430496111512184,
+      "vrmse_chmean": 0.08856157958507538,
+      "vrmse_density": 0.08530864119529724,
+      "vrmse_momentum_x": 0.06539939343929291,
+      "vrmse_momentum_y": 0.09348650276660919,
+      "vrmse_pressure": 0.11005179584026337
+    },
+    {
+      "id": "0493_gamma1.7599999905",
+      "vrmse": 0.14748238027095795,
+      "vrmse_chmean": 0.16862845420837402,
+      "vrmse_density": 0.12642896175384521,
+      "vrmse_momentum_x": 0.1843160092830658,
+      "vrmse_momentum_y": 0.1386117935180664,
+      "vrmse_pressure": 0.22515709698200226
+    },
+    {
+      "id": "0494_gamma1.7599999905",
+      "vrmse": 0.04563886299729347,
+      "vrmse_chmean": 0.059982527047395706,
+      "vrmse_density": 0.0752640813589096,
+      "vrmse_momentum_x": 0.04944692179560661,
+      "vrmse_momentum_y": 0.037702690809965134,
+      "vrmse_pressure": 0.07751641422510147
+    },
+    {
+      "id": "0495_gamma1.7599999905",
+      "vrmse": 0.09607292711734772,
+      "vrmse_chmean": 0.1206592246890068,
+      "vrmse_density": 0.09014356136322021,
+      "vrmse_momentum_x": 0.10717583447694778,
+      "vrmse_momentum_y": 0.1297570914030075,
+      "vrmse_pressure": 0.1555604189634323
+    },
+    {
+      "id": "0496_gamma1.7599999905",
+      "vrmse": 0.10418306291103363,
+      "vrmse_chmean": 0.12740913033485413,
+      "vrmse_density": 0.11738749593496323,
+      "vrmse_momentum_x": 0.10827478766441345,
+      "vrmse_momentum_y": 0.12036315351724625,
+      "vrmse_pressure": 0.16361103951931
+    },
+    {
+      "id": "0497_gamma1.7599999905",
+      "vrmse": 0.09170730412006378,
+      "vrmse_chmean": 0.14892810583114624,
+      "vrmse_density": 0.18604083359241486,
+      "vrmse_momentum_x": 0.13121658563613892,
+      "vrmse_momentum_y": 0.11463290452957153,
+      "vrmse_pressure": 0.16382208466529846
+    },
+    {
+      "id": "0498_gamma1.7599999905",
+      "vrmse": 0.08347930759191513,
+      "vrmse_chmean": 0.11553145945072174,
+      "vrmse_density": 0.10520173609256744,
+      "vrmse_momentum_x": 0.08895748853683472,
+      "vrmse_momentum_y": 0.12408105283975601,
+      "vrmse_pressure": 0.1438855677843094
+    },
+    {
+      "id": "0499_gamma1.7599999905",
+      "vrmse": 0.0710429847240448,
+      "vrmse_chmean": 0.09764768183231354,
+      "vrmse_density": 0.09932668507099152,
+      "vrmse_momentum_x": 0.06684350967407227,
+      "vrmse_momentum_y": 0.10207003355026245,
+      "vrmse_pressure": 0.12235052138566971
+    }
+  ]
+}

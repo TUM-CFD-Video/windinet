@@ -1,0 +1,77 @@
+START TIME: Sat 26 Sep 2026 02:13:17 PM CEST
+job=545974 node=i20r02c03s10
+start_time=2026-09-26T14:13:18+02:00
++-----------+--------------------------------------------------------------------------------------+
+| Device ID | Device Information                                                                   |
++-----------+--------------------------------------------------------------------------------------+
+| 0         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-003a-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:3a:00.0                                                        |
+|           | DRM Device: /dev/dri/card0                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 1         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-004b-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:4b:00.0                                                        |
+|           | DRM Device: /dev/dri/card1                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 2         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00ca-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:ca:00.0                                                        |
+|           | DRM Device: /dev/dri/card2                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+| 3         | Device Name: Intel(R) Data Center GPU Max 1550                                       |
+|           | Vendor Name: Intel(R) Corporation                                                    |
+|           | SOC UUID: 00000000-0000-00da-0000-002f0bd58086                                       |
+|           | PCI BDF Address: 0000:da:00.0                                                        |
+|           | DRM Device: /dev/dri/card3                                                           |
+|           | Function Type: physical                                                              |
++-----------+--------------------------------------------------------------------------------------+
+PREPROCESSED_DATA_ROOT: /hppfs/scratch/0D/go76fuz2/windinet/dit_preprocessed/finetune_vae_ch6_loss_rmse_h1_256res
+DIT_CHECKPOINT: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_loss_rmse_h1/checkpoints/model_weights_step_08000.safetensors
+VAE_CHECKPOINT: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_loss_rmse_h1_256res/checkpoints/vae_shockwave_best.safetensors
+NORMALIZATION: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_loss_rmse_h1_256res/training_config.yaml
+NUM_SAMPLES: 1
+NUM_INFERENCE_STEPS: <config default>
+OUT_DIR: logs/sng_pvc/eval_dit_vrmse/545974
+SIM_IDS: 2507_gamma1.3999999762 -> /hppfs/scratch/0D/go76fuz2/windinet/figure_data/dit/loss_rmse_h1_picked
+SCALAR_CHECKPOINT: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_loss_rmse_h1/checkpoints/scalar_embedding_step_08000.safetensors
+Prewarming checkpoints (sequential read, see comment above)...
+Prewarm done.
+Held-out split: 500 sims (seed=42) from /hppfs/scratch/0D/go76fuz2/windinet/dit_preprocessed/finetune_vae_ch6_loss_rmse_h1_256res/split_manifest.json
+h5: /hppfs/scratch/0D/go76fuz2/windinet/euler_mq_dataset/256x256_ds/train.h5
+--sim_ids: 2507_gamma1.3999999762 (train_ids)
+Evaluating 1 sim(s)
+Saving npz fields for ['2507_gamma1.3999999762'] (frames [0, 25, 50, 75, 100]) to /hppfs/scratch/0D/go76fuz2/windinet/figure_data/dit/loss_rmse_h1_picked
+Normalization from /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_loss_rmse_h1_256res/training_config.yaml: clip=5.0
+Latent space verified: fingerprint 625f8c69ee50dddb matches the DiT's training latents
+[windinet] loaded inflated VAE checkpoint: /hppfs/scratch/0D/go76fuz2/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_loss_rmse_h1_256res/checkpoints/vae_shockwave_best.safetensors (epoch=20, step=2500)
+Loading transformer: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_loss_rmse_h1/checkpoints/model_weights_step_08000.safetensors
+Loading scalar embedding: /hppfs/scratch/0D/go76fuz2/windinet/outputs/shockwave_dit_ch6_loss_rmse_h1/checkpoints/scalar_embedding_step_08000.safetensors
+[1/1] 2507_gamma1.3999999762: vae_only=0.07711  vae+dit=0.40928  latent_vrmse=0.66272
+
+============================================================
+n=1 sims
+VAE-only  val_vrmse (pixel)  : 0.07711
+VAE+DiT   val_vrmse (pixel)  : 0.40928
+Delta (DiT forecasting cost on top of VAE recon): +0.33217 (+430.8%)
+VAE-only  val_vrmse_chmean   : 0.09304
+VAE+DiT   val_vrmse_chmean   : 0.46802
+  density      vae_only=0.10859  vae+dit=0.53512  delta=+0.42653
+  momentum_x   vae_only=0.07637  vae+dit=0.45290  delta=+0.37653
+  momentum_y   vae_only=0.08275  vae+dit=0.49719  delta=+0.41443
+  pressure     vae_only=0.10446  vae+dit=0.38685  delta=+0.28240
+
+DiT rollout vs VAE-encoder ground truth, LATENT space (isolated from VAE decode):
+  latent_vrmse : 0.66272
+  latent_rmse  : 0.46318
+  worst 5 latent channels: [{'channel': 109, 'vrmse': 0.9572091102600098}, {'channel': 78, 'vrmse': 0.9422774314880371}, {'channel': 21, 'vrmse': 0.9217746257781982}, {'channel': 120, 'vrmse': 0.9071678519248962}, {'channel': 39, 'vrmse': 0.898097574710846}]
+
+Saved: logs/sng_pvc/eval_dit_vrmse/545974/vrmse_summary.json
+END TIME: Sat 26 Sep 2026 03:01:48 PM CEST
+end_time=2026-09-26T15:01:48+02:00 elapsed=2910s
