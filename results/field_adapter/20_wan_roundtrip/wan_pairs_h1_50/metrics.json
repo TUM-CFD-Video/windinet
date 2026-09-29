@@ -1,0 +1,85 @@
+{
+ "config": {
+  "name": "wan_pairs_h1_50",
+  "vae": "wan",
+  "data": {
+   "h5_path": "euler_mq_dataset/256x256_ds/test.h5",
+   "stats_json": "results/field_adapter/00_stats/eulermq_256_test_stats.json",
+   "test_every": 5,
+   "frames_per_sim": 2,
+   "num_workers": 2
+  },
+  "adapter": {
+   "groups": [
+    [
+     "density",
+     "pressure"
+    ],
+    [
+     "momentum_x",
+     "momentum_y"
+    ]
+   ],
+   "load": null
+  },
+  "loss": {
+   "rmse": 1.0,
+   "h1": 50.0
+  },
+  "train": {
+   "steps": 600,
+   "batch_sims": 1,
+   "lr": 0.003,
+   "vae_parts": "none",
+   "vae_lr": 2e-05,
+   "eval_every": 300,
+   "seed": 0
+  },
+  "ref_stats": "results/field_adapter/30_reference/wan_ref_stats.pt"
+ },
+ "init": {
+  "vrmse_density": 0.24063518643379211,
+  "vrmse_momentum_x": 0.20676279067993164,
+  "vrmse_momentum_y": 0.13959893584251404,
+  "vrmse_pressure": 0.08970701694488525,
+  "latentA_frechet": 6.242236137390137,
+  "latentB_frechet": 6.720229148864746
+ },
+ "final": {
+  "vrmse_density": 0.041845738887786865,
+  "vrmse_momentum_x": 0.18926042318344116,
+  "vrmse_momentum_y": 0.13387317955493927,
+  "vrmse_pressure": 0.0569370798766613,
+  "latentA_frechet": 6.622218132019043,
+  "latentB_frechet": 6.58786678314209
+ },
+ "history": [
+  {
+   "step": 300,
+   "train": {
+    "rmse": 0.013583878986537457,
+    "h1": 0.00016911316197365522
+   },
+   "vrmse_density": 0.049757350236177444,
+   "vrmse_momentum_x": 0.21813756227493286,
+   "vrmse_momentum_y": 0.14178989827632904,
+   "vrmse_pressure": 0.057213786989450455,
+   "latentA_frechet": 6.449489593505859,
+   "latentB_frechet": 6.541561126708984
+  },
+  {
+   "step": 600,
+   "train": {
+    "rmse": 0.02212074026465416,
+    "h1": 0.0005105557502247393
+   },
+   "vrmse_density": 0.041845738887786865,
+   "vrmse_momentum_x": 0.18926042318344116,
+   "vrmse_momentum_y": 0.13387317955493927,
+   "vrmse_pressure": 0.0569370798766613,
+   "latentA_frechet": 6.622218132019043,
+   "latentB_frechet": 6.58786678314209
+  }
+ ],
+ "n_params": 14
+}

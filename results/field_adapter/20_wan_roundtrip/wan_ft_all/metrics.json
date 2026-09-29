@@ -1,0 +1,88 @@
+{
+ "config": {
+  "name": "wan_ft_all",
+  "vae": "wan",
+  "data": {
+   "h5_path": "euler_mq_dataset/256x256_ds/test.h5",
+   "stats_json": "results/field_adapter/00_stats/eulermq_256_test_stats.json",
+   "test_every": 5,
+   "frames_per_sim": 2,
+   "num_workers": 2
+  },
+  "adapter": {
+   "groups": [
+    [
+     "density",
+     "pressure"
+    ],
+    [
+     "momentum_x",
+     "momentum_y"
+    ]
+   ],
+   "load": "results/field_adapter/20_wan_roundtrip/wan_pairs_h1_50.pt"
+  },
+  "loss": {
+   "rmse": 1.0,
+   "h1": 50.0
+  },
+  "train": {
+   "steps": 120,
+   "batch_sims": 8,
+   "lr": 0.0,
+   "vae_parts": "all",
+   "vae_lr": 1e-06,
+   "warmup_steps": 12,
+   "lr_floor": 0.02,
+   "max_grad_norm": 5.0,
+   "eval_every": 60,
+   "seed": 0
+  },
+  "ref_stats": "results/field_adapter/30_reference/wan_ref_stats.pt"
+ },
+ "init": {
+  "vrmse_density": 0.041845738887786865,
+  "vrmse_momentum_x": 0.18926042318344116,
+  "vrmse_momentum_y": 0.13387317955493927,
+  "vrmse_pressure": 0.0569370798766613,
+  "latentA_frechet": 6.622218132019043,
+  "latentB_frechet": 6.58786678314209
+ },
+ "final": {
+  "vrmse_density": 0.044726595282554626,
+  "vrmse_momentum_x": 0.14460958540439606,
+  "vrmse_momentum_y": 0.11395607888698578,
+  "vrmse_pressure": 0.0571279376745224,
+  "latentA_frechet": 6.768583297729492,
+  "latentB_frechet": 6.745149612426758
+ },
+ "history": [
+  {
+   "step": 60,
+   "train": {
+    "rmse": 0.0181697029620409,
+    "h1": 0.0003107408410869539
+   },
+   "vrmse_density": 0.04926546290516853,
+   "vrmse_momentum_x": 0.13414965569972992,
+   "vrmse_momentum_y": 0.12473400682210922,
+   "vrmse_pressure": 0.07208334654569626,
+   "latentA_frechet": 6.753467559814453,
+   "latentB_frechet": 6.728747367858887
+  },
+  {
+   "step": 120,
+   "train": {
+    "rmse": 0.020200427621603012,
+    "h1": 0.0002606787602417171
+   },
+   "vrmse_density": 0.044726595282554626,
+   "vrmse_momentum_x": 0.14460958540439606,
+   "vrmse_momentum_y": 0.11395607888698578,
+   "vrmse_pressure": 0.0571279376745224,
+   "latentA_frechet": 6.768583297729492,
+   "latentB_frechet": 6.745149612426758
+  }
+ ],
+ "n_params": 14
+}

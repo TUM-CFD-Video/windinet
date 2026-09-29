@@ -1,0 +1,91 @@
+{
+ "config": {
+  "name": "gamma_ref",
+  "vae": "wan",
+  "data": {
+   "h5_path": "euler_mq_dataset/256x256_ds/test.h5",
+   "stats_json": "results/field_adapter/00_stats/eulermq_256_test_stats.json",
+   "test_every": 5,
+   "test_gamma": null,
+   "frames_per_sim": 2,
+   "clip": false,
+   "num_workers": 2
+  },
+  "adapter": {
+   "groups": [
+    [
+     "density",
+     "pressure"
+    ],
+    [
+     "momentum_x",
+     "momentum_y"
+    ]
+   ],
+   "load": null
+  },
+  "loss": {
+   "rmse": 1.0,
+   "h1": 1.0
+  },
+  "train": {
+   "steps": 600,
+   "batch_sims": 1,
+   "lr": 0.003,
+   "vae_parts": "none",
+   "vae_lr": 5e-05,
+   "vae_load": null,
+   "warmup_steps": 0,
+   "lr_floor": 0.02,
+   "max_grad_norm": 0.0,
+   "eval_every": 300,
+   "seed": 0
+  },
+  "ref_stats": "results/field_adapter/30_reference/wan_ref_stats.pt"
+ },
+ "init": {
+  "vrmse_density": 0.30947983264923096,
+  "vrmse_momentum_x": 0.19674287736415863,
+  "vrmse_momentum_y": 0.14118415117263794,
+  "vrmse_pressure": 0.13839465379714966,
+  "latentA_frechet": 6.282899856567383,
+  "latentB_frechet": 6.932437896728516
+ },
+ "final": {
+  "vrmse_density": 0.053586214780807495,
+  "vrmse_momentum_x": 0.11850446462631226,
+  "vrmse_momentum_y": 0.0964173749089241,
+  "vrmse_pressure": 0.06272680312395096,
+  "latentA_frechet": 6.395929336547852,
+  "latentB_frechet": 7.389982223510742
+ },
+ "history": [
+  {
+   "step": 300,
+   "train": {
+    "rmse": 0.01694418489933014,
+    "h1": 0.0003820116398856044
+   },
+   "vrmse_density": 0.0705784410238266,
+   "vrmse_momentum_x": 0.1625305712223053,
+   "vrmse_momentum_y": 0.11991514265537262,
+   "vrmse_pressure": 0.0652712807059288,
+   "latentA_frechet": 6.26093864440918,
+   "latentB_frechet": 7.059473991394043
+  },
+  {
+   "step": 600,
+   "train": {
+    "rmse": 0.028218073770403862,
+    "h1": 0.0009511713869869709
+   },
+   "vrmse_density": 0.053586214780807495,
+   "vrmse_momentum_x": 0.11850446462631226,
+   "vrmse_momentum_y": 0.0964173749089241,
+   "vrmse_pressure": 0.06272680312395096,
+   "latentA_frechet": 6.395929336547852,
+   "latentB_frechet": 7.389982223510742
+  }
+ ],
+ "n_params": 14
+}
