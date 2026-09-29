@@ -75,7 +75,7 @@ def losses(cfg: FieldAdapterConfig, adapter: GroupedAdapter, x: torch.Tensor, va
 
 
 def lr_factor(t: TrainConfig):
-    """Multiplier on every group's lr: linear warm-up from 1 %, then cosine decay to `lr_floor`. Constant without warm-up."""
+    """Multiplier on every group's lr: linear warm-up from 1 %, then cosine decay to `lr_floor`; constant without warm-up."""
 
     def factor(step: int) -> float:
         if not t.warmup_steps:
@@ -113,7 +113,7 @@ def evaluate(
 
 def rel_change(params, ref) -> float:
     """||p - ref|| / ||ref|| over a list of tensors: how far weights moved. `ref` lives on the CPU (GPU is full)."""
-    num = sum((p.detach().cpu() - r).square().sum() for p, r in zip(params, ref))
+    num = sum((p.detach().cpu() - r).square().sum() for p, r in zip(params, ref, strict=True))
     return (num / sum(r.square().sum() for r in ref)).sqrt().item()
 
 
@@ -121,7 +121,7 @@ def drift_per_block(vae, w0) -> dict[str, float]:
     """Relative weight drift from the pretrained VAE, grouped by block (decoder.up_blocks.2, ...)."""
     names = [n for n, p in vae.vae.named_parameters() if p.requires_grad]
     blocks: dict[str, list] = {}
-    for n, p, r in zip(names, vae.trainable_params, w0):
+    for n, p, r in zip(names, vae.trainable_params, w0, strict=True):
         blocks.setdefault(".".join(n.split(".")[:3]), []).append((p, r))
     return {b: rel_change([p for p, _ in prs], [r for _, r in prs]) for b, prs in blocks.items()}
 
@@ -283,7 +283,7 @@ def main(
             {
                 "step": step,
                 "loss": loss,
-                "update_ratio": [rel_change(g["params"], b) for g, b in zip(opt.param_groups, before)],
+                "update_ratio": [rel_change(g["params"], b) for g, b in zip(opt.param_groups, before, strict=True)],
             }
         )
         if step % cfg.train.eval_every == 0 or step == cfg.train.steps:

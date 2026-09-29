@@ -57,7 +57,7 @@ class WanVAE:
     def encode(self, rgb: torch.Tensor) -> torch.Tensor:
         """Deterministic (posterior mean), normalised latents. Differentiable w.r.t. `rgb`."""
         z = self.vae.encode(self.pad_frames(rgb).to(self.dtype)).latent_dist.mode()
-        self.vae.clear_cache()  # drop the frame caches now, not at the next call: they are big and useless after the pass
+        self.vae.clear_cache()  # drop the frame caches now, not at the next call: big and useless after the pass
         return (z - self.latents_mean) / self.latents_std
 
     def decode(self, z: torch.Tensor) -> torch.Tensor:

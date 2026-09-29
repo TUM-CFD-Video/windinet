@@ -45,8 +45,9 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 ```bash
 conda activate windinet                      # local: /home/schwollie/anaconda3/envs/windinet
 pip install -e . && pip install ruff
-git sparse-checkout set --cone .vscode configs docs euler_mq_dataset jobs pretrained results scripts tests \
-    windinet logs/lumi logs/jupiter          # hides Weihao's output trees; `git sparse-checkout disable` undoes it
+git sparse-checkout init --cone            # then hide Weihao's output trees; `git sparse-checkout disable` undoes it
+git sparse-checkout set .vscode configs docs euler_mq_dataset jobs pretrained results scripts tests \
+    windinet logs/lumi logs/jupiter
 ```
 
 Clusters: outputs go to `$WINDINET_WORK/finetune_vae_outputs` (`windinet/cluster_config.py`), LTX weights to

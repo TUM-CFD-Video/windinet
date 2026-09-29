@@ -38,16 +38,16 @@ class GroupedAdapter(nn.Module):
         self.adapters = nn.ModuleList(FieldAdapter(**_norm_args(g, stats)) for g in groups)
 
     def _inputs(self, x: torch.Tensor) -> list[torch.Tensor]:
-        fields = dict(zip(BASE_FIELDS, x.unbind(1)))
+        fields = dict(zip(BASE_FIELDS, x.unbind(1), strict=True))
         return [torch.stack([fields[n] for n in g], dim=1) for g in self.groups]
 
     def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
-        return [a(inp) for a, inp in zip(self.adapters, self._inputs(x))]
+        return [a(inp) for a, inp in zip(self.adapters, self._inputs(x), strict=True)]
 
     def inverse(self, rgbs: list[torch.Tensor]) -> torch.Tensor:
-        parts = [a.inverse(rgb) for a, rgb in zip(self.adapters, rgbs)]
+        parts = [a.inverse(rgb) for a, rgb in zip(self.adapters, rgbs, strict=True)]
         per_field = {n: [] for n in BASE_FIELDS}
-        for group, part in zip(self.groups, parts):
+        for group, part in zip(self.groups, parts, strict=True):
             for i, n in enumerate(group):
                 per_field[n].append(part[:, i])
         return torch.stack([torch.stack(per_field[n]).mean(0) for n in BASE_FIELDS], dim=1)
@@ -58,5 +58,5 @@ class GroupedAdapter(nn.Module):
 
     @torch.no_grad()
     def init_from_data(self, x: torch.Tensor) -> None:
-        for a, inp in zip(self.adapters, self._inputs(x)):
+        for a, inp in zip(self.adapters, self._inputs(x), strict=True):
             a.init_from_data(inp)
