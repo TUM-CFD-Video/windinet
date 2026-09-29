@@ -8,6 +8,7 @@ of a stage folder is generated from those files; edit a description in config.ya
 from __future__ import annotations
 
 import json
+import shlex
 import platform
 import subprocess
 import sys
@@ -33,7 +34,7 @@ def provenance(started: float) -> dict:
     return {
         "commit": git("rev-parse", "--short", "HEAD"),
         "dirty": bool(git("status", "--porcelain", "--", "windinet", "scripts", "configs")),  # code changed since that commit
-        "command": "python " + " ".join(sys.argv),
+        "command": "python " + shlex.join(sys.argv),  # quoted, so it pastes back into a shell
         "python": platform.python_version(),
         "torch": torch.__version__,
         "diffusers": diffusers.__version__,
