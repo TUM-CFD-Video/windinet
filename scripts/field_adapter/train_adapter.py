@@ -10,9 +10,11 @@ set, the latent statistics of each group are compared to the natural-video refer
 
 Usage:
     python scripts/field_adapter/train_adapter.py configs/field_adapter/eulermq.yaml \
-        --name pairs_600 --set train.steps=600
-Writes results/field_adapter/<stage>/<name>/{metrics.json, panel.png, curves.png, adapter.pt[, vae.pt]}
-and appends one row to the ablations table.
+        --name pairs_600 --desc "pairs, 600 steps" --set train.steps=600
+Every run needs a name and a one-sentence description. Writes
+results/field_adapter/<stage>/<name>/{config.yaml, metrics.json, panel.png, curves.png, adapter.pt[, vae.pt]}
+and regenerates the stage's README.md index. config.yaml is the resolved config and re-runs as is;
+metrics.json carries the provenance (commit, command, versions, GPU, wall time).
 """
 
 from __future__ import annotations
@@ -36,11 +38,11 @@ from windinet.field_adapter import GroupedAdapter
 from windinet.field_adapter.config import FieldAdapterConfig, TrainConfig
 from windinet.field_adapter.data import FrameSampler, load_field_stats, split_ids
 from windinet.field_adapter.latent_stats import channel_stats, frechet_distance
+from windinet.field_adapter.runs import provenance, write_config, write_index
 from windinet.losses import h1_seminorm_loss, rmse_loss, vrms_per_channel
 from windinet.training.shockwave_data import CHANNEL_NAMES, ShockWaveDataset
 
 RESULTS = Path("results/field_adapter")
-ABLATIONS_MD = Path("docs/field_adapter/ablations.md")
 
 
 def _as_clip(x: torch.Tensor) -> torch.Tensor:
@@ -176,30 +178,14 @@ def save_panel(example: tuple, path: Path) -> None:
     plt.close(fig)
 
 
-def append_row(cfg: FieldAdapterConfig, metrics: dict[str, float], stage: str) -> None:
-    groups = " + ".join("(" + ",".join(g) + ")" for g in cfg.adapter.groups)
-    train = f"lr={cfg.train.lr:g}, {cfg.train.steps} steps" if cfg.train.steps else "init only"
-    if cfg.train.vae_parts != "none":
-        train += f", vae {cfg.train.vae_parts} lr={cfg.train.vae_lr:g}"
-    if cfg.train.warmup_steps:
-        train += f", warm-up {cfg.train.warmup_steps} + cosine, grad clip {cfg.train.max_grad_norm:g}"
-    if cfg.train.vae_load:
-        train += f", vae from {Path(cfg.train.vae_load).stem}"
-    if cfg.data.clip:
-        train += f", {cfg.data.frames_per_sim}-frame clips"
-    if cfg.data.test_gamma is not None:
-        train += f", gamma {cfg.data.test_gamma:g} held out"
-    frechet = ", ".join(f"{k}={v:.3g}" for k, v in metrics.items() if "frechet" in k)
-    cells = [stage, cfg.name, cfg.vae, groups, train, *(f"{metrics[f'vrmse_{n}']:.4f}" for n in CHANNEL_NAMES), frechet]
-    with open(ABLATIONS_MD, "a") as fh:
-        fh.write("| " + " | ".join(cells) + " |\n")
-
-
 def main(
     config_path: Path = typer.Argument(..., help="YAML matching FieldAdapterConfig"),
-    name: str | None = typer.Option(None, help="run name (overrides the YAML's)"),
+    name: str | None = typer.Option(None, help="run name = results folder (overrides the YAML's)"),
+    desc: str | None = typer.Option(None, help="one sentence: what this run tests (overrides the YAML's description)"),
     set_: list[str] = typer.Option([], "--set", help="dotted override, e.g. train.steps=0"),
+    overwrite: bool = typer.Option(False, help="replace an existing run folder of the same name"),
 ) -> None:
+    started = time.time()
     raw = yaml.safe_load(config_path.read_text())
     for item in set_:  # "a.b=c" -> raw["a"]["b"] = yaml(c)
         key, _, value = item.partition("=")
@@ -208,12 +194,16 @@ def main(
         for p in parents:
             node = node.setdefault(p, {})
         node[leaf] = yaml.safe_load(value)
-    cfg = FieldAdapterConfig(**(raw | {"name": name} if name else raw))
+    cfg = FieldAdapterConfig(**(raw | {k: v for k, v in {"name": name, "description": desc}.items() if v}))
+    out_dir = RESULTS / ("10_compression" if cfg.vae == "none" else "20_wan_roundtrip")
+    run_dir = out_dir / cfg.name
+    if (run_dir / "metrics.json").exists() and not overwrite:
+        raise typer.BadParameter(f"{run_dir} exists; pick another --name or pass --overwrite")
     torch.manual_seed(cfg.train.seed)
     random.seed(cfg.train.seed)  # frame sampling in the main process; loader workers derive theirs from torch
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    out_dir = RESULTS / ("10_compression" if cfg.vae == "none" else "20_wan_roundtrip")
-    out_dir.mkdir(parents=True, exist_ok=True)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    write_config(cfg.model_dump(), run_dir / "config.yaml")  # written first: a crashed run still shows what it was
 
     train_ids, test_ids = split_ids(ShockWaveDataset(cfg.data.h5_path).ids, cfg.data.test_every, cfg.data.test_gamma)
     clip = clip_len(cfg)
@@ -275,17 +265,16 @@ def main(
             print(f"step {step:5d}  loss {loss:.4f}  " + "  ".join(f"{k} {v:.4f}" for k, v in metrics.items())
                   + f"  [{time.time() - t0:.0f}s]")
 
-    run_dir = out_dir / cfg.name
-    run_dir.mkdir(exist_ok=True)
     save_panel(example, run_dir / "panel.png")
     save_curves(steps, history, drift_per_block(vae, w0) if w0 else {}, run_dir / "curves.png")
     torch.save(adapter.state_dict(), run_dir / "adapter.pt")
     if w0:  # fine-tuned VAE weights (gitignored); reload with train.vae_load
         torch.save({k: v.detach().cpu() for k, v in vae.vae.state_dict(keep_vars=True).items() if v.requires_grad}, run_dir / "vae.pt")
-    (run_dir / "metrics.json").write_text(json.dumps({"config": cfg.model_dump(), "init": metrics_init, "final": metrics, "history": history,
-                                                      "steps": steps, "n_params": sum(p.numel() for p in adapter.parameters())}, indent=1))
-    append_row(cfg, metrics, out_dir.name)
-    print(f"wrote {run_dir}/")
+    (run_dir / "metrics.json").write_text(json.dumps({"config": cfg.model_dump(), "provenance": provenance(started), "init": metrics_init,
+                                                      "final": metrics, "history": history, "steps": steps,
+                                                      "n_params": sum(p.numel() for p in adapter.parameters())}, indent=1))
+    write_index(out_dir)
+    print(f"wrote {run_dir}/ and {out_dir / 'README.md'}")
 
 
 if __name__ == "__main__":

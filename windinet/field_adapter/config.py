@@ -51,7 +51,8 @@ class TrainConfig(_Base):
 
 
 class FieldAdapterConfig(_Base):
-    name: str
+    name: str = Field(description="short run name: the results folder")
+    description: str = Field(min_length=1, description="one sentence: what this run tests; shown in the results index")
     vae: Literal["none", "wan"] = Field(default="wan", description="'none' skips the VAE: adapter round trip only")
     data: DataConfig
     adapter: AdapterConfig = AdapterConfig()
