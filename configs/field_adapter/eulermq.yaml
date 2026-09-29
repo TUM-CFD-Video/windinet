@@ -1,9 +1,10 @@
 # Field adapter on euler_mq 256x256 (the rha6696 test shards, 50 sims per gamma) through the frozen Wan VAE.
-# The only config; vary runs with CLI overrides, e.g.
+# Adapter experiments; VAE fine-tuning lives in eulermq_finetune.yaml. Vary runs with CLI overrides, e.g.
 #   python scripts/field_adapter/train_adapter.py configs/field_adapter/eulermq.yaml \
 #       --name pairs_600 --set train.steps=600
 #   python scripts/field_adapter/train_adapter.py configs/field_adapter/eulermq.yaml \
-#       --name eval_only --set train.steps=0 --set adapter.load=results/field_adapter/20_wan_roundtrip/<run>.pt
+#       --name eval_only --set train.steps=0 --set adapter.load=results/field_adapter/20_wan_roundtrip/<run>/adapter.pt
+#   --set data.test_gamma=1.76 holds out a whole gamma instead of every 5th simulation.
 # The reference statistics are produced locally by download_pexels.py + ref_latents.py (needs a Pexels key).
 name: pairs
 vae: wan

@@ -1,4 +1,4 @@
-"""Frozen Wan 2.1 VAE with normalised latents.
+"""Wan 2.1 VAE with normalised latents, frozen unless `train` says otherwise.
 
     rgb [B, 3, F, H, W] in (-1, 1), F = 4k + 1   --encode-->   z [B, 16, (F-1)/4 + 1, H/8, W/8]
 
@@ -12,15 +12,25 @@ from __future__ import annotations
 
 import torch
 from diffusers import AutoencoderKLWan
+from torch.utils.checkpoint import checkpoint
 
 REPO = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"  # same VAE as every Wan 2.1 variant
 TEMPORAL, SPATIAL = 4, 8
 
 
 class WanVAE:
-    def __init__(self, device: torch.device | str = "cuda", dtype: torch.dtype = torch.float32, repo: str = REPO):
+    def __init__(self, device: torch.device | str = "cuda", dtype: torch.dtype = torch.float32, repo: str = REPO,
+                 train: str = "none"):
+        """`train`: 'none' (frozen), 'decoder' (decoder + post_quant_conv, latents unchanged) or 'all'."""
         # fp32 on purpose: the Wan pipeline keeps its VAE in fp32; 507 MB fits any GPU.
         self.vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=dtype).to(device).eval().requires_grad_(False)
+        trainable = {"none": [], "decoder": [self.vae.decoder, self.vae.post_quant_conv], "all": [self.vae]}[train]
+        for module in trainable:
+            module.requires_grad_(True)
+        self.trainable_params = [p for p in self.vae.parameters() if p.requires_grad]
+        if trainable:  # recompute each block's activations in backward: a 5-frame clip's graph does not fit 11 GB
+            for block in [*self.vae.encoder.down_blocks, *self.vae.decoder.up_blocks]:
+                block.forward = _checkpointed(block.forward)
         self.device, self.dtype = torch.device(device), dtype
         shape = (1, -1, 1, 1, 1)
         self.latents_mean = torch.tensor(self.vae.config.latents_mean, device=device, dtype=dtype).view(shape)
@@ -37,7 +47,33 @@ class WanVAE:
     def encode(self, rgb: torch.Tensor) -> torch.Tensor:
         """Deterministic (posterior mean), normalised latents. Differentiable w.r.t. `rgb`."""
         z = self.vae.encode(self.pad_frames(rgb).to(self.dtype)).latent_dist.mode()
+        self.vae.clear_cache()  # drop the frame caches now, not at the next call: they are big and useless after the pass
         return (z - self.latents_mean) / self.latents_std
 
     def decode(self, z: torch.Tensor) -> torch.Tensor:
-        return self.vae.decode(z * self.latents_std + self.latents_mean).sample
+        x = self.vae.decode(z * self.latents_std + self.latents_mean).sample
+        self.vae.clear_cache()
+        return x
+
+
+def _checkpointed(block_forward):
+    """Wan blocks read and advance a per-chunk frame cache. The forward pass runs on the real cache; the
+    recompute in backward gets a scratch copy of just the entries this block read, so the caches of the
+    whole pass are not kept alive until backward."""
+    def forward(x, feat_cache=None, feat_idx=[0], **kw):
+        if feat_cache is None or not torch.is_grad_enabled():
+            return block_forward(x, feat_cache, feat_idx, **kw)
+        state = {"cache": feat_cache, "idx": feat_idx[0], "n": len(feat_cache)}
+
+        def run(x):
+            if "read" not in state:
+                return block_forward(x, state["cache"], feat_idx, **kw)
+            scratch = [None] * state["n"]
+            scratch[state["idx"]:state["idx"] + len(state["read"])] = state["read"]
+            return block_forward(x, scratch, [state["idx"]], **kw)
+
+        snapshot = list(feat_cache)
+        out = checkpoint(run, x, use_reentrant=False)
+        state["read"], state["cache"] = snapshot[state["idx"]:feat_idx[0]], None
+        return out
+    return forward
