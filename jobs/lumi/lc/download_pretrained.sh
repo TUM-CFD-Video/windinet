@@ -1,6 +1,6 @@
 #!/bin/bash
 # Download LTXV_2B_0.9.6_DEV weights to scratch. Run once on a login node,
-# from the repo root: bash jobs/lumi/download_pretrained.sh
+# from the repo root: bash jobs/lumi/lc/download_pretrained.sh
 set -euo pipefail
 
 LTX_CACHE=/scratch/project_465003416/lc_work/ltx_pretrained_lc

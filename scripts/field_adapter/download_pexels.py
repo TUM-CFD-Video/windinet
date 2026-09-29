@@ -5,7 +5,7 @@ Output: <out>/clips.pt = uint8 [N, F, 256, 256, 3] plus a JSON with the Pexels i
 Only the cropped frames are kept; the mp4s are deleted after decoding.
 Key: PEXELS_API_KEY env var, else ~/.config/windinet/pexels_api_key.
 
-    python scripts/field_adapter/download_pexels.py --out ref_clips
+    python scripts/field_adapter/download_pexels.py --out results/field_adapter/30_reference/pexels
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ def _middle_frames(path: str, frames: int, size: int) -> np.ndarray | None:
 
 
 def main(
-    out: Path = typer.Option(Path("ref_clips"), help="output directory (gitignored)"),
+    out: Path = typer.Option(Path("results/field_adapter/30_reference/pexels"), help="output directory (gitignored)"),
     per_query: int = typer.Option(40, help="clips per search term"),
     frames: int = typer.Option(9, help="frames per clip (Wan needs 4k+1)"),
     size: int = typer.Option(256),

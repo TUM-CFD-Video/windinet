@@ -6,7 +6,7 @@ Output <out>: {"rgb": {mean, var, cov}, "latent": {mean, var, cov}, "n_clips", "
   latent -- statistics of the normalised Wan latents          (C = 16)
 The tensors are a few KB; the latents themselves are not kept.
 
-    python scripts/field_adapter/ref_latents.py --clips ref_clips/clips.pt \
+    python scripts/field_adapter/ref_latents.py --clips results/field_adapter/30_reference/pexels/clips.pt \
         --out results/field_adapter/30_reference/wan_ref_stats.pt
 """
 
@@ -23,7 +23,7 @@ from windinet.wan.vae import WanVAE
 
 @torch.no_grad()
 def main(
-    clips: Path = typer.Option(Path("ref_clips/clips.pt")),
+    clips: Path = typer.Option(Path("results/field_adapter/30_reference/pexels/clips.pt")),
     out: Path = typer.Option(Path("results/field_adapter/30_reference/wan_ref_stats.pt")),
     batch: int = typer.Option(4),
 ) -> None:

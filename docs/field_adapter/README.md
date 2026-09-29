@@ -14,7 +14,7 @@ pip install -e .
   (`results/field_adapter/00_stats/`); recompute with `scripts/compute_channel_stats.py`.
 - Natural-video reference statistics for the Fréchet metric are committed
   (`results/field_adapter/30_reference/wan_ref_stats.pt`); to regenerate, run `download_pexels.py`
-  (Pexels API key) and `ref_latents.py` in `scripts/field_adapter/`.
+  (Pexels API key; clips land in `30_reference/pexels/`, not in git) and `ref_latents.py` in `scripts/field_adapter/`.
 - GPU: fp32, 11 GB is enough (activation checkpointing in `windinet/wan/vae.py`).
 
 ## Run
@@ -39,7 +39,8 @@ python scripts/field_adapter/train_adapter.py \
     results/field_adapter/20_wan_roundtrip/wan_ft_decoder_pairs2000/config.yaml --name repro
 ```
 
-Every run needs `--name` (the results folder) and `--desc` (one sentence). Any config key can be
+Every run needs `--name` (the results folder) and `--desc` (one sentence). On a cluster, prefix the command with
+`sbatch jobs/lumi/lc/run.sbatch` or `sbatch jobs/jupiter/lc/run.sbatch`. Any config key can be
 overridden with `--set a.b=value`. An existing folder is not overwritten without `--overwrite`.
 
 ## Outputs

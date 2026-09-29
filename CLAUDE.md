@@ -6,20 +6,21 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 ## Ownership and branches
 
 - Lars's parts: `windinet/field_adapter`, `windinet/wan`, `scripts/field_adapter`, `configs/field_adapter`,
-  `docs/field_adapter`, `results/field_adapter`, `tests`, `jobs/lumi`, `jobs/jupiter/*_lc.sbatch`, this file.
+  `docs/field_adapter`, `results/field_adapter`, `tests`, `jobs/lumi/lc`, `jobs/jupiter/lc`, this file.
 - Everything else is Weihao's. Do not edit, move or delete his files. If a change there is unavoidable, keep
   it minimal and say so; it will conflict with his next push.
 - Never merge into `main`. Merge `origin/main` into `dev-lars/main` regularly; resolve his files toward
   `origin/main`, Lars's toward the branch.
 - His output trees (`dit_outputs`, `dit_preprocessed`, `finetune_vae_outputs`, `logs/*` except
-  `logs/lumi` and `logs/jupiter`, `figures`, `resource_profile`) stay in git and are hidden from the working
+  `logs/lc`, `figures`, `resource_profile`) stay in git and are hidden from the working
   tree with sparse-checkout (see Setup). Hide, do not delete.
 
 ## How to work
 
 - Plan first: read, propose, and ask on every ambiguity with a recommendation and the reason. Do not start
   edits before the plan is agreed.
-- No commits, pushes or merges unless asked for that specific one. Commit messages carry no co-author line.
+- Never commit on your own. Every change is reviewed by Lars first, and a commit happens only when he says
+  so, for that change. Same for pushes and merges. Commit messages carry no co-author line.
 - Never launch GPU jobs on your own. CPU smoke tests are fine.
 - Report faithfully: what was verified, what was not.
 
@@ -46,10 +47,12 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 conda activate windinet                      # local: /home/schwollie/anaconda3/envs/windinet
 pip install -e . && pip install ruff
 git sparse-checkout init --cone            # then hide Weihao's output trees; `git sparse-checkout disable` undoes it
+# DANGER: sparse-checkout DELETES ignored files (datasets, checkpoints) in any directory that leaves the cone.
+# Never change the cone on a checkout that holds local data; keep datasets outside the repo behind a symlink.
 git sparse-checkout set .vscode configs docs euler_mq_dataset jobs pretrained results scripts tests \
-    windinet logs/lumi logs/jupiter
+    windinet logs/lc
 ```
 
 Clusters: outputs go to `$WINDINET_WORK/finetune_vae_outputs` (`windinet/cluster_config.py`), LTX weights to
-`$WINDINET_HF_CACHE`. Lars's launchers set both: `jobs/lumi/finetune_vae_debug.sbatch`,
-`jobs/jupiter/finetune_vae_lc.sbatch`. Local GPU is a 2080 Ti (11 GB, fp32 only).
+`$WINDINET_HF_CACHE`. Lars's launchers (`jobs/lumi/lc`, `jobs/jupiter/lc`) source `env.sh` there, which sets both, and `run.sbatch <command>`
+runs any command on a full node (clusters bill node hours, so never request fewer GPUs). Slurm logs go to `logs/lc/`. Local GPU is a 2080 Ti (11 GB, fp32 only).
