@@ -28,6 +28,10 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 
 - Python 3.11, `ruff` for lint and format (`pyproject.toml`, line length 120). Run `ruff check --fix` and
   `ruff format` on the files you touched, never on Weihao's.
+- As little code as does the job, fast, and built to extend without rewriting: one implementation per concern,
+  one config schema per script, one place per fact. Before adding a file, config or function, look for the one
+  that already does it and extend it; a second copy of anything is a bug. Delete what a change makes unused.
+- Be a professional SWE: keep good coding practices and well structured code but while keeping code simple and readable with clear non ai like naming no long ai like comments only comments where really necessary short and precise
 - Small modules with one job each. Configs are pydantic models with `Field(description=...)`, CLIs use typer,
   paths use `pathlib`. Comments say why, not what; one-line docstrings.
 - No new dependencies without asking. Tests: `pytest tests`.
