@@ -6,7 +6,7 @@ Output <out>: {"rgb": {mean, var, cov}, "latent": {mean, var, cov}, "n_clips", "
   latent -- statistics of the normalised Wan latents          (C = 16)
 The tensors are a few KB; the latents themselves are not kept.
 
-    python scripts/field_adapter/ref_latents.py --clips results/field_adapter/30_reference/pexels/clips.pt \
+    python scripts/wan/ref_latents.py --clips results/field_adapter/30_reference/pexels/clips.pt \
         --out results/field_adapter/30_reference/wan_ref_stats.pt
 """
 
@@ -17,7 +17,7 @@ from pathlib import Path
 import torch
 import typer
 
-from windinet.field_adapter.latent_stats import channel_stats
+from windinet.experiment.latent_stats import channel_stats
 from windinet.wan.vae import WanVAE
 
 
@@ -33,7 +33,7 @@ def main(
     rgb = video.permute(0, 4, 1, 2, 3).float() / 127.5 - 1  # [N, 3, F, H, W] in (-1, 1)
     latents = torch.cat([vae.encode(rgb[i : i + batch].to(device)).cpu() for i in range(0, len(rgb), batch)])
     stats = {
-        "rgb": channel_stats(rgb[:, :, :, ::4, ::4]),  # kept for reference, unused by train_adapter.py
+        "rgb": channel_stats(rgb[:, :, :, ::4, ::4]),  # kept for reference, unused by train_vae.py
         "latent": channel_stats(latents),
         "n_clips": len(rgb),
         "frames": rgb.shape[2],

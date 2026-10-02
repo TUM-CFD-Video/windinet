@@ -1,4 +1,4 @@
-"""Configuration for field-adapter experiments. One YAML, variants via CLI overrides."""
+"""Configuration of the VAE stage: the field adapter and the Wan VAE behind it. One YAML, variants via CLI overrides."""
 
 from __future__ import annotations
 
@@ -12,10 +12,19 @@ class _Base(BaseModel):
 
 
 class DataConfig(_Base):
-    h5_path: str
+    h5_path: str = Field(description="training file; also the evaluation file unless test_h5 is set")
+    test_h5: str | None = Field(
+        default=None, description="separate test file; the training file is then split into train + val"
+    )
     stats_json: str = Field(description="output of scripts/compute_channel_stats.py on h5_path")
-    test_every: int = Field(default=5, description="every n-th sim per gamma is held out")
-    test_gamma: float | None = Field(default=None, description="hold out this whole gamma instead (extrapolation test)")
+    val_sims: int = Field(default=500, description="with test_h5: sims held out of the training file for validation")
+    split_seed: int = Field(default=42, description="with test_h5: seed of the train/val shuffle; 42 = LTX baseline")
+    eval_sims: int = Field(default=100, description="validation sims evaluated mid-run (the first n)")
+    test_sims: int | None = Field(default=None, description="test sims in the final eval (the first n); None = all")
+    test_every: int = Field(default=5, description="without test_h5: every n-th sim per gamma is held out")
+    test_gamma: float | None = Field(
+        default=None, description="without test_h5: hold out this whole gamma instead (extrapolation test)"
+    )
     frames_per_sim: int = Field(default=2, description="random frames read per simulation per step")
     clip: bool = Field(
         default=False, description="the frames are consecutive and pass the VAE as one clip, not as single frames"
@@ -26,7 +35,7 @@ class DataConfig(_Base):
 class AdapterConfig(_Base):
     groups: list[list[str]] = Field(
         default=[["density", "pressure"], ["momentum_x", "momentum_y"]],
-        description="field names per colour image, at most three each; one VAE pass per group",
+        description="field names per colour image, at most three each; one VAE pass per group; other fields dropped",
     )
     load: str | None = Field(default=None, description="state_dict (.pt) of an earlier run")
 
@@ -40,12 +49,16 @@ class LossConfig(_Base):
 
 class TrainConfig(_Base):
     steps: int = Field(default=600, description="0 = evaluate only")
-    batch_sims: int = 1
-    lr: float = 3e-3
+    batch_sims: int = Field(default=1, description="simulations per update")
+    micro_batch: int = Field(default=1, description="clips (frames without data.clip) per backward pass; 1 fits 11 GB")
+    lr: float = Field(default=3e-3, description="adapter lr; 0 = adapter fixed")
     vae_parts: Literal["none", "decoder", "all"] = Field(
         default="none", description="which part of the Wan VAE to fine-tune alongside the adapter"
     )
     vae_lr: float = Field(default=5e-5, description="peak lr of the VAE parameters")
+    vae_per_group: bool = Field(
+        default=False, description="one VAE (and so one fine-tuned decoder) per image group instead of one shared"
+    )
     vae_load: str | None = Field(
         default=None, description="vae.pt of an earlier fine-tune run: its VAE weights as the starting point"
     )
@@ -58,10 +71,11 @@ class TrainConfig(_Base):
     )
     max_grad_norm: float = Field(default=0.0, description="gradient clipping; 0 = off")
     eval_every: int = 300
+    log_every: int = Field(default=10, description="training-progress line every n updates")
     seed: int = 0
 
 
-class FieldAdapterConfig(_Base):
+class VaeStageConfig(_Base):
     name: str = Field(description="short run name: the results folder")
     description: str = Field(min_length=1, description="one sentence: what this run tests; shown in the results index")
     vae: Literal["none", "wan"] = Field(default="wan", description="'none' skips the VAE: adapter round trip only")
@@ -71,4 +85,9 @@ class FieldAdapterConfig(_Base):
     train: TrainConfig = TrainConfig()
     ref_stats: str | None = Field(
         default=None, description="natural-video latent statistics from ref_latents.py; enables the Fréchet metric"
+    )
+    results_dir: str = Field(default="results/wan/vae", description="one folder per run is created here")
+    weights_dir: str | None = Field(
+        default=None,
+        description="where vae.pt (280+ MB) is written, with a symlink in the run folder; None = the run folder itself",
     )

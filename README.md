@@ -13,7 +13,7 @@ shocks, conditioned on the scalar `gamma`. Two lines of work live here:
 | | Backbone | Where | Status |
 |---|---|---|---|
 | VAE fine-tuning and DiT training | [LTX-Video](https://github.com/Lightricks/LTX-Video) | `windinet/`, `scripts/`, `configs/{finetune_vae,dit}` | ledger in [docs/weihao/EXPERIMENTS.md](docs/weihao/EXPERIMENTS.md) |
-| Field adapter for the frozen Wan 2.1 VAE | [Wan 2.1](https://github.com/Wan-Video/Wan2.1) | `windinet/{field_adapter,wan}`, `scripts/field_adapter`, `configs/field_adapter` | [docs/field_adapter/](docs/field_adapter/README.md) |
+| Field adapter for the frozen Wan 2.1 VAE | [Wan 2.1](https://github.com/Wan-Video/Wan2.1) | `windinet/{field_adapter,wan}`, `scripts/wan`, `configs/wan` | [docs/field_adapter/](docs/field_adapter/README.md) |
 
 ## Installation
 
@@ -30,10 +30,10 @@ elsewhere ([pretrained/README.md](pretrained/README.md)).
 ## Layout
 
 ```
-windinet/           library: VAE adapter, losses, scalar conditioning, training; field_adapter/, wan/
+windinet/           library: VAE adapter, losses, scalar conditioning, training; field_adapter/, wan/, eulermq/, experiment/
 scripts/            entry points (finetune_vae.py, preprocess_dataset.py, train.py, inference_shockwave.py,
-                    field_adapter/train_adapter.py)
-configs/            YAML per experiment family: finetune_vae/, dit/, field_adapter/
+                    wan/train_vae.py)
+configs/            YAML per experiment family: finetune_vae/, dit/, wan/
 jobs/<cluster>/     Slurm launchers per cluster (lundquist, sng_pvc, lrz_ai, jupiter, lumi)
 docs/               field_adapter/ (README, ablations), weihao/ (experiment ledger, infra notes, thesis prep)
 results/            field adapter runs: one folder per run with config, metrics, figures, adapter weights

@@ -5,7 +5,7 @@ Output: <out>/clips.pt = uint8 [N, F, 256, 256, 3] plus a JSON with the Pexels i
 Only the cropped frames are kept; the mp4s are deleted after decoding.
 Key: PEXELS_API_KEY env var, else ~/.config/windinet/pexels_api_key.
 
-    python scripts/field_adapter/download_pexels.py --out results/field_adapter/30_reference/pexels
+    python scripts/wan/download_pexels.py --out results/field_adapter/30_reference/pexels
 """
 
 from __future__ import annotations

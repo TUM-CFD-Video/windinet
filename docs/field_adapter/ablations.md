@@ -125,7 +125,7 @@ chapter 6 (`configs/finetune_vae/finetune_vae_ch6_*_256res.yaml`): AdamW, peak 5
 1 % linear warm-up, cosine to 1e-6, grad clip 5, RMSE + 50 H1, 16 frames per update.
 Differences: fp32 (no bf16 on the 2080 Ti), activation checkpointing by hand, no SSIM,
 single frames, 120 updates on the 400 test-shard sims instead of 20 epochs on train.h5.
-Config: `configs/field_adapter/eulermq_finetune.yaml`.
+Config: each run's `config.yaml` (re-runnable with `scripts/wan/train_vae.py`).
 
 The LTX peak lr breaks the Wan decoder within one update (VRMSE 1 to 25 after 60).
 Runs without warm-up and clipping at 1e-5 and 1e-6 degraded as well and were discarded.

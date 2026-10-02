@@ -1,0 +1,35 @@
+# VAE stage on euler_mq 256x256: the field adapter and the Wan VAE decoder behind it, on the LTX baseline's protocol
+# (train.h5 minus 500 validation sims for training, test.h5 whole trajectories for the final numbers).
+# Sized for one MI250X GCD (64 GB): 3 clips of 5 frames per update in one backward pass; on the 11 GB card
+# add --set train.micro_batch=1. Every run needs --name and --desc; variants via --set, see jobs/lc/vae_baselines.txt.
+name: vae
+vae: wan
+
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  frames_per_sim: 5
+  clip: true
+  num_workers: 2
+
+adapter:
+  groups: [[density, pressure], [momentum_x, momentum_y]]
+
+loss:
+  rmse: 1.0
+  h1: 1.0
+
+train:
+  steps: 1000
+  batch_sims: 3
+  micro_batch: 3
+  lr: 3.0e-3         # adapter; 0 = fixed, for the decoder-only stage of a two-stage run
+  vae_parts: decoder
+  vae_lr: 1.0e-6     # the LTX recipe's 5e-5 diverges for the Wan decoder (field_adapter ablations, section 7)
+  warmup_steps: 100
+  max_grad_norm: 5.0
+  eval_every: 100
+  seed: 0
+
+ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt

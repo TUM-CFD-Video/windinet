@@ -5,8 +5,12 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 
 ## Ownership and branches
 
-- Lars's parts: `windinet/field_adapter`, `windinet/wan`, `scripts/field_adapter`, `configs/field_adapter`,
-  `docs/field_adapter`, `results/field_adapter`, `tests`, `jobs/lumi/lc`, `jobs/jupiter/lc`, this file.
+- Lars's parts: `windinet/{field_adapter,wan,eulermq,experiment}`, `scripts/wan`, `configs/wan`, `docs/field_adapter`,
+  `docs/references`, `results/{field_adapter,wan}`, `tests`, `jobs/lc`, `jobs/lumi/lc`, `jobs/jupiter/lc`, this file.
+- Layout of Lars's code: `field_adapter` is the field-to-RGB map only; `wan` the model wrappers and the per-stage
+  config schema (`vae_stage.py`); `eulermq` data access and splits; `experiment` run bookkeeping
+  (config overrides, provenance, index, lr schedule, metrics). One script per stage in `scripts/wan`, one schema per script.
+- Weihao's thesis (the LTX baseline we compare against) is `docs/references/weihao_li_master_thesis_2026.pdf`.
 - Everything else is Weihao's. Do not edit, move or delete his files. If a change there is unavoidable, keep
   it minimal and say so; it will conflict with his next push.
 - Never merge into `main`. Merge `origin/main` into `dev-lars/main` regularly; resolve his files toward
@@ -40,9 +44,11 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 
 - Every run needs `--name` (the results folder) and `--desc` (one sentence on what it tests). The script
   writes `config.yaml`, `metrics.json` with provenance, figures and `adapter.pt`; `vae.pt` is not in git.
-- `results/field_adapter/<stage>/README.md` is generated (`scripts/field_adapter/index_runs.py`); do not edit.
-- A run folder stays only if a number in `docs/field_adapter/ablations.md` comes from it; every table there
-  has a `run` column. Unused runs are deleted.
+- The `README.md` index of a results folder is generated (`scripts/wan/index_runs.py`); do not edit.
+- A run folder stays only if a number in a document under `docs/` comes from it; every table there has a `run`
+  column. Unused runs are deleted. New VAE-stage runs go to `results/wan/vae`; `results/field_adapter` is the
+  finished adapter study.
+- Settings live in the pydantic schema with defaults; a YAML names only what differs, a run variant is a `--set`.
 - Documents are short: numbers in tables, one claim per sentence, no filler.
 
 ## Setup on a new machine

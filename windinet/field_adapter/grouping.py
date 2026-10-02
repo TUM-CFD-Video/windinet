@@ -2,7 +2,7 @@
 
 A group is a list of at most three field names; each group gets its own FieldAdapter
 and its own VAE pass. Default (ablations, experiment 3): (rho, p) and (m_x, m_y).
-A field that appears in several groups is averaged on the way back.
+A field in no group is dropped; a field in several groups is averaged on the way back.
 """
 
 from __future__ import annotations
@@ -29,16 +29,22 @@ def _norm_args(names: list[str], stats: dict[str, dict]) -> dict:
 
 
 class GroupedAdapter(nn.Module):
-    """One FieldAdapter per group. forward: fields [B, 4, ...] -> list of RGB; inverse: list of RGB -> fields."""
+    """One FieldAdapter per group, working on `fields`: the grouped base fields in dataset order.
+
+    select: dataset fields [B, 4, ...] -> [B, len(fields), ...]; forward: fields -> list of RGB; inverse: back."""
 
     def __init__(self, groups: list[list[str]], stats: dict[str, dict]):
         super().__init__()
         self.groups = groups
-        self.base_norm = PreNorm(**_norm_args(list(BASE_FIELDS), stats))
+        self.fields = [n for n in BASE_FIELDS if any(n in g for g in groups)]
+        self.base_norm = PreNorm(**_norm_args(self.fields, stats))
         self.adapters = nn.ModuleList(FieldAdapter(**_norm_args(g, stats)) for g in groups)
 
+    def select(self, x: torch.Tensor) -> torch.Tensor:
+        return x[:, [BASE_FIELDS.index(n) for n in self.fields]]
+
     def _inputs(self, x: torch.Tensor) -> list[torch.Tensor]:
-        fields = dict(zip(BASE_FIELDS, x.unbind(1), strict=True))
+        fields = dict(zip(self.fields, x.unbind(1), strict=True))
         return [torch.stack([fields[n] for n in g], dim=1) for g in self.groups]
 
     def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
@@ -46,14 +52,14 @@ class GroupedAdapter(nn.Module):
 
     def inverse(self, rgbs: list[torch.Tensor]) -> torch.Tensor:
         parts = [a.inverse(rgb) for a, rgb in zip(self.adapters, rgbs, strict=True)]
-        per_field = {n: [] for n in BASE_FIELDS}
+        per_field = {n: [] for n in self.fields}
         for group, part in zip(self.groups, parts, strict=True):
             for i, n in enumerate(group):
                 per_field[n].append(part[:, i])
-        return torch.stack([torch.stack(per_field[n]).mean(0) for n in BASE_FIELDS], dim=1)
+        return torch.stack([torch.stack(per_field[n]).mean(0) for n in self.fields], dim=1)
 
     def normalized(self, x: torch.Tensor) -> torch.Tensor:
-        """Base fields z-scored: the space reconstruction losses are measured in, identical for every grouping."""
+        """`fields` z-scored: the space reconstruction losses are measured in, identical for every grouping."""
         return self.base_norm(x)
 
     @torch.no_grad()

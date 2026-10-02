@@ -1,4 +1,4 @@
-"""Frame-level access to euler_mq simulations for per-pixel adapter training."""
+"""Frame-level access to euler_mq simulations: train/val/test splits and frame or trajectory samplers."""
 
 from __future__ import annotations
 
@@ -29,19 +29,28 @@ def split_ids(ids: list[str], test_every: int = 5, test_gamma: float | None = No
     return train, test
 
 
+def val_split(ids: list[str], n_val: int = 500, seed: int = 42) -> tuple[list[str], list[str]]:
+    """The LTX baseline's train/validation split (windinet/training/vae_trainer.py): the sorted ids shuffled with a
+    seeded torch generator, the last `n_val` of the permutation held out. Seed 42 gives Weihao's validation sims."""
+    ids = sorted(ids)
+    perm = torch.randperm(len(ids), generator=torch.Generator().manual_seed(seed)).tolist()
+    return [ids[i] for i in perm[:-n_val]], [ids[i] for i in perm[-n_val:]]
+
+
 class FrameSampler(ShockWaveDataset):
     """One item = `frames_per_item` frames of one simulation: fields [k, 4, H, W] in physical units, plus gamma.
 
     Reads only the chosen frames from HDF5 (not the whole 100-frame trajectory).
     Frames are random per access when `seed` is None, fixed otherwise (evaluation);
     spread over the trajectory, or consecutive (a clip) when `consecutive` is set.
+    `frames_per_item=None` reads the whole trajectory in order.
     """
 
     def __init__(
         self,
         h5_path: str | Path,
         ids: list[str],
-        frames_per_item: int,
+        frames_per_item: int | None,
         seed: int | None = None,
         consecutive: bool = False,
     ):
@@ -56,11 +65,12 @@ class FrameSampler(ShockWaveDataset):
         sid = self.ids[idx]
         group = self._get_group(sid)
         n_frames = group[CHANNEL_NAMES[0]].shape[0]
+        k = self.k or n_frames
         rng = (
             random if self.seed is None else random.Random(self.seed + idx)
         )  # loader workers seed `random` from the torch seed
-        start = rng.randrange(n_frames - self.k + 1)
-        frames = list(range(start, start + self.k)) if self.consecutive else sorted(rng.sample(range(n_frames), self.k))
+        start = rng.randrange(n_frames - k + 1)
+        frames = list(range(start, start + k)) if self.consecutive else sorted(rng.sample(range(n_frames), k))
         fields = np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)  # [k, 4, H, W]
         return torch.from_numpy(fields).float(), parse_gamma(sid)
 
