@@ -16,7 +16,7 @@ class DataConfig(_Base):
     test_h5: str | None = Field(
         default=None, description="separate test file; the training file is then split into train + val"
     )
-    stats_json: str = Field(description="output of scripts/compute_channel_stats.py on h5_path")
+    stats_json: str = Field(description="output of scripts/compute_channel_stats.py: field means, stds and ranges")
     val_sims: int = Field(default=500, description="with test_h5: sims held out of the training file for validation")
     split_seed: int = Field(default=42, description="with test_h5: seed of the train/val shuffle; 42 = LTX baseline")
     eval_sims: int = Field(default=100, description="validation sims evaluated mid-run (the first n)")
@@ -29,7 +29,12 @@ class DataConfig(_Base):
     clip: bool = Field(
         default=False, description="the frames are consecutive and pass the VAE as one clip, not as single frames"
     )
-    num_workers: int = 4
+    num_workers: int = Field(default=4, description="data-loader worker processes per training process")
+
+    @property
+    def clip_len(self) -> int:
+        """Frames per VAE pass in training: the clip, or 1 for single frames."""
+        return self.frames_per_sim if self.clip else 1
 
 
 class AdapterConfig(_Base):
@@ -40,16 +45,14 @@ class AdapterConfig(_Base):
 
 
 class LossConfig(_Base):
-    """Weights of the reconstruction terms, measured in z-scored field space."""
-
-    rmse: float = 1.0
-    h1: float = 1.0
+    rmse: float = Field(default=1.0, description="weight of the RMSE term, measured in z-scored field space")
+    h1: float = Field(default=1.0, description="weight of the H1 seminorm term (spatial gradients), same space")
 
 
 class TrainConfig(_Base):
     steps: int = Field(default=600, description="0 = evaluate only")
-    batch_sims: int = Field(default=1, description="simulations per update")
-    micro_batch: int = Field(default=1, description="clips (frames without data.clip) per backward pass; 1 fits 11 GB")
+    batch_sims: int = Field(default=1, description="simulations per update (under torchrun: global, split over ranks)")
+    micro_batch: int = Field(default=1, description="clips (frames without data.clip) per backward pass")
     lr: float = Field(default=3e-3, description="adapter lr; 0 = adapter fixed")
     vae_parts: Literal["none", "decoder", "all"] = Field(
         default="none", description="which part of the Wan VAE to fine-tune alongside the adapter"
@@ -66,9 +69,9 @@ class TrainConfig(_Base):
         default=0.02, description="final lr as a fraction of the peak, per parameter group (LTX: 1e-6 / 5e-5)"
     )
     max_grad_norm: float = Field(default=0.0, description="gradient clipping; 0 = off")
-    eval_every: int = 300
+    eval_every: int = Field(default=300, description="validation (and weight save) every n updates")
     log_every: int = Field(default=10, description="training-progress line every n updates")
-    seed: int = 0
+    seed: int = Field(default=0, description="torch and frame-sampling seed (+ rank under torchrun)")
 
 
 class VaeStageConfig(_Base):
@@ -79,9 +82,6 @@ class VaeStageConfig(_Base):
     adapter: AdapterConfig = AdapterConfig()
     loss: LossConfig = LossConfig()
     train: TrainConfig = TrainConfig()
-    ref_stats: str | None = Field(
-        default=None, description="natural-video latent statistics from ref_latents.py; enables the Fréchet metric"
-    )
     load: str | None = Field(
         default=None,
         description="run folder to continue from: its adapter.pt and, if present, vae.pt or one vae_<group>.pt per VAE",

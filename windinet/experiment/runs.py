@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import platform
 import shlex
-import string
 import subprocess
 import sys
 import time
@@ -18,21 +17,13 @@ from pathlib import Path
 
 import yaml
 
-CHANNELS = ("density", "momentum_x", "momentum_y", "pressure")
-SYMBOLS = {"density": "ρ", "momentum_x": "m_x", "momentum_y": "m_y", "pressure": "p"}
+from windinet.eulermq.data import FIELDS, SYMBOLS
 
 
-def group_tag(i: int) -> str:
-    """Image group i as a letter: A, B, C, ... (file names vae_A.pt, metric keys latentA_frechet, labels)."""
-    return string.ascii_uppercase[i]
-
-
-def provenance(started: float) -> dict:
-    """Code version, command, library versions, GPU and wall time of the run that is finishing now."""
-    import diffusers
+def provenance(started: float, world: int = 1) -> dict:
+    """Code version, command, library versions, GPUs and wall time of the run that is finishing now."""
+    import diffusers  # imported here: the index script needs neither
     import torch
-
-    from windinet.experiment.distributed import world
 
     def git(*args: str) -> str | None:
         try:
@@ -42,9 +33,7 @@ def provenance(started: float) -> dict:
 
     return {
         "commit": git("rev-parse", "--short", "HEAD"),
-        "dirty": bool(
-            git("status", "--porcelain", "--", "windinet", "scripts", "configs")
-        ),  # code changed since that commit
+        "dirty": bool(git("status", "--porcelain", "--", "windinet", "scripts", "configs")),
         "command": "python " + shlex.join(sys.argv),  # quoted, so it pastes back into a shell
         "python": platform.python_version(),
         "torch": torch.__version__,
@@ -55,12 +44,9 @@ def provenance(started: float) -> dict:
     }
 
 
-def write_config(cfg: dict, path: Path, note: str | None = None) -> None:
+def write_config(cfg: dict, path: Path) -> None:
     """The resolved config as YAML, with a header on how to re-run it."""
-    head = f"# {cfg['name']}: {cfg.get('description', '')}\n"
-    head += f"# Re-run: python {sys.argv[0]} {path} --name <new name>\n"
-    if note:
-        head += f"# {note}\n"
+    head = f"# {cfg['name']}: {cfg.get('description', '')}\n# Re-run: python {sys.argv[0]} {path} --name <new name>\n"
     path.write_text(head + yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True, width=200))
 
 
@@ -94,15 +80,11 @@ def run_row(run_dir: Path) -> list[str] | None:
     if not metrics_path.exists():
         return None
     metrics = json.loads(metrics_path.read_text())
-    cfg = (
-        yaml.safe_load((run_dir / "config.yaml").read_text())
-        if (run_dir / "config.yaml").exists()
-        else metrics["config"]
-    )
+    config_path = run_dir / "config.yaml"
+    cfg = yaml.safe_load(config_path.read_text()) if config_path.exists() else metrics["config"]
     final = metrics["final"]
-    vrmse = [final.get(f"vrmse_{c}") for c in CHANNELS]  # None for a field the run's groups drop
+    vrmse = [final.get(f"vrmse_{f}") for f in FIELDS]  # None for a field the run's groups drop
     present = [v for v in vrmse if v is not None]
-    frechet = " / ".join(f"{v:.2f}" for k, v in final.items() if k.endswith("_frechet")) or "–"
     prov = metrics.get("provenance", {})
     return [
         f"[{run_dir.name}]({run_dir.name}/)",
@@ -111,7 +93,6 @@ def run_row(run_dir: Path) -> list[str] | None:
         *(f"{v:.3f}" if v is not None else "–" for v in vrmse),
         f"{final.get('vrmse_mean', sum(present) / len(present)):.3f}",
         f"{final['vrmse_clipped_mean']:.3f}" if "vrmse_clipped_mean" in final else "–",
-        frechet,
         prov.get("commit", "") + (" (dirty)" if prov.get("dirty") else ""),
     ]
 
@@ -119,19 +100,7 @@ def run_row(run_dir: Path) -> list[str] | None:
 def write_index(stage_dir: Path) -> Path:
     """README.md of a stage: one row per run folder, from config.yaml + metrics.json."""
     rows = [r for d in sorted(stage_dir.iterdir()) if d.is_dir() and (r := run_row(d))]
-    head = [
-        "run",
-        "description",
-        "settings",
-        "ρ",
-        "m_x",
-        "m_y",
-        "p",
-        "mean",
-        "mean (5σ clipped)",
-        "Fréchet A / B",
-        "commit",
-    ]
+    head = ["run", "description", "settings", *SYMBOLS.values(), "mean", "mean (5σ clipped)", "commit"]
     lines = [
         f"# Runs in `{stage_dir}`",
         "",

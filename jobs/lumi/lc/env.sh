@@ -3,7 +3,7 @@
 # with the repo mounted at /workspace:  "${RUN[@]}" python <script> ...
 SCRATCH=/scratch/project_465003416
 WORK=${SCRATCH}/lc_work
-CONTAINER=${CONTAINER:-/project/project_465003416/venvs/windinet_rocm.sif}
+CONTAINER=${CONTAINER:-/project/project_465003416/venvs/windinet_rocm.sif}  # built with cotainr from venv.yml
 export WINDINET_WORK=${WORK}  # outputs: windinet/cluster_config.py
 export WINDINET_HF_CACHE=${WORK}/hf_cache HF_HUB_CACHE=${WORK}/hf_cache
 export HF_HUB_OFFLINE=1 WANDB_MODE=offline PYTHONUNBUFFERED=1 HDF5_USE_FILE_LOCKING=FALSE

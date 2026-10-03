@@ -11,7 +11,7 @@ like natural video? Answer: yes at 3 to 10 % error; no for the latents.
 - Data: euler_mq test shards, 500 simulations (50 per γ); every 5th per γ held out.
 - Metric: VRMSE per field in physical units on held-out frames. 0.05 = 5 % of the field's spread, 1.0 = predicting the mean.
 - Training: RMSE + H1 in z-scored field space, Adam, gradients through the frozen VAE, 2 frames per step. 400 steps ≈ 20 min on a 2080 Ti.
-- Latent reference: 319 Pexels clips (9 frames, 256×256) through the same VAE; Fréchet distance between 16-channel Gaussians.
+- Latent reference: 319 Pexels clips (9 frames, 256×256) through the same VAE; Fréchet distance between 16-channel Gaussians (diagnostic removed from the code after this study; last in commit 2c65a29).
 - Inverse clamped to the dataset's value range; otherwise a few tanh-tail pixels explode through exp.
 - Ablated variants (splines, PCA init, latent losses) are removed from the code; commit `0a525c9` has them and is the only place their checkpoints load. Reference run of the current code: `wan_pairs_nowarp_lr3e3_600`.
 - Per run: `results/field_adapter/20_wan_roundtrip/<name>/` with config.yaml (the resolved config, re-runnable as is), metrics.json (outcome and provenance), panel.png, curves.png and adapter.pt; fine-tunes also vae.pt, which is not in git. The `run` column of each table names the folder; the [index](../../results/field_adapter/20_wan_roundtrip/README.md) lists every run with a one-line description.

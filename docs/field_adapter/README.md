@@ -13,9 +13,8 @@ pip install -e .
 
 - Data: `euler_mq_dataset/256x256_ds/{train,test}.h5` (not in git; a symlink to the dataset outside the repo).
   Channel statistics are committed (`results/field_adapter/00_stats/`); recompute with `scripts/compute_channel_stats.py`.
-- Natural-video reference statistics for the Fréchet metric are committed
-  (`results/field_adapter/30_reference/wan_ref_stats.pt`); to regenerate, run `download_pexels.py`
-  (Pexels API key; clips land in `30_reference/pexels/`, not in git) and `ref_latents.py` in `scripts/wan/`.
+- The Fréchet latent diagnostic (natural-video reference) is no longer in the code; its numbers in ablations.md
+  are in the run folders' metrics.json, the last code with it is commit 2c65a29.
 - Wan weights come from the HF cache (`Wan-AI/Wan2.1-T2V-1.3B-Diffusers`, VAE only, 500 MB).
 - GPU: fp32. 11 GB is enough with `train.micro_batch: 1` (activation checkpointing in `windinet/wan/vae.py`).
 
@@ -44,7 +43,7 @@ is not overwritten without `--overwrite`.
 
 `<results_dir>/<name>/`: `config.yaml` (resolved config, re-runnable), `metrics.json` (`init` and `val`: VRMSE per
 field on the validation clips; `final`: VRMSE per field on every test simulation's whole trajectory, the LTX
-baseline's metric; Fréchet distances, loss curve, provenance: commit, command, versions, GPU, wall time),
+baseline's metric; loss curve, provenance: commit, command, versions, GPU, wall time),
 `panel.png`, `curves.png`, `adapter.pt` (in git) and, for VAE fine-tunes, `vae.pt` (280 to 485 MB, not in git).
 The folder's `README.md` index is regenerated after each run (`scripts/wan/index_runs.py`).
 

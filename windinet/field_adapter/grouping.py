@@ -7,14 +7,21 @@ A field in no group is dropped; a field in several groups is averaged on the way
 
 from __future__ import annotations
 
+import string
+
 import torch
 from torch import nn
 
-from windinet.training.shockwave_data import CHANNEL_NAMES as BASE_FIELDS
+from windinet.eulermq.data import FIELDS
 
 from .bijections import FieldAdapter, PreNorm
 
 LOG_FIELDS = {"density", "pressure"}
+
+
+def group_tag(i: int) -> str:
+    """Image group i as a letter A, B, ...: file names (vae_A.pt) and labels."""
+    return string.ascii_uppercase[i]
 
 
 def _norm_args(names: list[str], stats: dict[str, dict]) -> dict:
@@ -29,25 +36,25 @@ def _norm_args(names: list[str], stats: dict[str, dict]) -> dict:
 
 
 class GroupedAdapter(nn.Module):
-    """One FieldAdapter per group, working on `fields`: the grouped base fields in dataset order.
-
-    select: dataset fields [B, 4, ...] -> [B, len(fields), ...]; forward: fields -> list of RGB; inverse: back."""
+    """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order."""
 
     def __init__(self, groups: list[list[str]], stats: dict[str, dict]):
         super().__init__()
         self.groups = groups
-        self.fields = [n for n in BASE_FIELDS if any(n in g for g in groups)]
+        self.fields = [n for n in FIELDS if any(n in g for g in groups)]
         self.base_norm = PreNorm(**_norm_args(self.fields, stats))
         self.adapters = nn.ModuleList(FieldAdapter(**_norm_args(g, stats)) for g in groups)
 
     def select(self, x: torch.Tensor) -> torch.Tensor:
-        return x[:, [BASE_FIELDS.index(n) for n in self.fields]]
+        """Dataset fields [B, 4, ...] -> the grouped ones [B, len(fields), ...]."""
+        return x[:, [FIELDS.index(n) for n in self.fields]]
 
     def _inputs(self, x: torch.Tensor) -> list[torch.Tensor]:
         fields = dict(zip(self.fields, x.unbind(1), strict=True))
         return [torch.stack([fields[n] for n in g], dim=1) for g in self.groups]
 
     def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
+        """Fields -> one RGB tensor per group."""
         return [a(inp) for a, inp in zip(self.adapters, self._inputs(x), strict=True)]
 
     def inverse(self, rgbs: list[torch.Tensor]) -> torch.Tensor:

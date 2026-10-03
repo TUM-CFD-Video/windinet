@@ -1,11 +1,7 @@
-"""Deterministic per-pixel maps between physical fields and 3-channel RGB.
+"""Deterministic per-pixel maps between physical fields and 3-channel RGB; nothing here knows which video VAE
+consumes the RGB. `bijections.py` is the adapter, `grouping.py` the fields-to-images assignment."""
 
-Model-agnostic: nothing here imports diffusers or knows which video VAE
-consumes the RGB. See `bijections.py` for the adapter, `grouping.py` for the
-fields-to-images assignment. The latent Fréchet diagnostic lives in `windinet.experiment.latent_stats`.
-"""
+from .bijections import FieldAdapter
+from .grouping import GroupedAdapter, group_tag
 
-from .bijections import FieldAdapter, Mix, PreNorm, SoftClip
-from .grouping import GroupedAdapter
-
-__all__ = ["FieldAdapter", "GroupedAdapter", "Mix", "PreNorm", "SoftClip"]
+__all__ = ["FieldAdapter", "GroupedAdapter", "group_tag"]

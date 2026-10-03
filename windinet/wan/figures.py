@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 
-from windinet.experiment.runs import group_tag
+from windinet.field_adapter import group_tag
 
 
 def save_curves(steps: list[dict], history: list[dict], blocks: dict[str, float], fields: list[str], path: Path):
