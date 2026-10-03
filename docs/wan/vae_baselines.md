@@ -7,6 +7,8 @@ Protocol (his): euler_mq 256×256, `train.h5` split 4000 train / 500 val (seed 4
 whole 101-frame trajectories, VRMSE per field per simulation (thesis eq. 5.11) in his 5σ-clipped space, averaged over
 simulations and the four fields. The physical-unit VRMSE is given next to it. His numbers, LTX-Video VAE, 20 epochs over
 the 4000 training trajectories: decoder-only 0.144, full fine-tune (encoder + decoder) 0.080.
+Field statistics (adapter z-scoring, clamp bounds, 5σ clipping) in every run below came from `eulermq_256_test_stats.json`,
+computed on test.h5; since 2026-10-03 the config uses the train-set file. Means and stds differ by at most 3 %, so the
 
 Ours: adapter trained alone on the frozen VAE (2000 steps of 2 single frames, lr 3e-3), then the decoder behind the fixed
 adapter (1000 updates of 6 clips × 5 frames, AdamW, peak lr 1e-6, 100 warm-up steps, cosine, RMSE + H1, grad clip 5),

@@ -1,4 +1,4 @@
-"""Reconstruction metric of the thesis baseline: variance-normalised RMSE per field."""
+"""Metrics: the thesis baseline's variance-normalised RMSE per field, its clipped space, and weight change."""
 
 from __future__ import annotations
 
@@ -20,3 +20,9 @@ def clipped(x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor, k: float = 5
     `mean`, `std`: [C] in physical units. VRMSE here ignores whatever a pipeline loses beyond k sigma."""
     shape = (1, -1) + (1,) * (x.ndim - 2)
     return ((x - mean.view(shape)) / (k * std.view(shape))).clamp(-1, 1)
+
+
+def rel_change(params, ref) -> float:
+    """||p - ref|| / ||ref|| over a list of tensors: how far weights moved. Computed where `ref` lives."""
+    num = sum((p.detach().to(r.device) - r).square().sum() for p, r in zip(params, ref, strict=True))
+    return (num / sum(r.square().sum() for r in ref)).sqrt().item()

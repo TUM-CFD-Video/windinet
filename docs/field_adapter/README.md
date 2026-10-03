@@ -16,7 +16,7 @@ pip install -e .
 - The Fréchet latent diagnostic (natural-video reference) is no longer in the code; its numbers in ablations.md
   are in the run folders' metrics.json, the last code with it is commit 2c65a29.
 - Wan weights come from the HF cache (`Wan-AI/Wan2.1-T2V-1.3B-Diffusers`, VAE only, 500 MB).
-- GPU: fp32. 11 GB is enough with `train.micro_batch: 1` (activation checkpointing in `windinet/wan/vae.py`).
+- GPU: fp32. 11 GB is enough with `train.micro_batch: 1` (activation checkpointing in `windinet/wan/vae/model.py`).
 
 ## Run
 

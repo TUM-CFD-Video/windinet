@@ -1,4 +1,3 @@
-"""Wan 2.1 (Wan-AI) components: the video diffusion model family this branch targets.
+"""Wan 2.1 (Wan-AI): the video VAE (`vae/`) and the text-to-video transformer (`dit/`) this branch builds on."""
 
-Starts with the frozen VAE (`vae.py`); transformer / pipeline / training land here later.
-"""
+REPO = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"  # the 1.3B pipeline; its VAE is the one of every Wan 2.1 variant

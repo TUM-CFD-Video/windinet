@@ -8,11 +8,13 @@ A field in no group is dropped; a field in several groups is averaged on the way
 from __future__ import annotations
 
 import string
+from pathlib import Path
 
 import torch
+import yaml
 from torch import nn
 
-from windinet.eulermq.data import FIELDS
+from windinet.eulermq.data import FIELDS, load_field_stats
 
 from .bijections import FieldAdapter, PreNorm
 
@@ -73,3 +75,12 @@ class GroupedAdapter(nn.Module):
     def init_from_data(self, x: torch.Tensor) -> None:
         for a, inp in zip(self.adapters, self._inputs(x), strict=True):
             a.init_from_data(inp)
+
+
+def load_adapter(run: str | Path, device: torch.device | str) -> GroupedAdapter:
+    """The trained adapter of a VAE-stage run folder: groups and stats from its config.yaml, weights from adapter.pt."""
+    run = Path(run)
+    cfg = yaml.safe_load((run / "config.yaml").read_text())
+    adapter = GroupedAdapter(cfg["adapter"]["groups"], load_field_stats(cfg["data"]["stats_json"])).to(device)
+    adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
+    return adapter

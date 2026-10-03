@@ -1,9 +1,11 @@
-"""Learning-rate schedule of the LTX fine-tuning recipe."""
+"""Optimizer and learning-rate schedule shared by the stage scripts."""
 
 from __future__ import annotations
 
 import math
 from collections.abc import Callable
+
+import torch
 
 
 def warmup_cosine(warmup_steps: int, steps: int, floor: float) -> Callable[[int], float]:
@@ -18,3 +20,11 @@ def warmup_cosine(warmup_steps: int, steps: int, floor: float) -> Callable[[int]
         return floor + (1 - floor) * (1 + math.cos(math.pi * progress)) / 2
 
     return factor
+
+
+def adamw(
+    groups: list[dict], steps: int, warmup_steps: int, lr_floor: float, weight_decay: float = 0.0
+) -> tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler]:
+    """AdamW over `groups` (each {"params", "lr"}) with the warm-up + cosine schedule of the LTX recipe."""
+    opt = torch.optim.AdamW(groups, weight_decay=weight_decay)
+    return opt, torch.optim.lr_scheduler.LambdaLR(opt, warmup_cosine(warmup_steps, steps, lr_floor))

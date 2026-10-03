@@ -6,7 +6,7 @@ WORK=${SCRATCH}/lc_work
 CONTAINER=${CONTAINER:-/project/project_465003416/venvs/windinet_rocm.sif}  # built with cotainr from venv.yml
 export WINDINET_WORK=${WORK}  # outputs: windinet/cluster_config.py
 export WINDINET_HF_CACHE=${WORK}/hf_cache HF_HUB_CACHE=${WORK}/hf_cache
-export HF_HUB_OFFLINE=1 WANDB_MODE=offline PYTHONUNBUFFERED=1 HDF5_USE_FILE_LOCKING=FALSE
+export HF_HUB_OFFLINE=1 HF_HUB_DISABLE_PROGRESS_BARS=1 WANDB_MODE=offline PYTHONUNBUFFERED=1 HDF5_USE_FILE_LOCKING=FALSE
 export MIOPEN_USER_DB_PATH=/tmp/${USER}-miopen MIOPEN_CUSTOM_CACHE_DIR=/tmp/${USER}-miopen
 export SRUN_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK:-1}  # srun no longer inherits --cpus-per-task
 export PYTHONPATH=/workspace

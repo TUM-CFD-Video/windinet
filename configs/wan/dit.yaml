@@ -1,0 +1,16 @@
+# DiT stage: Wan 2.1 T2V 1.3B fine-tuned on the latents of a fixed adapter (scripts/wan/train_dit.py). Defaults in
+# windinet/wan/dit/config.py are Li's recipe: 8000 updates of 32 sims, lr 1e-5, clean first frame + gamma tokens, 20-step
+# rollouts. Variants via --set; every run needs --name and --desc.
+name: dit
+latents:
+  dir: /scratch/project_465003416/lc_work/latents/rgb3
+vae: results/wan/vae/rgb3_two_stage   # the adapter behind the latents and its fine-tuned decoder
+
+data:                                  # the simulations: split and ground truth of the evaluation (as in vae.yaml)
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
+  eval_sims: 16                        # validation rollouts mid-run; the final test uses all 500 (test_sims null)
+  num_workers: 2
+
+weights_dir: /scratch/project_465003416/lc_work/weights   # dit.pt on scratch, symlinked from the run folder

@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from windinet.eulermq import data
+
 
 class _Base(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -35,6 +37,10 @@ class DataConfig(_Base):
     def clip_len(self) -> int:
         """Frames per VAE pass in training: the clip, or 1 for single frames."""
         return self.frames_per_sim if self.clip else 1
+
+    def splits(self) -> dict[str, tuple[str, list[str]]]:
+        """{'train' | 'val' | 'test': (h5 file, sim ids)}, see eulermq.data.splits."""
+        return data.splits(self.h5_path, self.test_h5, self.val_sims, self.split_seed, self.test_every, self.test_gamma)
 
 
 class AdapterConfig(_Base):

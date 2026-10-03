@@ -11,10 +11,10 @@ from windinet.experiment.distributed import all_sum
 from windinet.experiment.metrics import clipped, vrmse
 from windinet.field_adapter import GroupedAdapter
 from windinet.losses import h1_seminorm_loss, rmse_loss
-from windinet.wan.vae_stage import LossConfig
+from windinet.wan.vae.config import LossConfig
 
 if TYPE_CHECKING:
-    from windinet.wan.vae import WanVAE
+    from windinet.wan.vae.model import WanVAE
 
 
 def round_trip(

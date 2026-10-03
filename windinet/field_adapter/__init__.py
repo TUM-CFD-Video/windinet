@@ -2,6 +2,6 @@
 consumes the RGB. `bijections.py` is the adapter, `grouping.py` the fields-to-images assignment."""
 
 from .bijections import FieldAdapter
-from .grouping import GroupedAdapter, group_tag
+from .grouping import GroupedAdapter, group_tag, load_adapter
 
-__all__ = ["FieldAdapter", "GroupedAdapter", "group_tag"]
+__all__ = ["FieldAdapter", "GroupedAdapter", "group_tag", "load_adapter"]

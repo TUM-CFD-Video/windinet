@@ -45,6 +45,24 @@ def val_split(ids: list[str], n_val: int = 500, seed: int = 42) -> tuple[list[st
     return [ids[i] for i in perm[:-n_val]], [ids[i] for i in perm[-n_val:]]
 
 
+def splits(
+    h5_path: str,
+    test_h5: str | None = None,
+    val_sims: int = 500,
+    split_seed: int = 42,
+    test_every: int = 5,
+    test_gamma: float | None = None,
+) -> dict[str, tuple[str, list[str]]]:
+    """{'train' | 'val' | 'test': (h5 file, sim ids)}. With `test_h5` the LTX protocol: validation sims held out of
+    the training file, the test file whole; else one file split by `split_ids`, and val = test."""
+    ids = sim_ids(h5_path)
+    if test_h5:
+        train, val = val_split(ids, val_sims, split_seed)
+        return {"train": (h5_path, train), "val": (h5_path, val), "test": (test_h5, sim_ids(test_h5))}
+    train, held_out = split_ids(ids, test_every, test_gamma)
+    return {"train": (h5_path, train), "val": (h5_path, held_out), "test": (h5_path, held_out)}
+
+
 class FrameSampler(ShockWaveDataset):
     """One item = `frames_per_item` frames of one simulation, fields [k, 4, H, W] in physical units, plus gamma.
 
@@ -78,6 +96,12 @@ class FrameSampler(ShockWaveDataset):
         frames = list(range(start, start + k)) if self.consecutive else sorted(rng.sample(range(n_frames), k))
         fields = np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)  # [k, 4, H, W]
         return torch.from_numpy(fields).float(), parse_gamma(sid)
+
+
+def endless(loader):
+    """Loop over a loader forever; unlike itertools.cycle it keeps no copy of what it yielded."""
+    while True:
+        yield from loader
 
 
 def load_field_stats(stats_json: str | Path) -> dict[str, dict]:

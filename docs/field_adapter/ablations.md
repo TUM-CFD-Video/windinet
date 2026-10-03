@@ -115,7 +115,7 @@ so this is the comparable number, and the adapter's latents are further from nat
 video in time than in space.
 
 Clip fine-tuning needs block-wise activation checkpointing inside the Wan decoder
-(`windinet/wan/vae.py`): with it a 5-frame clip peaks at 7.8 GB, without it 9 frames do
+(`windinet/wan/vae/model.py`): with it a 5-frame clip peaks at 7.8 GB, without it 9 frames do
 not fit, and the gradient is unchanged (relative difference 1e-8).
 
 ## 7. Fine-tuning the Wan VAE behind the fixed adapter

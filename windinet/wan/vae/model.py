@@ -14,7 +14,8 @@ import torch
 from diffusers import AutoencoderKLWan
 from torch.utils.checkpoint import checkpoint
 
-REPO = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"  # same VAE as every Wan 2.1 variant
+from windinet.wan import REPO
+
 TEMPORAL = 4  # frames per latent frame
 
 

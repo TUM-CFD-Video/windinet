@@ -36,7 +36,7 @@ def provenance(started: float, world: int = 1) -> dict:
         "dirty": bool(git("status", "--porcelain", "--", "windinet", "scripts", "configs")),
         "command": "python " + shlex.join(sys.argv),  # quoted, so it pastes back into a shell
         "python": platform.python_version(),
-        "torch": torch.__version__,
+        "torch": str(torch.__version__),  # a str subclass that yaml cannot dump
         "diffusers": diffusers.__version__,
         "gpu": f"{world} x " + (torch.cuda.get_device_name() if torch.cuda.is_available() else "cpu"),
         "started": time.strftime("%Y-%m-%d %H:%M", time.localtime(started)),
@@ -51,9 +51,16 @@ def write_config(cfg: dict, path: Path) -> None:
 
 
 def settings(cfg: dict) -> str:
-    """One phrase per run: what was trained and how."""
+    """One phrase per run: what was trained and how (VAE-stage and DiT-stage configs)."""
     train, data, loss = cfg.get("train", {}), cfg.get("data", {}), cfg.get("loss", {})
     steps, lr = train.get("steps", 0), train.get("lr", 0)
+    if "cond" in cfg:  # DiT stage
+        cond = cfg["cond"]
+        parts = [cond["kind"] + " tokens" + (", clean first frame" if cond.get("first_frame") else "")]
+        parts.append(f"from {Path(cfg['load']).name}" if cfg.get("load") else "from pretrained Wan 2.1")
+        parts.append(f"{steps} steps, lr {lr:g}, batch {train.get('batch_sims')}" if steps else "eval only")
+        parts.append(f"{cfg.get('sampling', {}).get('steps', 20)}-step rollouts, decoders of {Path(cfg['vae']).name}")
+        return ", ".join(parts)
     load = cfg.get("load")
     adapter = f"weights from {Path(load).name}" if load else "adapter untrained"
     if steps and lr > 0:
@@ -93,7 +100,7 @@ def run_row(run_dir: Path) -> list[str] | None:
         *(f"{v:.3f}" if v is not None else "–" for v in vrmse),
         f"{final.get('vrmse_mean', sum(present) / len(present)):.3f}",
         f"{final['vrmse_clipped_mean']:.3f}" if "vrmse_clipped_mean" in final else "–",
-        prov.get("commit", "") + (" (dirty)" if prov.get("dirty") else ""),
+        (prov.get("commit") or "") + (" (dirty)" if prov.get("dirty") else ""),  # no git: commit is None
     ]
 
 

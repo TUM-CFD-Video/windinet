@@ -6,9 +6,11 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=8
 #SBATCH --cpus-per-task=56
+#SBATCH --mem=480G
 #SBATCH --time=00:30:00
 #SBATCH --output=logs/lc/%x_%j.log
-# Any command in the windinet container on LUMI, 30 min by default. Always a full node: LUMI bills node hours,
+# Any command in the windinet container on LUMI, 30 min by default, with the whole node's memory (the partition default
+# is 64 GB). Always a full node: LUMI bills node hours,
 # not GPU hours, so a single-GPU script costs the same as eight. From the repo root:
 #   sbatch jobs/lumi/lc/run.sbatch python scripts/wan/train_vae.py configs/wan/vae.yaml \
 #       --name <run> --desc "<what it tests>"

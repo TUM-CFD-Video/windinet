@@ -1,0 +1,14 @@
+# Sampling from the Wan 2.1 DiT (scripts/wan/sample_dit.py): zero-shot text-to-video at Wan's native size and
+# settings by default. Variants via --set, see jobs/lc/dit_zero_shot.txt. Every sample needs --name and --desc.
+name: sample
+prompt: >-
+  Top-down 2D simulation of a compressible inviscid gas (Euler equations, ratio of specific heats 1.40). The square
+  domain starts as four quadrants of piecewise-constant density, pressure and velocity, a 2D Riemann problem. Shock
+  waves, rarefaction waves and contact discontinuities form at the quadrant interfaces, propagate and interact; open
+  boundaries let waves leave the domain. No text, smooth frame-by-frame evolution.
+negative_prompt: >-
+  Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray,
+  worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn
+  faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people
+  in the background, walking backwards
+video_dir: /scratch/project_465003416/lc_work/videos   # mp4 on scratch, symlinked from the run folder; null = run folder
