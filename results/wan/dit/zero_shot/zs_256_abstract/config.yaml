@@ -1,0 +1,21 @@
+# zs_256_abstract: zero-shot, abstract prompt, 256x256x101
+# Re-run: python scripts/wan/sample_dit.py results/wan/dit/zs_256_abstract/config.yaml --name <new name>
+name: zs_256_abstract
+description: zero-shot, abstract prompt, 256x256x101
+prompt: A colourful abstract animation of slowly flowing and swirling shapes.
+negative_prompt: Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete,
+  extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards
+height: 256
+width: 256
+frames: 101
+steps: 50
+guidance: 5.0
+seed: 0
+fps: 16
+source: null
+adapter: null
+strength: 1.0
+keep_first_frame: false
+load: null
+results_dir: results/wan/dit/zero_shot
+video_dir: /scratch/project_465003416/lc_work/videos
