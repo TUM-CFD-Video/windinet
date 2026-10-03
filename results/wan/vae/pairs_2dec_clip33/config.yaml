@@ -1,0 +1,45 @@
+# pairs_2dec_clip33: (rho, p) + (m_x, m_y); per-image decoders continued from pairs_2dec on 33-frame clips (9 latent frames), 8 clips per update over 8 GPUs, 2000 updates
+# Re-run: python scripts/wan/train_vae.py results/wan/vae/pairs_2dec_clip33/config.yaml --name <new name>
+name: pairs_2dec_clip33
+description: (rho, p) + (m_x, m_y); per-image decoders continued from pairs_2dec on 33-frame clips (9 latent frames), 8 clips per update over 8 GPUs, 2000 updates
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: null
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 33
+  clip: true
+  num_workers: 2
+adapter:
+  groups:
+  - - density
+    - pressure
+  - - momentum_x
+    - momentum_y
+loss:
+  rmse: 1.0
+  h1: 1.0
+train:
+  steps: 2000
+  batch_sims: 8
+  micro_batch: 1
+  lr: 0.0
+  vae_parts: decoder
+  vae_lr: 3.0e-06
+  vae_per_group: true
+  warmup_steps: 100
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 200
+  log_every: 10
+  seed: 0
+ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt
+load: results/wan/vae/pairs_2dec
+results_dir: results/wan/vae
+weights_dir: /scratch/project_465003416/lc_work/weights

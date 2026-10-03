@@ -66,9 +66,9 @@ class FrameSampler(ShockWaveDataset):
         group = self._get_group(sid)
         n_frames = group[CHANNEL_NAMES[0]].shape[0]
         k = self.k or n_frames
-        rng = (
-            random if self.seed is None else random.Random(self.seed + idx)
-        )  # loader workers seed `random` from the torch seed
+        # fixed frames belong to the sim, not to its list position, so a sharded loader evaluates the same clips;
+        # loader workers seed `random` from the torch seed
+        rng = random if self.seed is None else random.Random(f"{self.seed}/{sid}")
         start = rng.randrange(n_frames - k + 1)
         frames = list(range(start, start + k)) if self.consecutive else sorted(rng.sample(range(n_frames), k))
         fields = np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)  # [k, 4, H, W]

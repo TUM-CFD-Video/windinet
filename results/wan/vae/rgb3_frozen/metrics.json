@@ -1,0 +1,99 @@
+{
+ "config": {
+  "name": "rgb3_frozen",
+  "description": "rho, m_x, m_y in one image; adapter at its data init, Wan VAE frozen, no training: the zero-shot reference",
+  "vae": "wan",
+  "data": {
+   "h5_path": "euler_mq_dataset/256x256_ds/train.h5",
+   "test_h5": "euler_mq_dataset/256x256_ds/test.h5",
+   "stats_json": "results/field_adapter/00_stats/eulermq_256_test_stats.json",
+   "val_sims": 500,
+   "split_seed": 42,
+   "eval_sims": 100,
+   "test_sims": 100,
+   "test_every": 5,
+   "test_gamma": null,
+   "frames_per_sim": 5,
+   "clip": true,
+   "num_workers": 2
+  },
+  "adapter": {
+   "groups": [
+    [
+     "density",
+     "momentum_x",
+     "momentum_y"
+    ]
+   ],
+   "load": null
+  },
+  "loss": {
+   "rmse": 1.0,
+   "h1": 1.0
+  },
+  "train": {
+   "steps": 0,
+   "batch_sims": 3,
+   "micro_batch": 3,
+   "lr": 0.003,
+   "vae_parts": "decoder",
+   "vae_lr": 1e-06,
+   "vae_load": null,
+   "warmup_steps": 100,
+   "lr_floor": 0.02,
+   "max_grad_norm": 5.0,
+   "eval_every": 100,
+   "log_every": 10,
+   "seed": 0
+  },
+  "ref_stats": "results/field_adapter/30_reference/wan_ref_stats.pt",
+  "results_dir": "results/wan/vae"
+ },
+ "provenance": {
+  "commit": "95a20dc",
+  "dirty": true,
+  "command": "python scripts/wan/train_vae.py configs/wan/vae.yaml --name rgb3_frozen --desc 'rho, m_x, m_y in one image; adapter at its data init, Wan VAE frozen, no training: the zero-shot reference' --set 'adapter.groups=[[density, momentum_x, momentum_y]]' --set train.steps=0",
+  "python": "3.12.14",
+  "torch": "2.7.1+rocm6.2.4",
+  "diffusers": "0.40.0",
+  "gpu": "AMD Instinct MI250X",
+  "started": "2026-10-02 18:40",
+  "seconds": 953
+ },
+ "init": {
+  "vrmse_density": 0.33427155017852783,
+  "vrmse_momentum_x": 0.19241122901439667,
+  "vrmse_momentum_y": 0.24946413934230804,
+  "vrmse_mean": 0.2587156593799591,
+  "vrmse_clipped_density": 0.15069061517715454,
+  "vrmse_clipped_momentum_x": 0.13547544181346893,
+  "vrmse_clipped_momentum_y": 0.17311592400074005,
+  "vrmse_clipped_mean": 0.15309399366378784,
+  "latentA_frechet": 8.283928871154785
+ },
+ "val": {
+  "vrmse_density": 0.33427155017852783,
+  "vrmse_momentum_x": 0.19241122901439667,
+  "vrmse_momentum_y": 0.24946413934230804,
+  "vrmse_mean": 0.2587156593799591,
+  "vrmse_clipped_density": 0.15069061517715454,
+  "vrmse_clipped_momentum_x": 0.13547544181346893,
+  "vrmse_clipped_momentum_y": 0.17311592400074005,
+  "vrmse_clipped_mean": 0.15309399366378784,
+  "latentA_frechet": 8.283928871154785
+ },
+ "final": {
+  "vrmse_density": 0.5712922811508179,
+  "vrmse_momentum_x": 0.2538759112358093,
+  "vrmse_momentum_y": 0.31272995471954346,
+  "vrmse_mean": 0.3792994022369385,
+  "vrmse_clipped_density": 0.14811497926712036,
+  "vrmse_clipped_momentum_x": 0.14100459218025208,
+  "vrmse_clipped_momentum_y": 0.18506018817424774,
+  "vrmse_clipped_mean": 0.15805992484092712,
+  "latentA_frechet": 16.094524383544922
+ },
+ "history": [],
+ "steps": [],
+ "n_params": 10
+}

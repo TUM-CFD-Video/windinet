@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import platform
 import shlex
+import string
 import subprocess
 import sys
 import time
@@ -21,10 +22,17 @@ CHANNELS = ("density", "momentum_x", "momentum_y", "pressure")
 SYMBOLS = {"density": "ρ", "momentum_x": "m_x", "momentum_y": "m_y", "pressure": "p"}
 
 
+def group_tag(i: int) -> str:
+    """Image group i as a letter: A, B, C, ... (file names vae_A.pt, metric keys latentA_frechet, labels)."""
+    return string.ascii_uppercase[i]
+
+
 def provenance(started: float) -> dict:
     """Code version, command, library versions, GPU and wall time of the run that is finishing now."""
     import diffusers
     import torch
+
+    from windinet.experiment.distributed import world
 
     def git(*args: str) -> str | None:
         try:
@@ -41,7 +49,7 @@ def provenance(started: float) -> dict:
         "python": platform.python_version(),
         "torch": torch.__version__,
         "diffusers": diffusers.__version__,
-        "gpu": torch.cuda.get_device_name() if torch.cuda.is_available() else "cpu",
+        "gpu": f"{world} x " + (torch.cuda.get_device_name() if torch.cuda.is_available() else "cpu"),
         "started": time.strftime("%Y-%m-%d %H:%M", time.localtime(started)),
         "seconds": round(time.time() - started),
     }
@@ -60,8 +68,8 @@ def settings(cfg: dict) -> str:
     """One phrase per run: what was trained and how."""
     train, data, loss = cfg.get("train", {}), cfg.get("data", {}), cfg.get("loss", {})
     steps, lr = train.get("steps", 0), train.get("lr", 0)
-    load = cfg.get("adapter", {}).get("load")
-    adapter = f"adapter from {Path(load).parent.name}" if load else "adapter untrained"
+    load = cfg.get("load")
+    adapter = f"weights from {Path(load).name}" if load else "adapter untrained"
     if steps and lr > 0:
         adapter += f", lr {lr:g}"
     groups = cfg.get("adapter", {}).get("groups")
@@ -70,10 +78,7 @@ def settings(cfg: dict) -> str:
     if cfg.get("vae") == "none":
         parts.append("no VAE")
     elif train.get("vae_parts", "none") != "none":
-        parts.append(
-            f"vae {train['vae_parts']} lr {train['vae_lr']:g}"
-            + (f" from {Path(train['vae_load']).parent.name}" if train.get("vae_load") else "")
-        )
+        parts.append(f"vae {train['vae_parts']} lr {train['vae_lr']:g}")
     parts.append(f"{steps} steps" if steps else "eval only")
     if data.get("clip"):
         parts.append(f"{data['frames_per_sim']}-frame clips")

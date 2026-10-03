@@ -3,7 +3,7 @@
 A 14-parameter per-pixel map from the Euler fields (ρ, m_x, m_y, p) to one or two RGB images, so the Wan 2.1 VAE
 can carry CFD fields; optionally the VAE decoder is fine-tuned behind it. Findings of the adapter study:
 [ablations.md](ablations.md), runs in the [field_adapter index](../../results/field_adapter/20_wan_roundtrip/README.md).
-VAE baselines on the LTX protocol (train.h5 / test.h5, whole-trajectory VRMSE): [results/wan/vae](../../results/wan/vae/README.md).
+VAE baselines on the LTX protocol (train.h5 / test.h5, whole-trajectory VRMSE): [docs/wan/vae_baselines.md](../wan/vae_baselines.md), runs in [results/wan/vae](../../results/wan/vae/README.md).
 
 ## Setup
 
@@ -27,7 +27,7 @@ python scripts/wan/train_vae.py configs/wan/vae.yaml --name pairs_joint --desc "
 
 # evaluate a saved adapter on the frozen VAE without training
 python scripts/wan/train_vae.py configs/wan/vae.yaml --name eval --desc "..." --set train.steps=0 \
-    --set adapter.load=results/wan/vae/pairs_adapter/adapter.pt
+    --set load=results/wan/vae/pairs_adapter
 
 # reproduce any run from its own config
 python scripts/wan/train_vae.py results/wan/vae/pairs_joint/config.yaml --name repro --overwrite

@@ -3,11 +3,13 @@
 # Cluster-agnostic: CUDA_VISIBLE_DEVICES selects the GPU on NVIDIA and, through HIP, on AMD too (setting
 # ROCR_VISIBLE_DEVICES as well would mask twice). Lines starting with # are skipped.
 # Per-command logs: logs/lc/<job name>_<job id>/gpu<i>.log. From the repo root, e.g. on LUMI:
-#   sbatch --time=05:00:00 --partition=small-g jobs/lumi/lc/run.sbatch bash jobs/lc/one_per_gpu.sh jobs/lc/vae_baselines.txt
+#   sbatch --time=05:00:00 --partition=small-g jobs/lumi/lc/run.sbatch bash jobs/lc/one_per_gpu.sh jobs/lc/vae_job2_decoder.txt
 set -uo pipefail
 commands=${1:?usage: one_per_gpu.sh <file with one command per line>}
 log_dir=logs/lc/${SLURM_JOB_NAME:-local}_${SLURM_JOB_ID:-$$}
 mkdir -p "${log_dir}"
+n=$(grep -c -v -E '^(#|$)' "${commands}")
+export OMP_NUM_THREADS=$(( ${SLURM_CPUS_PER_TASK:-$(nproc)} / n ))  # else every process starts one thread per core
 gpu=0
 while IFS= read -r command; do
     [[ -z "${command}" || "${command}" == \#* ]] && continue

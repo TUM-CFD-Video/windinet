@@ -4,11 +4,13 @@
     vae: wan    x -> A -> Wan VAE -> A^-1 -> x_hat     (the real round trip)
     vae: none   x -> A -> A^-1 -> x_hat                (adapter alone, sanity check)
 
-train.steps=0 evaluates an init (or adapter.load=<.pt>) without training. With ref_stats set, the latent
+train.steps=0 evaluates an init (or load=<run folder>) without training. With ref_stats set, the latent
 statistics of each group are compared to the natural-video reference (Fréchet distance).
 
 Usage:
     python scripts/wan/train_vae.py configs/wan/vae.yaml --name pairs_joint --desc "..." --set train.steps=1000
+    torchrun --standalone --nproc_per_node=8 scripts/wan/train_vae.py ...   # one process per GPU, same config:
+    train.batch_sims is the global batch, split over the ranks; evaluation is sharded; rank 0 logs and writes.
 Every run needs a name and a one-sentence description. Writes
 <results_dir>/<name>/{config.yaml, metrics.json, panel.png, curves.png, adapter.pt[, vae.pt]} and regenerates
 the results_dir README.md index. config.yaml is the resolved config and re-runs as is; metrics.json carries the
@@ -34,8 +36,9 @@ from torch.utils.data import DataLoader
 
 from windinet.eulermq.data import FrameSampler, load_field_stats, split_ids, val_split
 from windinet.experiment.config import load_config
+from windinet.experiment.distributed import all_mean, rank, setup, shard, sync, world
 from windinet.experiment.figures import save_curves, save_panel
-from windinet.experiment.runs import SYMBOLS, provenance, write_config, write_index
+from windinet.experiment.runs import SYMBOLS, group_tag, provenance, write_config, write_index
 from windinet.experiment.schedule import warmup_cosine
 from windinet.field_adapter import GroupedAdapter
 from windinet.training.shockwave_data import ShockWaveDataset
@@ -54,7 +57,7 @@ def drift_per_block(vaes: list, w0) -> dict[str, float]:
     blocks: dict[str, list] = {}
     w0 = iter(w0)
     for i, vae in enumerate(vaes):
-        prefix = f"{'ABC'[i]}: " if len(vaes) > 1 else ""
+        prefix = f"{group_tag(i)}: " if len(vaes) > 1 else ""
         for name, p in vae.vae.named_parameters():
             if p.requires_grad:
                 blocks.setdefault(prefix + ".".join(name.split(".")[:3]), []).append((p, next(w0)))
@@ -71,15 +74,18 @@ def summary(metrics: dict[str, float], fields: list[str]) -> tuple[str, str]:
     return means, per_field
 
 
+def vae_file(i: int, n_vaes: int) -> str:
+    return f"vae_{group_tag(i)}.pt" if n_vaes > 1 else "vae.pt"
+
+
 def save_weights(run_dir: Path, adapter: GroupedAdapter, vaes: list, weights_dir: str | None) -> None:
-    """adapter.pt (in git) and, for VAE fine-tunes, the trained VAE weights as vae.pt, or vae_A.pt, vae_B.pt with
-    one VAE per group (gitignored; train.vae_load). With `weights_dir` (scratch on a cluster) the VAE files live
-    there and the run folder holds symlinks to them."""
+    """adapter.pt and, per fine-tuned VAE, vae.pt or vae_<group>.pt (gitignored; see `load`); with `weights_dir`
+    the VAE files live there and the run folder holds symlinks."""
     torch.save(adapter.state_dict(), run_dir / "adapter.pt")
     for i, vae in enumerate(vaes):
         if not vae.trainable_params:
             continue
-        name = f"vae_{'ABC'[i]}.pt" if len(vaes) > 1 else "vae.pt"
+        name = vae_file(i, len(vaes))
         path = Path(weights_dir) / run_dir.name / name if weights_dir else run_dir / name
         if weights_dir:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -88,6 +94,16 @@ def save_weights(run_dir: Path, adapter: GroupedAdapter, vaes: list, weights_dir
         torch.save(
             {k: v.detach().cpu() for k, v in vae.vae.state_dict(keep_vars=True).items() if v.requires_grad}, path
         )
+
+
+def load_weights(run: Path, adapter: GroupedAdapter, vaes: list, device: torch.device) -> None:
+    """The inverse of save_weights: a VAE takes its own vae_<group>.pt, else the run's shared vae.pt, else stays."""
+    adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
+    for i, vae in enumerate(vaes):
+        for name in (vae_file(i, len(vaes)), "vae.pt"):
+            if (run / name).exists():
+                vae.vae.load_state_dict(torch.load(run / name, map_location=device), strict=False)
+                break
 
 
 def hours(seconds: float) -> str:
@@ -108,12 +124,16 @@ def main(
     run_dir = out_dir / cfg.name
     if (run_dir / "metrics.json").exists() and not overwrite:
         raise typer.BadParameter(f"{run_dir} exists; pick another --name or pass --overwrite")
-    torch.manual_seed(cfg.train.seed)
-    random.seed(cfg.train.seed)  # frame sampling in the main process; loader workers derive theirs from torch
+    if cfg.train.steps and cfg.train.batch_sims % world:
+        raise typer.BadParameter(f"train.batch_sims={cfg.train.batch_sims} is not a multiple of {world} processes")
+    setup()
+    torch.manual_seed(cfg.train.seed + rank)
+    random.seed(cfg.train.seed + rank)  # frame sampling in the main process; loader workers derive theirs from torch
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    run_dir.mkdir(parents=True, exist_ok=True)
-    write_config(cfg.model_dump(), run_dir / "config.yaml")  # written first: a crashed run still shows what it was
-    print((run_dir / "config.yaml").read_text())  # the resolved settings, the same text as the file
+    if rank == 0:
+        run_dir.mkdir(parents=True, exist_ok=True)
+        write_config(cfg.model_dump(), run_dir / "config.yaml")  # written first: a crashed run still shows what it was
+        print((run_dir / "config.yaml").read_text())  # the resolved settings, the same text as the file
 
     ids = ShockWaveDataset(cfg.data.h5_path).ids
     if cfg.data.test_h5:
@@ -123,21 +143,22 @@ def main(
         train_ids, val_ids = split_ids(ids, cfg.data.test_every, cfg.data.test_gamma)
         test_h5, test_ids = cfg.data.h5_path, val_ids
     test_ids = test_ids[: cfg.data.test_sims]
+    eval_ids = val_ids[: cfg.data.eval_sims]
     clip = clip_len(cfg)
 
     def loader(h5, sims, frames, seed, consecutive):  # seed None: random frames every access (training)
         sampler = FrameSampler(h5, sims, frames, seed, consecutive)
         return DataLoader(
             sampler,
-            batch_size=cfg.train.batch_sims if seed is None else 1,
+            batch_size=max(1, cfg.train.batch_sims // world) if seed is None else 1,  # max: eval-only never draws
             shuffle=seed is None,
             num_workers=cfg.data.num_workers,
             persistent_workers=cfg.data.num_workers > 0,
         )
 
-    train_loader = loader(cfg.data.h5_path, train_ids, cfg.data.frames_per_sim, None, cfg.data.clip)
-    val_loader = loader(cfg.data.h5_path, val_ids[: cfg.data.eval_sims], cfg.data.frames_per_sim, 0, cfg.data.clip)
-    test_loader = loader(test_h5, test_ids, None, 0, True)  # whole trajectories, in order
+    train_loader = loader(cfg.data.h5_path, shard(train_ids), cfg.data.frames_per_sim, None, cfg.data.clip)
+    val_loader = loader(cfg.data.h5_path, shard(eval_ids), cfg.data.frames_per_sim, 0, cfg.data.clip)
+    test_loader = loader(test_h5, shard(test_ids), None, 0, True)  # whole trajectories, in order
 
     def batches():  # endless; unlike itertools.cycle it keeps no copy of the batches it yielded
         while True:
@@ -145,28 +166,26 @@ def main(
 
     batches = batches()
     print(
-        f"{len(train_ids)} train / {len(val_ids)} val ({len(val_loader)} evaluated mid-run) / {len(test_ids)} test sims"
-        f" (whole trajectories at the end), device {device}"
+        f"{len(train_ids)} train / {len(val_ids)} val ({len(eval_ids)} evaluated mid-run) / "
+        f"{len(test_ids)} test sims (whole trajectories at the end), {world} x {device}"
     )
 
     stats = load_field_stats(cfg.data.stats_json)
     adapter = GroupedAdapter(cfg.adapter.groups, stats).to(device)
     norm = tuple(torch.tensor([stats[n][k] for n in adapter.fields], device=device) for k in ("mean", "std"))
     adapter.requires_grad_(cfg.train.lr > 0)  # lr 0 = fixed adapter, no gradient through the encoder for it
-    if cfg.adapter.load:
-        adapter.load_state_dict(torch.load(cfg.adapter.load, map_location=device))
-    else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw
-        probe = FrameSampler(cfg.data.h5_path, train_ids[:: max(1, len(train_ids) // 100)][:100], 2, seed=0)
-        adapter.init_from_data(adapter.select(torch.cat([probe[i][0] for i in range(len(probe))])).to(device))
     vaes = []
     if cfg.vae == "wan":
         from windinet.wan.vae import WanVAE
 
         n_vaes = len(cfg.adapter.groups) if cfg.train.vae_per_group else 1
         vaes = [WanVAE(device=device, train=cfg.train.vae_parts) for _ in range(n_vaes)]
-        if cfg.train.vae_load:  # the same start weights for every VAE
-            for vae in vaes:
-                vae.vae.load_state_dict(torch.load(cfg.train.vae_load, map_location=device), strict=False)
+    if cfg.load:
+        load_weights(Path(cfg.load), adapter, vaes, device)
+    else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw
+        probe = FrameSampler(cfg.data.h5_path, train_ids[:: max(1, len(train_ids) // 100)][:100], 2, seed=0)
+        adapter.init_from_data(adapter.select(torch.cat([probe[i][0] for i in range(len(probe))])).to(device))
+    sync(adapter)  # the tanh-scale init subsamples at random: every rank takes rank 0's
     ref = torch.load(cfg.ref_stats) if cfg.ref_stats else None
     init, example = evaluate(adapter, val_loader, vaes, ref, norm, clip)
     means, per_field = summary(init, adapter.fields)
@@ -195,6 +214,7 @@ def main(
             weight = len(xi) / len(x)
             (total * weight).backward()
             loss += total.item() * weight
+        all_mean(*(p.grad for p in params if p.grad is not None))
         if cfg.train.max_grad_norm:
             torch.nn.utils.clip_grad_norm_(params, cfg.train.max_grad_norm)
         before = [[p.detach().clone() for p in g["params"]] for g in opt.param_groups]  # on the device: no sync
@@ -227,11 +247,14 @@ def main(
             history.append({"step": step, "train": {k: v.item() for k, v in terms.items()}, **metrics})
             means, per_field = summary(metrics, adapter.fields)
             print(f"val {step} | loss {loss:.4f} | {means} | {hours(time.time() - t0)}\n    | {per_field}")
-            save_weights(run_dir, adapter, vaes, cfg.weights_dir)  # a killed run keeps its last evaluated weights
+            if rank == 0:
+                save_weights(run_dir, adapter, vaes, cfg.weights_dir)  # a killed run keeps its last evaluated weights
 
     final, example = evaluate(adapter, test_loader, vaes, ref, norm, None)
     means, per_field = summary(final, adapter.fields)
     print(f"test {len(test_ids)} whole trajectories | {means} | {hours(time.time() - t0)}\n     | {per_field}")
+    if rank != 0:
+        return
     save_panel(example, adapter.fields, run_dir / "panel.png")
     save_curves(steps, history, drift_per_block(vaes, w0) if w0 else {}, adapter.fields, run_dir / "curves.png")
     save_weights(run_dir, adapter, vaes, cfg.weights_dir)

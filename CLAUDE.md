@@ -5,7 +5,7 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 
 ## Ownership and branches
 
-- Lars's parts: `windinet/{field_adapter,wan,eulermq,experiment}`, `scripts/wan`, `configs/wan`, `docs/field_adapter`,
+- Lars's parts: `windinet/{field_adapter,wan,eulermq,experiment}`, `scripts/wan`, `configs/wan`, `docs/field_adapter`, `docs/wan`,
   `docs/references`, `results/{field_adapter,wan}`, `tests`, `jobs/lc`, `jobs/lumi/lc`, `jobs/jupiter/lc`, this file.
 - Layout of Lars's code: `field_adapter` is the field-to-RGB map only; `wan` the model wrappers and the per-stage
   config schema (`vae_stage.py`); `eulermq` data access and splits; `experiment` run bookkeeping

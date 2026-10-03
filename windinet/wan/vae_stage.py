@@ -37,7 +37,6 @@ class AdapterConfig(_Base):
         default=[["density", "pressure"], ["momentum_x", "momentum_y"]],
         description="field names per colour image, at most three each; one VAE pass per group; other fields dropped",
     )
-    load: str | None = Field(default=None, description="state_dict (.pt) of an earlier run")
 
 
 class LossConfig(_Base):
@@ -58,9 +57,6 @@ class TrainConfig(_Base):
     vae_lr: float = Field(default=5e-5, description="peak lr of the VAE parameters")
     vae_per_group: bool = Field(
         default=False, description="one VAE (and so one fine-tuned decoder) per image group instead of one shared"
-    )
-    vae_load: str | None = Field(
-        default=None, description="vae.pt of an earlier fine-tune run: its VAE weights as the starting point"
     )
     warmup_steps: int = Field(
         default=0,
@@ -85,6 +81,10 @@ class VaeStageConfig(_Base):
     train: TrainConfig = TrainConfig()
     ref_stats: str | None = Field(
         default=None, description="natural-video latent statistics from ref_latents.py; enables the Fréchet metric"
+    )
+    load: str | None = Field(
+        default=None,
+        description="run folder to continue from: its adapter.pt and, if present, vae.pt or one vae_<group>.pt per VAE",
     )
     results_dir: str = Field(default="results/wan/vae", description="one folder per run is created here")
     weights_dir: str | None = Field(

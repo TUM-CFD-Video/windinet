@@ -6,6 +6,8 @@ from pathlib import Path
 
 import torch
 
+from windinet.experiment.runs import group_tag
+
 
 def save_curves(steps: list[dict], history: list[dict], blocks: dict[str, float], fields: list[str], path: Path):
     """Train loss per update, validation VRMSE per field, relative weight change per group, drift per block."""
@@ -35,7 +37,8 @@ def save_curves(steps: list[dict], history: list[dict], blocks: dict[str, float]
             [h["step"] for h in history], [h["vae_drift"] for h in history], "k--", marker="o", label="vae: drift"
         )
     ax[1, 0].set(title="relative weight change", xlabel="step")
-    ax[1, 0].legend(fontsize=8)
+    if ax[1, 0].lines:  # empty for an eval-only run
+        ax[1, 0].legend(fontsize=8)
     ax[1, 1].barh(list(blocks), list(blocks.values()))
     ax[1, 1].set(title="drift from start weights per block" if blocks else "VAE frozen")
     ax[1, 1].tick_params(labelsize=7)
@@ -67,7 +70,7 @@ def save_panel(example: tuple, fields: list[str], path: Path) -> None:
             plt.colorbar(im, ax=axes[i, j], fraction=0.046)
     for g, rgb in enumerate(rgbs):
         axes[g, 3].imshow((rgb.permute(1, 2, 0) + 1) / 2)
-        axes[g, 3].set_title(f"adapter RGB {'ABC'[g]}", fontsize=9)
+        axes[g, 3].set_title(f"adapter RGB {group_tag(g)}", fontsize=9)
     for ax in axes.flat:
         ax.axis("off")
     fig.tight_layout()

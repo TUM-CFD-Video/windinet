@@ -17,7 +17,6 @@ adapter:
     - pressure
   - - momentum_x
     - momentum_y
-  load: results/field_adapter/20_wan_roundtrip/wan_ft_decoder_noadapter/adapter.pt
 loss:
   rmse: 1.0
   h1: 1.0
@@ -27,10 +26,10 @@ train:
   lr: 0.0
   vae_parts: all
   vae_lr: 1.0e-05
-  vae_load: null
   warmup_steps: 3
   lr_floor: 0.02
   max_grad_norm: 5.0
   eval_every: 10
   seed: 0
 ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt
+load: results/field_adapter/20_wan_roundtrip/wan_ft_decoder_noadapter

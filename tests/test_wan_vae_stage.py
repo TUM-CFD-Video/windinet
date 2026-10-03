@@ -51,3 +51,14 @@ def test_val_split_is_the_ltx_baselines_rule():
     train, val = val_split(ids, n_val=5, seed=42)
     perm = torch.randperm(20, generator=torch.Generator().manual_seed(42)).tolist()
     assert val == [ids[i] for i in perm[15:]] and len(train) == 15 and not set(train) & set(val)
+
+
+def test_channel_moments_match_channel_stats():
+    from windinet.experiment.latent_stats import ChannelMoments, channel_stats
+
+    x = torch.randn(6, 5, 3, 4)
+    moments = ChannelMoments(5)
+    for part in x.split(2):
+        moments.add(part)
+    for k, v in channel_stats(x).items():
+        torch.testing.assert_close(moments.stats()[k], v)

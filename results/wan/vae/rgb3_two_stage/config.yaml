@@ -1,0 +1,44 @@
+# rgb3_two_stage: rho, m_x, m_y in one image; decoder (1e-6) behind the fixed rgb3_adapter
+# Re-run: python scripts/wan/train_vae.py results/wan/vae/rgb3_two_stage/config.yaml --name <new name>
+name: rgb3_two_stage
+description: rho, m_x, m_y in one image; decoder (1e-6) behind the fixed rgb3_adapter
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: 100
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 5
+  clip: true
+  num_workers: 2
+adapter:
+  groups:
+  - - density
+    - momentum_x
+    - momentum_y
+loss:
+  rmse: 1.0
+  h1: 1.0
+train:
+  steps: 1000
+  batch_sims: 6
+  micro_batch: 6
+  lr: 0.0
+  vae_parts: decoder
+  vae_lr: 1.0e-06
+  vae_per_group: false
+  warmup_steps: 100
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 100
+  log_every: 10
+  seed: 0
+ref_stats: results/field_adapter/30_reference/wan_ref_stats.pt
+load: results/wan/vae/rgb3_adapter
+results_dir: results/wan/vae
+weights_dir: /scratch/project_465003416/lc_work/weights

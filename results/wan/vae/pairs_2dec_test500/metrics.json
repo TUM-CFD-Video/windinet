@@ -1,0 +1,112 @@
+{
+ "config": {
+  "name": "pairs_2dec_test500",
+  "description": "pairs_2dec evaluated on all 500 test trajectories (LTX protocol)",
+  "vae": "wan",
+  "data": {
+   "h5_path": "euler_mq_dataset/256x256_ds/train.h5",
+   "test_h5": "euler_mq_dataset/256x256_ds/test.h5",
+   "stats_json": "results/field_adapter/00_stats/eulermq_256_test_stats.json",
+   "val_sims": 500,
+   "split_seed": 42,
+   "eval_sims": 100,
+   "test_sims": null,
+   "test_every": 5,
+   "test_gamma": null,
+   "frames_per_sim": 5,
+   "clip": true,
+   "num_workers": 2
+  },
+  "adapter": {
+   "groups": [
+    [
+     "density",
+     "pressure"
+    ],
+    [
+     "momentum_x",
+     "momentum_y"
+    ]
+   ]
+  },
+  "loss": {
+   "rmse": 1.0,
+   "h1": 1.0
+  },
+  "train": {
+   "steps": 0,
+   "batch_sims": 6,
+   "micro_batch": 6,
+   "lr": 0.003,
+   "vae_parts": "none",
+   "vae_lr": 1e-06,
+   "vae_per_group": true,
+   "warmup_steps": 100,
+   "lr_floor": 0.02,
+   "max_grad_norm": 5.0,
+   "eval_every": 100,
+   "log_every": 10,
+   "seed": 0
+  },
+  "ref_stats": "results/field_adapter/30_reference/wan_ref_stats.pt",
+  "load": "results/wan/vae/pairs_2dec",
+  "results_dir": "results/wan/vae",
+  "weights_dir": "/scratch/project_465003416/lc_work/weights"
+ },
+ "provenance": {
+  "commit": "1722454",
+  "dirty": true,
+  "command": "python scripts/wan/train_vae.py configs/wan/vae.yaml --set train.steps=0 --set train.vae_parts=none --set data.test_sims=null --name pairs_2dec_test500 --desc 'pairs_2dec evaluated on all 500 test trajectories (LTX protocol)' --set load=results/wan/vae/pairs_2dec --set train.vae_per_group=true",
+  "python": "3.12.14",
+  "torch": "2.7.1+rocm6.2.4",
+  "diffusers": "0.40.0",
+  "gpu": "8 x AMD Instinct MI250X",
+  "started": "2026-10-03 02:32",
+  "seconds": 1108
+ },
+ "init": {
+  "vrmse_density": 0.0394342765212059,
+  "vrmse_momentum_x": 0.06634248793125153,
+  "vrmse_momentum_y": 0.08188147842884064,
+  "vrmse_pressure": 0.09715692698955536,
+  "vrmse_mean": 0.0712037906050682,
+  "vrmse_clipped_density": 0.0385424979031086,
+  "vrmse_clipped_momentum_x": 0.06069238483905792,
+  "vrmse_clipped_momentum_y": 0.07222001254558563,
+  "vrmse_clipped_pressure": 0.058899227529764175,
+  "vrmse_clipped_mean": 0.05758852884173393,
+  "latentA_frechet": 8.99288558959961,
+  "latentB_frechet": 11.379491806030273
+ },
+ "val": {
+  "vrmse_density": 0.0394342765212059,
+  "vrmse_momentum_x": 0.06634248793125153,
+  "vrmse_momentum_y": 0.08188147842884064,
+  "vrmse_pressure": 0.09715692698955536,
+  "vrmse_mean": 0.0712037906050682,
+  "vrmse_clipped_density": 0.0385424979031086,
+  "vrmse_clipped_momentum_x": 0.06069238483905792,
+  "vrmse_clipped_momentum_y": 0.07222001254558563,
+  "vrmse_clipped_pressure": 0.058899227529764175,
+  "vrmse_clipped_mean": 0.05758852884173393,
+  "latentA_frechet": 8.99288558959961,
+  "latentB_frechet": 11.379491806030273
+ },
+ "final": {
+  "vrmse_density": 0.04744485020637512,
+  "vrmse_momentum_x": 0.08421803265810013,
+  "vrmse_momentum_y": 0.09672573208808899,
+  "vrmse_pressure": 0.057944998145103455,
+  "vrmse_mean": 0.07158340513706207,
+  "vrmse_clipped_density": 0.04494006559252739,
+  "vrmse_clipped_momentum_x": 0.06853736937046051,
+  "vrmse_clipped_momentum_y": 0.0746493712067604,
+  "vrmse_clipped_pressure": 0.05320783331990242,
+  "vrmse_clipped_mean": 0.06033366173505783,
+  "latentA_frechet": 15.585664749145508,
+  "latentB_frechet": 21.285558700561523
+ },
+ "history": [],
+ "steps": [],
+ "n_params": 14
+}
