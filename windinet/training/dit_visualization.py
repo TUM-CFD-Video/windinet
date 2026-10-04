@@ -61,7 +61,11 @@ from windinet.training.shockwave_data import (
     normalize_fields,
     pad_frames_8n1,
 )
-from windinet.training.vae_visualization import denormalize_fields, save_reconstruction_panels
+from windinet.training.vae_visualization import (
+    denormalize_fields,
+    save_reconstruction_panels,
+    save_reconstruction_video,
+)
 from windinet.utils import logger
 
 
@@ -188,6 +192,8 @@ class DitVisualizer:
         device: torch.device,
         dtype: torch.dtype = torch.bfloat16,
         default_temb: float = 0.0,
+        save_video: bool = False,
+        video_fps: int = 8,
     ) -> None:
         self._preprocessed_data_root = Path(preprocessed_data_root)
         self._model_source = model_source
@@ -201,6 +207,8 @@ class DitVisualizer:
         self._device = device
         self._dtype = dtype
         self._default_temb = default_temb
+        self._save_video = save_video
+        self._video_fps = video_fps
 
         self._samples: list[dict] | None = None  # lazy: fixed raw ShockWaveDataset rows
         self._stats: dict | None = None
@@ -401,6 +409,16 @@ class DitVisualizer:
                 output_dir=self._output_dir,
                 dpi=self._dpi,
             )
+            if self._save_video:
+                save_reconstruction_video(
+                    prediction=pred_physical[0],
+                    target=gt[0],
+                    sample_id=sample["id"],
+                    label=f"step_{step:06d}",
+                    channel_names=CHANNEL_NAMES,
+                    output_dir=self._output_dir,
+                    fps=self._video_fps,
+                )
 
             if self._device.type == "cuda":
                 torch.cuda.empty_cache()
@@ -417,7 +435,8 @@ class DitVisualizer:
 
         logger.info(
             f"Saved DiT visualization panels for step {step} "
-            f"({len(self._samples)} samples x {len(self._frame_numbers)} frames); "
+            f"({len(self._samples)} samples x {len(self._frame_numbers)} frames"
+            f"{', + videos' if self._save_video else ''}); "
             f"latent_vrmse={latent_vrmse_mean:.5f} pixel_vrmse={pixel_vrmse_mean:.5f} "
             f"-> {metrics_path}, {curve_path}"
         )

@@ -6,6 +6,7 @@
 # 32, seed=42), so its test VRMSE is directly comparable to THESIS_RESULTS.md
 # (VAE + DiT ch-mean 0.4984). Differences:
 #   optimization.gradient_accumulation_steps: 4 -> 8 (4 GPUs instead of 8 tiles)
+#   visualization on at the final step 8000 (PNG panels + MP4s); off on sng_pvc
 #   output_dir on jupiter scratch, wandb tags.
 #
 # Latents must be encoded with EVAL_SIMS=500 (preprocess_dit_data.sbatch's
@@ -64,12 +65,14 @@ flow_matching:
   timestep_sampling_params: {}
 
 visualization:
-  enabled: false  # disabled, same reasoning as every sng_pvc DiT config since
-  # 2026-09-07 (job 534853/534884: UR_RESULT_ERROR_OUT_OF_RESOURCES on ranks
-  # 2-7 one step after the first visualization trigger). Re-enable once
-  # root-caused; backfill PNG panels/VRMSE curve post-hoc against saved
-  # checkpoints in the meantime.
-  interval: 2000
+  # Off on sng_pvc (XPU OUT_OF_RESOURCES after the first pass, jobs
+  # 534853/534884); on here (GH200). Rank 0 only, RNG saved/restored, so it
+  # does not change training.
+  enabled: true
+  steps: [8000]        # end of training only; replaces interval
+  num_samples: 3       # fixed, evenly spaced over the val split
+  frame_numbers: [25, 50, 75, 100]
+  save_video: true     # + GT/Prediction/Residual MP4 over all frames per sample
 
 wandb:
   enabled: false

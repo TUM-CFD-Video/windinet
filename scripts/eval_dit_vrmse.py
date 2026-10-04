@@ -375,8 +375,9 @@ def main():
     per_sample = []
     sum_overall = {"vae_only": 0.0, "vae_dit": 0.0}
     sum_channel = {"vae_only": [0.0] * 4, "vae_dit": [0.0] * 4}
-    sum_lat_vrmse, sum_lat_rmse = 0.0, 0.0
+    sum_lat_vrmse, sum_lat_rmse, sum_lat_mse = 0.0, 0.0, 0.0
     sum_lat_channel = None  # lazily sized to the latent's own channel count on first sample
+    sum_lat_channel_mse = None
 
     for i, sid in enumerate(val_ids):
         idx = dataset.ids.index(sid)
@@ -441,10 +442,15 @@ def main():
 
         lat_vrmse = float(vrms_loss(pred_lat, cmp_gt_lat).item())
         lat_rmse = float(rmse_loss(pred_lat, cmp_gt_lat).item())
+        lat_sq_err = (pred_lat - cmp_gt_lat) ** 2
+        lat_mse = float(lat_sq_err.mean().item())
         lat_channel = vrms_per_channel(pred_lat, cmp_gt_lat)
+        lat_channel_mse = lat_sq_err.mean(dim=(0, 2, 3, 4))
         if sum_lat_channel is None:
             sum_lat_channel = torch.zeros(lat_channel.shape[0])
+            sum_lat_channel_mse = torch.zeros(lat_channel_mse.shape[0])
         sum_lat_channel += lat_channel.cpu()
+        sum_lat_channel_mse += lat_channel_mse.cpu()
 
         # Decoded pixel space -- same predicted latent, one extra decode
         # (zero extra transformer forward passes), directly comparable to
@@ -465,7 +471,7 @@ def main():
             "vae_only_vrmse": vo_overall, "vae_dit_vrmse": vd_overall,
             "vae_only_per_channel": dict(zip(CHANNEL_NAMES, vo_channel)),
             "vae_dit_per_channel": dict(zip(CHANNEL_NAMES, vd_channel)),
-            "latent_vrmse": lat_vrmse, "latent_rmse": lat_rmse,
+            "latent_vrmse": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
         })
         sum_overall["vae_only"] += vo_overall
         sum_overall["vae_dit"] += vd_overall
@@ -474,6 +480,7 @@ def main():
             sum_channel["vae_dit"][c] += vd_channel[c]
         sum_lat_vrmse += lat_vrmse
         sum_lat_rmse += lat_rmse
+        sum_lat_mse += lat_mse
 
         print(f"[{i+1}/{len(val_ids)}] {sid}: vae_only={vo_overall:.5f}  vae+dit={vd_overall:.5f}  "
               f"latent_vrmse={lat_vrmse:.5f}")
@@ -552,7 +559,12 @@ def main():
         "vae_dit_vrmse_chmean": sum(sum_channel["vae_dit"]) / (4 * n),
         "latent_vrmse_mean": sum_lat_vrmse / n,
         "latent_rmse_mean": sum_lat_rmse / n,
+        # Raw (unnormalized) latent MSE, per sim then averaged: the quantity the
+        # DiT's flow-matching objective is closest to. Like latent_vrmse it is
+        # in this VAE's own latent space -- compare DiTs on the same VAE only.
+        "latent_mse_mean": sum_lat_mse / n,
         "latent_vrmse_per_channel": mean_lat_channel,
+        "latent_mse_per_channel": (sum_lat_channel_mse / n).tolist(),
         "worst_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[:5]],
         "best_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[-5:]],
         "per_sample": per_sample,
@@ -575,6 +587,7 @@ def main():
     print(f"\nDiT rollout vs VAE-encoder ground truth, LATENT space (isolated from VAE decode):")
     print(f"  latent_vrmse : {summary['latent_vrmse_mean']:.5f}")
     print(f"  latent_rmse  : {summary['latent_rmse_mean']:.5f}")
+    print(f"  latent_mse   : {summary['latent_mse_mean']:.5f}")
     print(f"  worst 5 latent channels: {summary['worst_5_latent_channels']}")
     print(f"\nSaved: {args.out_dir / 'vrmse_summary.json'}")
     if vis_ids:

@@ -1,4 +1,4 @@
-"""PNG reconstruction panels and epoch-level loss curves for VAE training."""
+"""PNG reconstruction panels, MP4 comparison videos and epoch-level loss curves."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/windinet-matplotlib")
+import imageio.v2 as imageio
 import matplotlib
 
 matplotlib.use("Agg")
@@ -113,6 +114,94 @@ def save_reconstruction_panels(
         saved.append(path)
 
     return saved
+
+
+def write_comparison_video(
+    *,
+    prediction: np.ndarray,
+    target: np.ndarray,
+    channel_names: list[str],
+    out_path: str | Path,
+    title: str,
+    fps: int = 8,
+    dpi: int = 100,
+) -> Path:
+    """Write one MP4 of [C,F,H,W] fields: a row per channel, GT / Prediction /
+    Residual (Pred-GT) columns, one video frame per simulation frame.
+
+    Color limits are fixed per channel over the whole sequence, so brightness
+    changes show the field evolving, not a rescaled axis.
+    """
+    num_frames = min(prediction.shape[1], target.shape[1])
+    prediction, target = prediction[:, :num_frames], target[:, :num_frames]
+    residual = prediction - target
+
+    num_channels = len(channel_names)
+    fig, axes = plt.subplots(num_channels, 3, figsize=(12, 3.25 * num_channels), dpi=dpi, constrained_layout=True)
+    images = []
+    for channel, name in enumerate(channel_names):
+        value_min = float(min(target[channel].min(), prediction[channel].min()))
+        value_max = float(max(target[channel].max(), prediction[channel].max()))
+        residual_limit = max(float(np.abs(residual[channel]).max()), 1e-12)
+        row = []
+        for column, column_title in enumerate(("GT", "Prediction", "Residual (Pred-GT)")):
+            if column == 2:
+                cmap, vmin, vmax = "coolwarm", -residual_limit, residual_limit
+            else:
+                cmap, vmin, vmax = "viridis", value_min, value_max
+            image = axes[channel, column].imshow(target[channel, 0], cmap=cmap, vmin=vmin, vmax=vmax)
+            axes[channel, column].set_xticks([])
+            axes[channel, column].set_yticks([])
+            if channel == 0:
+                axes[channel, column].set_title(column_title)
+            fig.colorbar(image, ax=axes[channel, column], fraction=0.046, pad=0.04)
+            row.append(image)
+        axes[channel, 0].set_ylabel(name)
+        images.append(row)
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with imageio.get_writer(out_path, fps=fps) as writer:
+        for t in range(num_frames):
+            for channel in range(num_channels):
+                images[channel][0].set_data(target[channel, t])
+                images[channel][1].set_data(prediction[channel, t])
+                images[channel][2].set_data(residual[channel, t])
+            frame_rmse = float(np.sqrt(np.mean(residual[:, t] ** 2)))
+            fig.suptitle(f"{title}  frame={t + 1}/{num_frames}  RMSE={frame_rmse:.4e}", fontsize=13)
+            fig.canvas.draw()
+            frame = np.asarray(fig.canvas.buffer_rgba())[..., :3]
+            # Pad (white) to a multiple of 16 px so ffmpeg doesn't rescale the frame.
+            pad_h, pad_w = -frame.shape[0] % 16, -frame.shape[1] % 16
+            frame = np.pad(frame, ((0, pad_h), (0, pad_w), (0, 0)), constant_values=255)
+            writer.append_data(frame)
+    plt.close(fig)
+    return out_path
+
+
+def save_reconstruction_video(
+    *,
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    sample_id: str,
+    label: str,
+    channel_names: list[str],
+    output_dir: str | Path,
+    fps: int = 8,
+    dpi: int = 100,
+) -> Path:
+    """Save a four-channel GT/prediction/residual MP4 of the whole sequence next
+    to save_reconstruction_panels' PNGs: visualizations/<label>/<sample>/video.mp4."""
+    safe_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", sample_id)
+    return write_comparison_video(
+        prediction=prediction.detach().float().cpu().numpy(),
+        target=target.detach().float().cpu().numpy(),
+        channel_names=channel_names,
+        out_path=Path(output_dir) / "visualizations" / label / safe_id / "video.mp4",
+        title=f"{label}  sample={sample_id}",
+        fps=fps,
+        dpi=dpi,
+    )
 
 
 def save_metrics_history(rows: list[dict[str, float]], output_dir: str | Path) -> tuple[Path, Path]:

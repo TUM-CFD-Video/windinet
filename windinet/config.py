@@ -215,8 +215,20 @@ class DitVisualizationConfig(ConfigBaseModel):
         gt=0,
         description="Optimizer steps between visualization passes. Defaults to "
         "checkpoints.interval. A final pass always runs at the end of training "
-        "regardless of this value.",
+        "regardless of this value. Ignored when `steps` is set.",
     )
+    steps: list[int] | None = Field(
+        default=None,
+        description="Exact optimizer steps to visualize at (e.g. [4000, 8000]). When set, "
+        "replaces `interval` and the forced end-of-training pass: only these steps "
+        "are rendered.",
+    )
+    save_video: bool = Field(
+        default=False,
+        description="Also write a four-channel GT/Prediction/Residual MP4 over the whole "
+        "sequence per sample (visualizations/step_<n>/<sample>/video.mp4).",
+    )
+    video_fps: int = Field(default=8, ge=1)
     num_samples: int = Field(
         default=3,
         ge=1,
@@ -232,6 +244,13 @@ class DitVisualizationConfig(ConfigBaseModel):
         "(independent of training itself -- matches scripts/inference_shockwave.py's default).",
     )
     dpi: int = Field(default=150, ge=72)
+
+    @field_validator("steps")
+    @classmethod
+    def validate_steps(cls, values: list[int] | None) -> list[int] | None:
+        if values is not None and any(value < 1 for value in values):
+            raise ValueError("visualization steps must be >= 1")
+        return values
 
 
 class CheckpointsConfig(ConfigBaseModel):
@@ -681,6 +700,21 @@ class VaeVisualizationConfig(ConfigBaseModel):
 
     enabled: bool = Field(default=True)
     interval_epochs: int = Field(default=1, ge=1)
+    epochs: list[int] | None = Field(
+        default=None,
+        description=(
+            "Exact epochs to visualize at (e.g. [10, 20]). When set, replaces "
+            "interval_epochs and the forced last-epoch pass: only these epochs are rendered."
+        ),
+    )
+    save_video: bool = Field(
+        default=False,
+        description=(
+            "Also write a four-channel GT/Prediction/Residual MP4 over the whole sequence "
+            "per sample (visualizations/epoch_<n>/<sample>/video.mp4)."
+        ),
+    )
+    video_fps: int = Field(default=8, ge=1)
     num_samples: int = Field(
         default=3,
         ge=1,
@@ -700,6 +734,13 @@ class VaeVisualizationConfig(ConfigBaseModel):
     def validate_frame_numbers(cls, values: list[int]) -> list[int]:
         if any(value < 1 for value in values):
             raise ValueError("visualization frame_numbers are one-based and must be >= 1")
+        return values
+
+    @field_validator("epochs")
+    @classmethod
+    def validate_epochs(cls, values: list[int] | None) -> list[int] | None:
+        if values is not None and any(value < 1 for value in values):
+            raise ValueError("visualization epochs must be >= 1")
         return values
 
 

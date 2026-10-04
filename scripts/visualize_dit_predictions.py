@@ -18,18 +18,12 @@ Usage:
 """
 
 import argparse
-import os
 from pathlib import Path
 
-os.environ.setdefault("MPLCONFIGDIR", "/tmp/windinet-matplotlib")
-import imageio.v2 as imageio
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 
 from windinet.training.shockwave_data import CHANNEL_NAMES, ShockWaveDataset
+from windinet.training.vae_visualization import write_comparison_video
 
 
 def load_ground_truth(dataset: ShockWaveDataset, sample_id: str) -> dict[str, np.ndarray]:
@@ -49,55 +43,16 @@ def render_video(
     dpi: int,
 ) -> None:
     """One MP4 per sample: 4 rows (channels) x 3 columns (GT/Pred/Residual)."""
-    num_frames = min(pred[CHANNEL_NAMES[0]].shape[0], gt[CHANNEL_NAMES[0]].shape[0])
-
-    # Fixed color limits across all frames (per channel) so the colorbar is
-    # stable and brightness changes reflect the field, not a rescaled axis.
-    limits = {}
-    for name in CHANNEL_NAMES:
-        g, p = gt[name][:num_frames], pred[name][:num_frames]
-        limits[name] = (
-            float(min(g.min(), p.min())),
-            float(max(g.max(), p.max())),
-            float(max(np.abs(p - g).max(), 1e-12)),
-        )
-
-    fig, axes = plt.subplots(4, 3, figsize=(12, 13), constrained_layout=True)
-    images = [[None, None, None] for _ in CHANNEL_NAMES]
-    for row, name in enumerate(CHANNEL_NAMES):
-        vmin, vmax, rlim = limits[name]
-        for col, title in enumerate(("GT", "Prediction", "Residual (Pred-GT)")):
-            cmap = "coolwarm" if col == 2 else "viridis"
-            vlo, vhi = (-rlim, rlim) if col == 2 else (vmin, vmax)
-            images[row][col] = axes[row, col].imshow(np.zeros_like(gt[name][0]), cmap=cmap, vmin=vlo, vmax=vhi)
-            axes[row, col].set_xticks([])
-            axes[row, col].set_yticks([])
-            if row == 0:
-                axes[row, col].set_title(title)
-            fig.colorbar(images[row][col], ax=axes[row, col], fraction=0.046, pad=0.04)
-        axes[row, 0].set_ylabel(name)
-
-    with imageio.get_writer(out_path, fps=fps) as writer:
-        for t in range(num_frames):
-            frame_rmse = 0.0
-            for row, name in enumerate(CHANNEL_NAMES):
-                g, p = gt[name][t], pred[name][t]
-                residual = p - g
-                frame_rmse += float(np.sqrt(np.mean(residual**2)))
-                images[row][0].set_data(g)
-                images[row][1].set_data(p)
-                images[row][2].set_data(residual)
-            fig.suptitle(
-                f"{sample_id}  gamma={gamma:.4f}  frame={t + 1}/{num_frames}  "
-                f"mean channel RMSE={frame_rmse / len(CHANNEL_NAMES):.4e}",
-                fontsize=13,
-            )
-            fig.canvas.draw()
-            frame_rgba = np.asarray(fig.canvas.buffer_rgba())
-            writer.append_data(frame_rgba[..., :3])
-
-    plt.close(fig)
-    print(f"  {sample_id}: {num_frames} frames -> {out_path}")
+    write_comparison_video(
+        prediction=np.stack([pred[name] for name in CHANNEL_NAMES]),
+        target=np.stack([gt[name] for name in CHANNEL_NAMES]),
+        channel_names=CHANNEL_NAMES,
+        out_path=out_path,
+        title=f"{sample_id}  gamma={gamma:.4f}",
+        fps=fps,
+        dpi=dpi,
+    )
+    print(f"  {sample_id} -> {out_path}")
 
 
 def main():

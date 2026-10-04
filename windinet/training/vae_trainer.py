@@ -73,6 +73,7 @@ from windinet.training.vae_visualization import (
     denormalize_fields,
     save_metrics_history,
     save_reconstruction_panels,
+    save_reconstruction_video,
 )
 from windinet.utils import logger
 
@@ -1079,7 +1080,11 @@ class VaeTrainer:
                     vis_t0 = time.time()
                     vis_cfg = cfg.visualization
                     is_last_epoch = epoch == cfg.optimization.epochs
-                    if vis_cfg.enabled and (epoch % vis_cfg.interval_epochs == 0 or is_last_epoch):
+                    if vis_cfg.epochs is not None:
+                        vis_due = epoch in vis_cfg.epochs
+                    else:
+                        vis_due = epoch % vis_cfg.interval_epochs == 0 or is_last_epoch
+                    if vis_cfg.enabled and vis_due:
                         self._save_visualization(vis_loader, device, epoch)
                     vis_elapsed = time.time() - vis_t0
 
@@ -1240,6 +1245,7 @@ class VaeTrainer:
         vis_cfg = cfg.visualization
         self._set_trainable_modules_mode(False)
         saved_count = 0
+        video_count = 0
         for sample_index, batch in enumerate(vis_loader):
             orig_F = batch["density"].shape[1]
             x = build_shockwave_video(
@@ -1283,8 +1289,21 @@ class VaeTrainer:
                 dpi=vis_cfg.dpi,
             )
             saved_count += len(paths)
+            if vis_cfg.save_video:
+                save_reconstruction_video(
+                    prediction=prediction[0],
+                    target=target[0],
+                    sample_id=sample_id,
+                    label=f"epoch_{epoch:04d}",
+                    channel_names=cfg.adapter.channels,
+                    output_dir=cfg.output_dir,
+                    fps=vis_cfg.video_fps,
+                )
+                video_count += 1
         self._set_trainable_modules_mode(True)
-        logger.info(f"Saved {saved_count} validation reconstruction PNGs for epoch {epoch}")
+        logger.info(
+            f"Saved {saved_count} validation reconstruction PNGs and {video_count} videos for epoch {epoch}"
+        )
 
     # ------------------------------------------------------------------
     # Checkpointing (safetensors, compatible with load_adapted_vae)

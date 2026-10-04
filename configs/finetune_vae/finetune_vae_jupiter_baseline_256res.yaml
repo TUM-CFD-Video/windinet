@@ -3,7 +3,8 @@
 # Identical to the thesis baseline (finetune_vae_ch6_loss_rmse_h1_256res.yaml,
 # Ch6 "Full FT": whole encoder + decoder, 1.0*RMSE + 50*H1, AdamW LR 5e-5,
 # 200 warm-up steps, cosine to 1e-6, 20 epochs, effective batch 32, seed 42);
-# only output_dir and the wandb tags differ. A separate run name keeps it from
+# only output_dir, the wandb tags and the visualization schedule (PNGs + MP4s at
+# epochs 10 and 20 instead of PNGs every 4 epochs) differ. A separate run name keeps it from
 # colliding with the 2026-09-26 jupiter run of the thesis config (job 2028911),
 # whose output_dir already holds .train_complete.
 #
@@ -67,10 +68,11 @@ loss:
 
 visualization:
   enabled: true
-  interval_epochs: 4
-  num_samples: 3
+  epochs: [10, 20]   # mid-training and final; replaces interval_epochs
+  num_samples: 3     # gamma min / median / max of the val split
   frame_numbers: [25, 50, 75, 100]
   dpi: 150
+  save_video: true   # + GT/Prediction/Residual MP4 over all frames per sample
 
 acceleration:
   mixed_precision_mode: "bf16"

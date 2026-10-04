@@ -160,9 +160,18 @@ class LtxvTrainer:
     @property
     def _visualization_interval(self) -> int | None:
         """Optimizer steps between visualization passes, or None if disabled."""
-        if not self._config.visualization.enabled:
+        if not self._config.visualization.enabled or self._config.visualization.steps is not None:
             return None
         return self._config.visualization.interval or self._config.checkpoints.interval
+
+    def _visualization_due(self, step: int) -> bool:
+        """Whether a periodic visualization pass is due at optimizer step `step`."""
+        vis_cfg = self._config.visualization
+        if not vis_cfg.enabled or step <= 0:
+            return False
+        if vis_cfg.steps is not None:
+            return step in vis_cfg.steps
+        return step % self._visualization_interval == 0
 
     def _init_visualizer(self) -> None:
         """Build the (lazily-loading) DitVisualizer if visualization is enabled.
@@ -181,6 +190,8 @@ class LtxvTrainer:
             frame_numbers=vis_cfg.frame_numbers,
             num_inference_steps=vis_cfg.num_inference_steps,
             dpi=vis_cfg.dpi,
+            save_video=vis_cfg.save_video,
+            video_fps=vis_cfg.video_fps,
             output_dir=self._config.output_dir,
             seed=self._config.seed,
             device=self._accelerator.device,
@@ -400,7 +411,6 @@ class LtxvTrainer:
                 "No validation.data_root configured: this run will only report training loss "
                 "and cannot tell you whether the model generalizes."
             )
-        vis_interval = self._visualization_interval
 
         self._accelerator.wait_for_everyone()
         Path(cfg.output_dir).mkdir(parents=True, exist_ok=True)
@@ -527,10 +537,8 @@ class LtxvTrainer:
                         self._save_checkpoint()
 
                     if (
-                        vis_interval
-                        and is_optimization_step
-                        and self._global_step > 0
-                        and self._global_step % vis_interval == 0
+                        is_optimization_step
+                        and self._visualization_due(self._global_step)
                         and IS_MAIN_PROCESS
                     ):
                         self._run_visualization(self._global_step)
@@ -666,9 +674,12 @@ class LtxvTrainer:
 
             # Skip if the periodic pass above already rendered this exact step
             # (e.g. optimization.steps an exact multiple of vis_interval) --
-            # a real generation pass, not free to duplicate.
-            if self._visualizer is not None and not (
-                vis_interval and self._global_step % vis_interval == 0
+            # a real generation pass, not free to duplicate. An explicit
+            # visualization.steps list means "only these steps": no final pass.
+            if (
+                self._visualizer is not None
+                and cfg.visualization.steps is None
+                and not self._visualization_due(self._global_step)
             ):
                 self._run_visualization(self._global_step)
 
