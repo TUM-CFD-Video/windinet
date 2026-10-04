@@ -637,12 +637,15 @@ class LtxvTrainer:
         end_mem = get_gpu_memory_gb(device)
         peak_mem = max(start_mem, end_mem, peak_mem_during_training)
 
+        # Steps run by THIS job: a resumed job starts at _resume_global_step,
+        # so dividing the full optimization.steps by its time overstates speed.
+        steps_this_job = cfg.optimization.steps - self._resume_global_step
         if cfg.acceleration.compile_with_inductor:
             training_time = train_end_time - actual_training_start
-            steps_per_second = (cfg.optimization.steps - COMPILE_WARMUP_STEPS) / training_time
+            steps_per_second = (steps_this_job - COMPILE_WARMUP_STEPS) / training_time
         else:
             training_time = train_end_time - train_start_time
-            steps_per_second = cfg.optimization.steps / training_time
+            steps_per_second = steps_this_job / training_time
 
         effective_batch_size = (
             cfg.optimization.batch_size
