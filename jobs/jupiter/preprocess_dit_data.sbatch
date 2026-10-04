@@ -26,6 +26,11 @@
 # old 675 default), so DiT val is on the same sims as the VAE's val_vrmse.
 # EVAL_SIMS=0 disables the split; MAX_SAMPLES=<n> gives a smoke-test encode.
 #
+# NUM_SIM_FRAMES: frames kept per sim (e.g. 97 = 8*12+1, no padding). Defaults
+# to the VAE run's own data.num_sim_frames, read from the training_config.yaml
+# next to its checkpoints/, so the latents always match what the VAE was
+# trained on; set it explicitly only to override that.
+#
 # Submit from the repo root, windinet env active:
 #   VAE_CHECKPOINT=/e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/<run>/checkpoints/vae_shockwave_best.safetensors \
 #     sbatch jobs/jupiter/preprocess_dit_data.sbatch [OUTPUT_NAME] [DATA_ROOT]
@@ -63,6 +68,11 @@ OUTPUT_NAME=${1:-${DEFAULT_OUTPUT_NAME}}
 DEFAULT_DATA_ROOT=$("${PYTHON}" -c "from windinet.cluster_config import CLUSTER_DEFAULTS; print(CLUSTER_DEFAULTS['jupiter']['data_root'])")
 DATA_ROOT=${2:-${DEFAULT_DATA_ROOT}}
 MAX_SAMPLES=${MAX_SAMPLES:-0}
+VAE_TRAINING_CONFIG="$(dirname "$(dirname "${VAE_CHECKPOINT}")")/training_config.yaml"
+if [[ -z "${NUM_SIM_FRAMES:-}" ]]; then
+    [[ -f "${VAE_TRAINING_CONFIG}" ]] || { echo "error: ${VAE_TRAINING_CONFIG} not found; set NUM_SIM_FRAMES" >&2; exit 1; }
+    NUM_SIM_FRAMES=$("${PYTHON}" -c "import sys,yaml; print(yaml.safe_load(open(sys.argv[1]))['data'].get('num_sim_frames') or '')" "${VAE_TRAINING_CONFIG}")
+fi
 EVAL_SIMS=${EVAL_SIMS:-500}
 SPLIT_SEED=${SPLIT_SEED:-42}
 OUT_DIR="/e/scratch/e-dev-2026d09-262/wh_work/dit_preprocessed/${OUTPUT_NAME}"
@@ -70,7 +80,7 @@ OUT_DIR="/e/scratch/e-dev-2026d09-262/wh_work/dit_preprocessed/${OUTPUT_NAME}"
 echo "VAE_CHECKPOINT: ${VAE_CHECKPOINT}"
 echo "DATA_ROOT: ${DATA_ROOT}"
 echo "OUTPUT_NAME: ${OUTPUT_NAME} -> ${OUT_DIR}"
-echo "EVAL_SIMS=${EVAL_SIMS} SPLIT_SEED=${SPLIT_SEED} MAX_SAMPLES=${MAX_SAMPLES}"
+echo "EVAL_SIMS=${EVAL_SIMS} SPLIT_SEED=${SPLIT_SEED} MAX_SAMPLES=${MAX_SAMPLES} NUM_SIM_FRAMES=${NUM_SIM_FRAMES:-<all>}"
 
 printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Is)" "${SLURM_JOB_ID}" "${SLURM_JOB_NAME}" \
     "${VAE_CHECKPOINT}" "${OUT_DIR}" >> logs/jupiter/INDEX.tsv
@@ -81,6 +91,7 @@ if [[ "${MAX_SAMPLES}" != "0" ]]; then
 elif [[ "${EVAL_SIMS}" != "0" ]]; then
     EXTRA_ARGS+=(--eval-sims "${EVAL_SIMS}" --split-seed "${SPLIT_SEED}")
 fi
+[[ -n "${NUM_SIM_FRAMES}" ]] && EXTRA_ARGS+=(--num-sim-frames "${NUM_SIM_FRAMES}")
 
 "${PYTHON}" scripts/preprocess_dataset.py \
     "${DATA_ROOT}" \

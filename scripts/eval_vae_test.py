@@ -139,7 +139,7 @@ def main(
     batch_size: int = typer.Option(4, help="Sims per forward pass (does not affect the metrics)"),
     output: str = typer.Option("vae_test_eval.json", help="Where to write the JSON report"),
     save_samples: int = typer.Option(3, help="Save fields of N gamma-spread test sims for figures (0 = none)"),
-    sample_frames: list[int] = typer.Option([0, 25, 50, 75, 100], help="Frames saved per sample (repeat the option)"),
+    sample_frames: list[int] = typer.Option([0, 25, 50, 75, 96], help="0-based frames saved per sample (repeat the option); 96 = last of 97"),
     metric_frames: int = typer.Option(
         None,
         help="Score only the first N frames. For comparing a 101-frame VAE against a 97-frame "

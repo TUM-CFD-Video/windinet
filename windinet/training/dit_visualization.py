@@ -237,6 +237,10 @@ class DitVisualizer:
             "channel_std": payload["channel_std"],
             "normalization_clip": payload["normalization_clip"],
         }
+        # Latents encoded from truncated sims (preprocess_dataset.py
+        # --num-sim-frames, e.g. 97): roll out and score that many frames,
+        # not the raw file's full length, same as scripts/eval_dit_vrmse.py.
+        num_sim_frames = payload.get("num_sim_frames")
 
         # Fixed, evenly-spaced picks across the held-out split, chosen once and
         # reused every call -- same "same samples every time" intent as VAE
@@ -248,7 +252,7 @@ class DitVisualizer:
         picked_ids, raw_h5 = pick_fixed_visualization_sample_ids(
             self._preprocessed_data_root, self._num_samples
         )
-        dataset = ShockWaveDataset(raw_h5)
+        dataset = ShockWaveDataset(raw_h5, num_sim_frames=num_sim_frames)
         id_to_idx = {sid: i for i, sid in enumerate(dataset.ids)}
         missing = [sid for sid in picked_ids if sid not in id_to_idx]
         if missing:
@@ -326,7 +330,7 @@ class DitVisualizer:
             H, W = sample["density"].shape[-2:]
             gt = torch.stack([sample[name] for name in CHANNEL_NAMES]).unsqueeze(0)  # [1, C, F, H, W]
             num_frames_needed = gt.shape[2]
-            num_frames_padded = ((num_frames_needed - 1) // 8 + 1) * 8 + 1  # LTX VAE needs 8k+1
+            num_frames_padded = ((num_frames_needed - 1 + 7) // 8) * 8 + 1  # LTX VAE needs 8k+1 (97 -> 97, 101 -> 105)
 
             # Full normalized ground truth -- used both as the VAE-encode input
             # (for the latent-space comparison below) and as the pixel-space

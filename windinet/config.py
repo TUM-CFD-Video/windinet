@@ -236,7 +236,7 @@ class DitVisualizationConfig(ConfigBaseModel):
         "as an even spread over validation.data_root's split_manifest.json val_ids "
         "(not resampled after that).",
     )
-    frame_numbers: list[int] = Field(default=[25, 50, 75, 100], min_length=1)
+    frame_numbers: list[int] = Field(default=[25, 50, 75, 97], min_length=1)
     num_inference_steps: int = Field(
         default=20,
         ge=1,
@@ -726,7 +726,7 @@ class VaeVisualizationConfig(ConfigBaseModel):
             "random), so the same sims are plotted every epoch."
         ),
     )
-    frame_numbers: list[int] = Field(default=[25, 50, 75, 100], min_length=1)
+    frame_numbers: list[int] = Field(default=[25, 50, 75, 97], min_length=1)
     dpi: int = Field(default=150, ge=72)
 
     @field_validator("frame_numbers")

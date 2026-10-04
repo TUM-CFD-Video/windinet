@@ -1,8 +1,11 @@
 #!/bin/bash
 # Jupiter baseline, end to end: one sbatch per stage, every stage on 1 node x
-# 4 GPUs, chained with afterok dependencies. Same recipe as the thesis
-# baseline (VAE "Full FT" + 8k-step DiT, THESIS_RESULTS.md), so its test
-# numbers are comparable to the thesis (VAE ch-mean 0.0800, VAE + DiT 0.4984):
+# 4 GPUs, chained with afterok dependencies. Thesis baseline recipe (VAE
+# "Full FT" + 8k-step DiT, THESIS_RESULTS.md) on 97-frame sims, the project
+# standard from 2026-10-04 (the thesis used 101, padded to 105), so its test
+# numbers are the new reference rather than directly comparable to the thesis.
+# The 97 comes from the VAE config's data.num_sim_frames; the encode stage
+# reads it from the VAE run, and the DiT and its eval follow the latents.
 #
 #   VAE      finetune_vae.sbatch         finetune_vae_jupiter_baseline_256res
 #   vaetest  eval_vae_test.sbatch        afterok VAE   (test.h5, 500 sims)
@@ -11,8 +14,8 @@
 #   diteval  eval_dit_vrmse.sbatch       afterok DiT   (test.h5, 500 sims)
 #
 # Each training stage must finish inside its own job (VAE ~3.5h of 6h; DiT
-# 12h booster limit, steps/s on jupiter not measured yet -- sng_pvc ran
-# 0.12 steps/s). If a training job hits its walltime, its dependents stay
+# ~6.7h of the 12h booster limit at the ~0.33 steps/s measured by the 30k run,
+# jobs 2028915-17, on 101-frame latents). If a training job hits its walltime, its dependents stay
 # PENDING (DependencyNeverSatisfied): resubmit that stage's sbatch with the
 # same arguments -- both launchers resume from the newest checkpoint -- then
 # scancel the stale dependents and chain the rest by hand.

@@ -1,10 +1,13 @@
 # Jupiter baseline DiT -- reference point for the post-thesis experiments.
 # VAE: finetune_vae_jupiter_baseline_256res (= the thesis baseline VAE recipe)
 #
-# Identical to the thesis baseline DiT (train_dit_sng_pvc_ch6_loss_rmse_h1.yaml:
-# full transformer, flow matching, steps=8000, LR=1e-5 cosine, effective batch
-# 32, seed=42), so its test VRMSE is directly comparable to THESIS_RESULTS.md
-# (VAE + DiT ch-mean 0.4984). Differences:
+# Thesis baseline DiT recipe (train_dit_sng_pvc_ch6_loss_rmse_h1.yaml: full
+# transformer, flow matching, steps=8000, LR=1e-5 cosine, effective batch 32,
+# seed=42). Differences:
+#   97-frame sims (13 latent frames, none padded) instead of 101 padded to 105
+#     (14): nothing to set here -- the sequence length comes from the latents,
+#     which preprocess_dit_data.sbatch encodes with the VAE run's
+#     num_sim_frames. Not directly comparable to THESIS_RESULTS.md (101 frames).
 #   optimization.gradient_accumulation_steps: 4 -> 8 (4 GPUs instead of 8 tiles)
 #   visualization on at the final step 8000 (PNG panels + MP4s); off on sng_pvc
 #   output_dir on jupiter scratch, wandb tags.
@@ -71,13 +74,13 @@ visualization:
   enabled: true
   steps: [8000]        # end of training only; replaces interval
   num_samples: 3       # fixed, evenly spaced over the val split
-  frame_numbers: [25, 50, 75, 100]
+  frame_numbers: [25, 50, 75, 97]
   save_video: true     # + GT/Prediction/Residual MP4 over all frames per sample
 
 wandb:
   enabled: false
   project: "shockwavenet"
-  tags: ["cfd", "full", "2b", "scalar-only", "jupiter", "256res", "eval500", "baseline"]
+  tags: ["cfd", "full", "2b", "scalar-only", "jupiter", "256res", "eval500", "baseline", "f97"]
 
 seed: 42
 output_dir: "/e/scratch/e-dev-2026d09-262/wh_work/dit_outputs/shockwave_dit_jupiter_baseline"

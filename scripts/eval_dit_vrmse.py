@@ -239,7 +239,7 @@ def parse_args():
                           "in every VAE training config seen in this repo so far)")
     ap.add_argument("--save_vis_samples", type=int, default=3,
                      help="Render GT/Prediction/Residual panels (both passes) for the first N samples")
-    ap.add_argument("--frame_numbers", type=int, nargs="+", default=[25, 50, 75, 100],
+    ap.add_argument("--frame_numbers", type=int, nargs="+", default=[25, 50, 75, 97],
                      help="1-indexed frame numbers to render panels for (default matches "
                           "DitVisualizationConfig's own default)")
     ap.add_argument("--dpi", type=int, default=150, help="Panel image DPI")
@@ -252,7 +252,7 @@ def parse_args():
                      help="Save float16 fields (gt_raw, gt_norm, vae_only_norm, vae_dit_norm) of N "
                           "gamma-spread sims at --npz_frames for thesis figures; same picks as "
                           "eval_vae_test.py on the same id list")
-    ap.add_argument("--npz_frames", type=int, nargs="+", default=[0, 25, 50, 75, 100],
+    ap.add_argument("--npz_frames", type=int, nargs="+", default=[0, 25, 50, 75, 96],
                      help="0-indexed frames saved per npz sample (frame 0 = the conditioning IC)")
     ap.add_argument("--metric_frames", type=int, default=None,
                      help="Score only the first N frames (pixel space; latent space keeps every latent "
