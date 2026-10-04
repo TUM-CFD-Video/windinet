@@ -40,8 +40,8 @@
 # PREPROCESSED_NAME is REQUIRED, no default: must match the <name>
 # preprocess_dit_data.sbatch wrote under ${SCRATCH}/windinet/dit_preprocessed/.
 # $2 (optional) overrides BASE_CONFIG, default
-# configs/dit/train_dit_sng_pvc_baseline.yaml -- pass one of the sibling
-# kl1e6/kl1e5/anchor_kl1e7 configs for the other VAE arms.
+# configs/dit/train_dit_sng_pvc_ch6_loss_rmse_h1.yaml -- pass one of the
+# sibling train_dit_sng_pvc_ch6_* configs for the other VAE arms.
 #
 # STEPS (optional env var, 2026-08-30): overrides optimization.steps at
 # launch instead of editing the config file -- e.g. for a shorter trial run
@@ -89,7 +89,7 @@ if [[ -z "${1:-}" ]]; then
     exit 1
 fi
 PREPROCESSED_NAME=$1
-BASE_CONFIG=${2:-configs/dit/train_dit_sng_pvc_baseline.yaml}
+BASE_CONFIG=${2:-configs/dit/train_dit_sng_pvc_ch6_loss_rmse_h1.yaml}
 STEPS=${STEPS:-}
 RUN_CONFIG=$(mktemp /tmp/dit_train_sng_pvc_XXXX.yaml)
 

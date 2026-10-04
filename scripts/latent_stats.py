@@ -45,19 +45,19 @@ Reports, per latent channel, both:
     directly interpretable form.
 
 Usage:
-    python scripts/latent_stats.py configs/finetune_vae/archive/done/finetune_vae_whole_structure_baseline.yaml \\
-        --checkpoint $SCRATCH/windinet/finetune_vae_outputs/sng_pvc/finetune_vae_whole_structure_baseline/checkpoints/vae_shockwave_best.safetensors \\
+    python scripts/latent_stats.py configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml \\
+        --checkpoint $SCRATCH/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_loss_rmse_h1_256res/checkpoints/vae_shockwave_best.safetensors \\
         --num-samples 32 \\
-        --output latent_stats_whole_structure_baseline.json
+        --output latent_stats_baseline.json
 
 By default this measures against the 'eval' split -- held out from training,
 but not from the hyperparameter tuning that picked this checkpoint's config
 in the first place (every KL-weight/epoch/lr-schedule sweep in EXPERIMENTS.md
 watched val_vrmse on this exact split). For a shift measurement uncontaminated
 by that, pass --split test --test-h5 <path to test.h5>, e.g.:
-    python scripts/latent_stats.py configs/finetune_vae/finetune_vae_whole_structure_baseline_ep30.yaml \\
+    python scripts/latent_stats.py configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml \\
         --checkpoint <checkpoint>.safetensors \\
-        --split test --test-h5 euler_mq_dataset/128x128_ds/test.h5 \\
+        --split test --test-h5 euler_mq_dataset/256x256_ds/test.h5 \\
         --num-samples 32 \\
         --output latent_stats_test.json
 

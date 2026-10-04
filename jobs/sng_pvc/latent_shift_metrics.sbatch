@@ -55,9 +55,9 @@ export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export HDF5_USE_FILE_LOCKING=FALSE
 
-CONFIG=${1:-configs/finetune_vae/finetune_vae_whole_structure_baseline_ep30.yaml}
-CHECKPOINT=${2:-"${SCRATCH}/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_whole_structure_baseline_ep30/checkpoints/vae_shockwave_best.safetensors"}
-TEST_H5=${3:-"${SCRATCH}/windinet/euler_mq_dataset/128x128_ds/test.h5"}
+CONFIG=${1:-configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml}
+CHECKPOINT=${2:-"${SCRATCH}/windinet/finetune_vae_outputs_sng_pvc/finetune_vae_ch6_loss_rmse_h1_256res/checkpoints/vae_shockwave_best.safetensors"}
+TEST_H5=${3:-"${SCRATCH}/windinet/euler_mq_dataset/256x256_ds/test.h5"}
 NUM_SAMPLES=${4:-64}
 OUTPUT_JSON="logs/sng_pvc/${SLURM_JOB_ID}-latent_shift_metrics.json"
 

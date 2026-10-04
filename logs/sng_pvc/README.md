@@ -27,4 +27,6 @@ truncated in the source log and marked `-`. Rows from before the 2026-08-01
 record the paths that were actually current at the time -- a historical log,
 not something to rewrite.
 
-Experiment results and rationale live in `../../EXPERIMENTS.md`, not here.
+Final experiment results live in `../../THESIS_RESULTS.md`, not here. Logs of
+runs outside the final thesis set were removed in the post-thesis cleanup and
+are kept in the `thesis-final` git tag.

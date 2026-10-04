@@ -109,10 +109,8 @@ export PYTHONUNBUFFERED=1
 # open object (can't open file)" under this much concurrent access -- disable it.
 export HDF5_USE_FILE_LOCKING=FALSE
 
-# Defaults to the current 128-res baseline (finetune_vae_whole_structure_
-# baseline_ep30.yaml, 30ep/1.0x-encoder-LR, val_vrmse 0.078662, job 524322)
-# -- was finetune_vae_baseline.yaml (frozen-trunk, superseded), now archived
-# to configs/finetune_vae/archive/done/, see EXPERIMENTS.md.
+# Defaults to the final thesis baseline (Ch6 "Full FT": RMSE + 50*H1,
+# LR 5e-5 cosine, 20 epochs, 256^2), see THESIS_RESULTS.md.
 #
 # batch_size 4 (2026-08-16): the largest batch_size that still divides
 # effective_batch=32 across 8 tiles (accum=1) -- adopted as sng_pvc's
@@ -120,7 +118,7 @@ export HDF5_USE_FILE_LOCKING=FALSE
 # batch_size=4, val_vrmse 0.084099 vs batch_size=1's 0.083633, well inside
 # the ~1.1% noise floor) and the batch_size x accum grid follow-up. See
 # EXPERIMENTS.md's "Open Question 23" section for the full readout.
-BASE_CONFIG=${1:-configs/finetune_vae/finetune_vae_whole_structure_baseline_ep30.yaml}
+BASE_CONFIG=${1:-configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml}
 DATA_ROOT_OVERRIDE=${2:-}
 RUN_CONFIG=$(mktemp /tmp/finetune_vae_sng_pvc_XXXX.yaml)
 

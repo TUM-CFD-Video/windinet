@@ -6,13 +6,13 @@
   </a>
 </p>
 
-WinDiNet repurposes the [LTX-Video](https://github.com/Lightricks/LTX-Video) video diffusion transformer as a fast, differentiable surrogate for computational fluid dynamics (CFD) simulations. This fork adapts the original urban-wind-flow model (2-channel u/v velocity + building mask, 256x256) to **ShockWaveNet**: 4-channel compressible Euler CFD fields (density, momentum_x, momentum_y, pressure) with shocks, 128x128, conditioned on the scalar `gamma`.
+WinDiNet repurposes the [LTX-Video](https://github.com/Lightricks/LTX-Video) video diffusion transformer as a fast, differentiable surrogate for computational fluid dynamics (CFD) simulations. This fork adapts the original urban-wind-flow model (2-channel u/v velocity + building mask) to **ShockWaveNet**: 4-channel compressible Euler CFD fields (density, momentum_x, momentum_y, pressure) with shocks, 256x256, conditioned on the scalar `gamma`.
 
-For experiment status, results, and open questions, see [EXPERIMENTS.md](EXPERIMENTS.md) -- that file, not this one, is the source of truth for what has actually been run and what it showed.
+The final results of the master's thesis (VAE fine-tuning study + full VAE/DiT pipeline, Chapter 6) are in [THESIS_RESULTS.md](THESIS_RESULTS.md); the generated LaTeX tables and appendices are under [thesis/](thesis/), the figures under [figures/](figures/). The full experiment history (every run, config, log and the old experiment ledgers) is preserved in the `thesis-final` git tag.
 
 ## Installation
 
-**Prerequisites:** Python 3.10+, CUDA-capable GPU (48 GB VRAM recommended for training).
+**Prerequisites:** Python 3.10+, a GPU/XPU with 48+ GB memory for training.
 
 ```bash
 pip install -e .
@@ -24,16 +24,9 @@ pip install -e ".[training]"
 ### Base weights
 
 By default, LTX-Video weights download to `huggingface_hub`'s own cache
-(`~/.cache/huggingface`) like any other project -- no setup needed. Set
-`WINDINET_HF_CACHE=/path/to/dir` (`windinet/paths.py`) to redirect to a
-different location instead -- e.g. lundquist's `jobs/lundquist/*.sbatch`
-launchers point it at an in-repo `pretrained/hub/` (~8.4 GB, gitignored) so
-a checkout there is self-contained. **This is opt-in per machine, not a
-repo-wide default** -- sng_pvc and lrz_ai deliberately leave it unset and
-use the ordinary `~/.cache/huggingface` location (lrz_ai's `$HOME` is
-DSS-quota'd and can't absorb an in-repo copy). See
-[pretrained/README.md](pretrained/README.md) for the layout and how to
-populate one.
+(`~/.cache/huggingface`). Set `WINDINET_HF_CACHE=/path/to/dir`
+(`windinet/paths.py`) to redirect them elsewhere -- e.g. jupiter points it at
+a shared project-storage cache populated by `jobs/jupiter/download_pretrained.sh`.
 
 ## Training
 
@@ -42,10 +35,10 @@ Training has two stages: (1) finetuning the VAE to reconstruct the 4-channel CFD
 ### Stage 1: VAE finetuning
 
 ```bash
-python scripts/finetune_vae.py configs/finetune_vae/finetune_vae_baseline.yaml
+python scripts/finetune_vae.py configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml
 ```
 
-Edit `data.data_root` in the config to point at your shockwave HDF5 dataset (`<sample_id>/{density,momentum_x,momentum_y,pressure}`, see `windinet/training/shockwave_data.py` for the expected layout). Checkpoints, per-epoch reconstruction panels, metrics and the resolved config are written under `output_dir`:
+This is the thesis baseline ("Full FT": whole encoder + decoder, 1.0·RMSE + 50·H1, AdamW LR 5e-5 cosine, 20 epochs). The other `configs/finetune_vae/finetune_vae_ch6_*` files are the Chapter 6 ablation arms, each changing exactly one setting. Edit `data.data_root` to point at your shockwave HDF5 dataset (`<sample_id>/{density,momentum_x,momentum_y,pressure}`, see `windinet/training/shockwave_data.py`). Outputs under `output_dir`:
 
 ```
 <output_dir>/
@@ -56,7 +49,7 @@ Edit `data.data_root` in the config to point at your shockwave HDF5 dataset (`<s
     training_config.yaml
 ```
 
-Cluster launchers (Slurm): `jobs/lundquist/finetune_vae_{2,4,6}gpu.sbatch`, `jobs/sng_pvc/finetune_vae.sbatch`. Per-cluster storage/worker-count defaults live in `windinet/cluster_config.py`.
+Test-set evaluation: `scripts/eval_vae_test.py` (writes `test_eval_256.json`).
 
 ### Stage 2: Data preprocessing
 
@@ -66,36 +59,52 @@ Encode the CFD fields into VAE latents for DiT training:
 python scripts/preprocess_dataset.py /path/to/shockwave_dataset/train.h5 \
     --output-dir /path/to/preprocessed \
     --inflate-checkpoint <output_dir>/checkpoints/vae_shockwave_best.safetensors \
-    --eval-sims 675
+    --eval-sims 500
 ```
 
-This must use the *finetuned* VAE checkpoint from stage 1 -- see `scripts/preprocess_dataset.py`'s docstring for the exact output layout (`latents/`, `scalars/`, `normalization.json`, and a `val/` split when `--eval-sims` is set).
+This must use the *finetuned* VAE checkpoint from stage 1 -- see `scripts/preprocess_dataset.py`'s docstring for the output layout (`latents/`, `scalars/`, `normalization.json`, and a `val/` split when `--eval-sims` is set).
 
 ### Stage 3: DiT training
 
 ```bash
-python scripts/train.py configs/dit/train_dit.yaml
+python scripts/train.py configs/dit/train_dit_sng_pvc_ch6_loss_rmse_h1.yaml
 ```
 
-Set `data.preprocessed_data_root` (and `validation.data_root` to the `val/` split from preprocessing) and `output_dir` in the config. DiT training consumes precomputed latents only -- it never re-runs the VAE encoder -- and records which VAE checkpoint produced them in `<output_dir>/latent_provenance.json` for later verification.
+Set `data.preprocessed_data_root` (and `validation.data_root` to the `val/` split from preprocessing) and `output_dir` in the config. DiT training consumes precomputed latents only and records which VAE checkpoint produced them in `<output_dir>/latent_provenance.json`. `configs/dit/train_dit_sng_pvc_ch6_*` are the per-VAE DiT runs of Chapter 6; `configs/dit/train_dit.yaml` is the generic template.
 
-Cluster launchers: `jobs/lundquist/train_dit.sbatch`, `jobs/sng_pvc/train_dit.sbatch`.
-
-## Inference
+## Evaluation and inference
 
 ```bash
+# Pixel-space VRMSE of a full VAE + DiT rollout on the test set
+python scripts/eval_dit_vrmse.py configs/dit/inference_dit.yaml --help
+
+# Roll out predictions as .npz fields, then render them
 python scripts/inference_shockwave.py configs/dit/inference_dit.yaml \
-    --h5 euler_mq_dataset/128x128_ds/train.h5 \
-    --out_dir predictions/ --num_samples 8
+    --h5 euler_mq_dataset/256x256_ds/test.h5 --out_dir predictions/ --num_samples 8
+python scripts/visualize_dit_predictions.py --pred_dir predictions/ ...
 ```
 
-Conditions on the initial condition (frame 0 of a simulation) plus scalar `gamma`, and rolls out the remaining frames as 4-channel `.npz` fields. The VAE checkpoint in the config must be the exact one the DiT's latents were encoded with -- the script refuses to decode (`verify_latent_space`) if the stored latent-space fingerprint doesn't match, since a mismatched decoder silently produces physically wrong output.
+Inference conditions on frame 0 of a simulation (encoded with the VAE posterior mean) plus `gamma` and rolls out the remaining frames. The VAE checkpoint in the config must be the exact one the DiT's latents were encoded with -- the pipeline refuses to decode (`verify_latent_space`) on a latent-space fingerprint mismatch.
+
+Thesis tables and figures are regenerated with `scripts/thesis_tables.py` and `scripts/thesis_figures.py`.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `windinet/` | Package: VAE adapter, losses, scalar conditioning, VAE/DiT trainers, inference pipeline |
+| `scripts/` | Entry points: training, preprocessing, evaluation, latent diagnostics, thesis tables/figures |
+| `configs/` | Final Chapter 6 VAE and DiT configs |
+| `jobs/{sng_pvc,jupiter}/` | Slurm launchers (`jobs/sng_pvc/ch6_submit.sh` submits the Chapter 6 runs); per-cluster defaults in `windinet/cluster_config.py` |
+| `finetune_vae_outputs/`, `logs/` | Metrics, test evals and job logs of the final runs (weights are not tracked) |
+| `thesis/`, `figures/`, `THESIS_RESULTS.md` | Thesis tables, appendices, figures and final numbers |
+| `docs/` | Cluster infrastructure notes, latent-shift measurement method |
 
 ## Architecture
 
 WinDiNet modifies LTX-Video in two ways:
 
-1. **VAE channel adapter** (`windinet/vae_adapter.py`): grows the pretrained 3-channel encoder/decoder to 4 channels (`inflate` mode) so the CFD fields pass through natively, then finetunes the decoder (and `encoder.conv_in`) with reconstruction losses (`windinet/losses/`, weighted via `windinet/loss_weighting/`).
+1. **VAE channel adapter** (`windinet/vae_adapter.py`): grows the pretrained 3-channel `conv_in`/`conv_out` to 4 channels (`inflate` mode, the new pressure slot zero-initialised) so the CFD fields pass through natively, then finetunes the VAE with reconstruction losses (`windinet/losses/`, weighted via `windinet/loss_weighting/`), optionally with KL or SDS latent regularisation (`windinet/training/sds_loss.py`).
 2. **Scalar conditioning** (`windinet/scalar_embeddings.py`): replaces text conditioning with Fourier-feature-encoded scalar inputs (currently just `gamma`), enabling physical parameterization instead of prompts.
 
 ## Acknowledgements

@@ -111,9 +111,7 @@ def vrmse_per_channel(pred: torch.Tensor, target: torch.Tensor, eps: float = 1e-
 # not individually selectable, since granular per-block control
 # (adapter.unfreeze_down_blocks / adapter.unfreeze_encoder_tail) was already
 # tried and retired after the head-vs-tail unfreeze sweep (Open Question 3,
-# EXPERIMENTS.md) settled on unfreezing everything. Archived configs from
-# that sweep that unfroze a different subset can no longer be replayed
-# as-is -- see configs/finetune_vae/archive/{done,known-bad}/README.md.
+# EXPERIMENTS.md, in the thesis-final tag) settled on unfreezing everything.
 # Whether this whole set trains at all (vs. conv_in-only, or nothing when
 # mode='adapter') is controlled by adapter.unfreeze_encoder_trunk
 # (windinet/config.py's VaeAdapterConfig) -- see _load_vae's use of it

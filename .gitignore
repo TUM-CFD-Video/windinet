@@ -40,16 +40,14 @@ MANIFEST
 euler_mq_dataset/*
 !euler_mq_dataset/sng_pvc/
 !euler_mq_dataset/sng_pvc/download_from_hf.py
-!euler_mq_dataset/lrz_ai/
-!euler_mq_dataset/lrz_ai/download_from_hf.py
+!euler_mq_dataset/jupiter/
+!euler_mq_dataset/jupiter/download_from_hf.py
 
-# SLURM job logs -- tracked only under logs/{sng_pvc,lrz_ai}/
+# SLURM job logs -- tracked only under logs/sng_pvc/
 *.err
 *.out
 !logs/sng_pvc/*.err
 !logs/sng_pvc/*.out
-!logs/lrz_ai/*.err
-!logs/lrz_ai/*.out
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -82,7 +80,6 @@ cover/
 
 # Django stuff:
 *.log
-!logs/lundquist/*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -233,54 +230,19 @@ marimo/_lsp/
 __marimo__/
 
 # WinDiNet outputs
-# finetune_vae_outputs/lundquist/ is tracked (metrics, resolved configs);
-# its weights stay out via the checkpoints/ rule below, its per-epoch
-# visualization frames via the rule below that. `**` so this also matches
-# closed runs nested under archive/{done,known-bad}/.
-finetune_vae_outputs/lundquist/**/visualizations/
-finetune_vae_outputs/lundquist/**/metrics/loss_curves.png
-finetune_vae_outputs/sng_pvc/**/visualizations/
-finetune_vae_outputs/sng_pvc/**/metrics/loss_curves.png
-finetune_vae_outputs/lrz_ai/**/visualizations/
-finetune_vae_outputs/lrz_ai/**/metrics/loss_curves.png
-finetune_vae_outputs/jupiter/**/visualizations/
-finetune_vae_outputs/jupiter/**/metrics/loss_curves.png
+# finetune_vae_outputs/{cluster}/ and dit_outputs/{cluster}/ are tracked
+# (metrics, resolved configs, test evals); weights, per-epoch visualization
+# frames and curve plots stay out -- all regenerable from the checkpoints.
 checkpoints/
+finetune_vae_outputs/**/visualizations/
+finetune_vae_outputs/**/metrics/loss_curves.png
+dit_outputs/**/visualizations/
+dit_outputs/**/dit_vrmse_curve.png
 
-# Diagnostic-script PNGs synced down under logs/ (e.g.
-# scripts/latent_shift_metrics.py's per-sample channel-correlation heatmaps)
-# -- large binary images regenerable by rerunning the script; the JSON/log
-# they came from is the durable record and stays tracked.
+# Diagnostic-script outputs synced down under logs/ -- PNGs and VAE weights
+# are regenerable; the JSON/log next to them is the durable record.
 logs/**/*.png
-
-# One-off latent_shift_metrics.py comparison export (2026-08-17, jobs
-# 21995/21997) -- not written by a tracked script, not referenced in
-# EXPERIMENTS.md/EXPERIMENTS_archive.md, and regenerable by rerunning that
-# script against those two checkpoints if ever needed again.
-logs/latent_shift_comparison.csv
-
-# scripts/finetune_decoder_on_rollout.py writes its output VAE checkpoint
-# under logs/lundquist/finetune_decoder_on_rollout/<job>/ alongside that
-# job's small metrics/logs (2026-09-13) -- the checkpoints/ rule above
-# doesn't catch it (no checkpoints/ path segment here), and a full VAE
-# safetensors is large enough that committing it (as opposed to every
-# other checkpoint in this project, always gitignored) noticeably slows
-# add/commit/push. Same regenerable-by-rerunning reasoning as every other
-# checkpoint exclusion -- the finetune_summary.json next to it is the
-# durable record and stays tracked.
 logs/**/*.safetensors
 
-# In-repo HuggingFace cache for the LTX-Video base weights (~8.4 GB).
-# The weights themselves stay out of git; pretrained/README.md explains how to
-# get them (rsync from another checkout, or let the loader re-download).
-pretrained/*
-!pretrained/README.md
-
-# dit_outputs/{cluster}/ 目录本身是tracked的(config/epoch_log/provenance);
-# 每步的可视化帧和vrmse曲线图不track,可以从checkpoint/metrics重新生成
-dit_outputs/lundquist/**/visualizations/
-dit_outputs/lundquist/**/dit_vrmse_curve.png
-dit_outputs/sng_pvc/**/visualizations/
-dit_outputs/sng_pvc/**/dit_vrmse_curve.png
-dit_outputs/lrz_ai/**/visualizations/
-dit_outputs/lrz_ai/**/dit_vrmse_curve.png
+# Optional in-repo HuggingFace cache (WINDINET_HF_CACHE, windinet/paths.py)
+pretrained/

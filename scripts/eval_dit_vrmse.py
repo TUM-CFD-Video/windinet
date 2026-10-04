@@ -38,8 +38,8 @@ The DiT checkpoint can be a mid-training checkpoint (this run may not have
 finished) -- this script does not require or check a "final" checkpoint.
 
 Usage:
-    python scripts/eval_dit_vrmse.py configs/dit/inference_dit_lrz_ai.yaml \\
-        --preprocessed_data_root finetune_vae_outputs/sng_pvc/dit_preprocessed/finetune_vae_whole_structure_baseline_256res \\
+    python scripts/eval_dit_vrmse.py configs/dit/inference_dit.yaml \\
+        --preprocessed_data_root finetune_vae_outputs/sng_pvc/dit_preprocessed/finetune_vae_ch6_loss_rmse_h1_256res \\
         --checkpoint /path/to/checkpoints/model_weights_step_09177.safetensors \\
         --scalar_checkpoint /path/to/checkpoints/model_weights_step_09177.state.pt \\
         --vae_checkpoint /path/to/finetune_vae_outputs/.../checkpoints/vae_shockwave_best.safetensors \\

@@ -61,7 +61,7 @@ split or tuning decision.
 
 Usage:
     python scripts/latent_shift_metrics.py \\
-        configs/finetune_vae/finetune_vae_whole_structure_baseline_ep30_256res.yaml \\
+        configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml \\
         --checkpoint <run_output_dir>/checkpoints/vae_shockwave_best.safetensors \\
         --test-h5 /dss/.../Euler_MQ/data/256x256_ds/test.h5 \\
         --num-samples 64 \\

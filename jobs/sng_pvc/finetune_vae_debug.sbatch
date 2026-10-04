@@ -54,8 +54,8 @@
 # much larger workload); watch the first job's epoch timing lines and shrink
 # this if resubmitting.
 #
-# Defaults to the overfit-8 diagnostic; pass any other config as $1, e.g.
-#   sbatch jobs/sng_pvc/finetune_vae_debug.sbatch configs/finetune_vae/finetune_vae_overfit_lr5e5_wsd_wholestruct.yaml
+# The config is required ($1), e.g.
+#   sbatch jobs/sng_pvc/finetune_vae_debug.sbatch configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml
 #
 # Submit with:   sbatch jobs/sng_pvc/finetune_vae_debug.sbatch <config>
 # Watch with:    tail -f logs/sng_pvc/<jobid>-wh_debug_vae.out
@@ -106,7 +106,7 @@ export HDF5_USE_FILE_LOCKING=FALSE
 # metrics.csv/checkpoints (separate direct file I/O) survive untouched.
 export PYTHONUNBUFFERED=1
 
-BASE_CONFIG=${1:-configs/finetune_vae/finetune_vae_overfit.yaml}
+BASE_CONFIG=${1:?usage: sbatch jobs/sng_pvc/finetune_vae_debug.sbatch <config.yaml>}
 RUN_CONFIG=$(mktemp /tmp/finetune_vae_sng_pvc_debug_XXXX.yaml)
 
 python - "${BASE_CONFIG}" "${RUN_CONFIG}" <<'PY'
