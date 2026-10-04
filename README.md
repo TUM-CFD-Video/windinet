@@ -8,7 +8,7 @@
 
 WinDiNet repurposes the [LTX-Video](https://github.com/Lightricks/LTX-Video) video diffusion transformer as a fast, differentiable surrogate for computational fluid dynamics (CFD) simulations. This fork adapts the original urban-wind-flow model (2-channel u/v velocity + building mask) to **ShockWaveNet**: 4-channel compressible Euler CFD fields (density, momentum_x, momentum_y, pressure) with shocks, 256x256, conditioned on the scalar `gamma`.
 
-The final results of the master's thesis (VAE fine-tuning study + full VAE/DiT pipeline, Chapter 6) are in [THESIS_RESULTS.md](THESIS_RESULTS.md); the generated LaTeX tables and appendices are under [thesis/](thesis/), the figures under [figures/](figures/). The full experiment history (every run, config, log and the old experiment ledgers) is preserved in the `thesis-final` git tag.
+The final results of the master's thesis (VAE fine-tuning study + full VAE/DiT pipeline, Chapter 6) are in [THESIS_RESULTS.md](THESIS_RESULTS.md). The thesis LaTeX tables, appendices and figures, and the full experiment history (every run, config, log and the old experiment ledgers), are preserved in the `thesis-final` git tag.
 
 ## Installation
 
@@ -86,7 +86,7 @@ python scripts/visualize_dit_predictions.py --pred_dir predictions/ ...
 
 Inference conditions on frame 0 of a simulation (encoded with the VAE posterior mean) plus `gamma` and rolls out the remaining frames. The VAE checkpoint in the config must be the exact one the DiT's latents were encoded with -- the pipeline refuses to decode (`verify_latent_space`) on a latent-space fingerprint mismatch.
 
-Thesis tables and figures are regenerated with `scripts/thesis_tables.py` and `scripts/thesis_figures.py`.
+The thesis tables can be regenerated with `scripts/thesis_tables.py`.
 
 ## Repository layout
 
@@ -97,8 +97,8 @@ Thesis tables and figures are regenerated with `scripts/thesis_tables.py` and `s
 | `configs/` | Final Chapter 6 VAE and DiT configs |
 | `jobs/{sng_pvc,jupiter}/` | Slurm launchers (`jobs/sng_pvc/ch6_submit.sh` submits the Chapter 6 runs); per-cluster defaults in `windinet/cluster_config.py` |
 | `finetune_vae_outputs/`, `logs/` | Metrics, test evals and job logs of the final runs (weights are not tracked) |
-| `thesis/`, `figures/`, `THESIS_RESULTS.md` | Thesis tables, appendices, figures and final numbers |
-| `docs/` | Cluster infrastructure notes, latent-shift measurement method |
+| `THESIS_RESULTS.md` | Final thesis numbers |
+| `docs/` | Cluster infrastructure notes |
 
 ## Architecture
 
