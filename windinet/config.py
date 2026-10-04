@@ -385,7 +385,9 @@ class VaeDataConfig(ConfigBaseModel):
     channel_order: list[str] = Field(
         default=["density", "momentum_x", "momentum_y", "pressure"],
         description=(
-            "Which physical field is stacked into which of the 4 tensor channels, "
+            "Which physical fields are stacked into which tensor channels -- all four "
+            "in any order, or a subset (e.g. the 3-channel [density, momentum_x, "
+            "momentum_y] run, which keeps the VAE's native 3-channel conv_in/conv_out) -- "
             "positionally aligned with channel_mean/channel_std (index i of both "
             "must refer to the same field) -- must stay identical to "
             "adapter.channels, which only carries the same order as metadata for "
@@ -429,8 +431,11 @@ class VaeDataConfig(ConfigBaseModel):
     @classmethod
     def validate_channel_order(cls, values: list[str]) -> list[str]:
         expected = {"density", "momentum_x", "momentum_y", "pressure"}
-        if len(values) != 4 or set(values) != expected:
-            raise ValueError(f"channel_order must be a permutation of {sorted(expected)}, got {values}")
+        if not values or len(set(values)) != len(values) or not set(values) <= expected:
+            raise ValueError(
+                f"channel_order must be a non-empty, duplicate-free subset (in any order) of "
+                f"{sorted(expected)}, got {values}"
+            )
         return values
 
     @model_validator(mode="after")
@@ -477,8 +482,9 @@ class VaeDataConfig(ConfigBaseModel):
         elif self.channel_mean is None or self.channel_std is None:
             raise ValueError("set either channel_mean and channel_std, or normalization_stats_file")
 
-        if len(self.channel_mean) != 4 or len(self.channel_std) != 4:
-            raise ValueError("channel_mean and channel_std must each contain four values")
+        n = len(self.channel_order)
+        if len(self.channel_mean) != n or len(self.channel_std) != n:
+            raise ValueError(f"channel_mean and channel_std must each contain {n} values (one per channel_order entry)")
         if any(value <= 0 for value in self.channel_std):
             raise ValueError("all channel_std values must be positive")
         return self

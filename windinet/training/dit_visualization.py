@@ -233,6 +233,10 @@ class DitVisualizer:
         if not vae_checkpoint:
             raise ValueError(f"{norm_path} has no vae_checkpoint recorded -- cannot decode DiT samples.")
         self._stats = {
+            # Stacked field order the latents were built with (all four, or a
+            # subset such as the 3-channel run); older normalization.json files
+            # predate the field and are always the four-channel layout.
+            "channel_names": payload.get("channel_names") or CHANNEL_NAMES,
             "channel_mean": payload["channel_mean"],
             "channel_std": payload["channel_std"],
             "normalization_clip": payload["normalization_clip"],
@@ -328,7 +332,8 @@ class DitVisualizer:
 
         for i, sample in enumerate(self._samples):
             H, W = sample["density"].shape[-2:]
-            gt = torch.stack([sample[name] for name in CHANNEL_NAMES]).unsqueeze(0)  # [1, C, F, H, W]
+            channel_names = self._stats["channel_names"]
+            gt = torch.stack([sample[name] for name in channel_names]).unsqueeze(0)  # [1, C, F, H, W]
             num_frames_needed = gt.shape[2]
             num_frames_padded = ((num_frames_needed - 1 + 7) // 8) * 8 + 1  # LTX VAE needs 8k+1 (97 -> 97, 101 -> 105)
 
@@ -409,7 +414,7 @@ class DitVisualizer:
                 sample_id=sample["id"],
                 label=f"step_{step:06d}",
                 frame_numbers=self._frame_numbers,
-                channel_names=CHANNEL_NAMES,
+                channel_names=channel_names,
                 output_dir=self._output_dir,
                 dpi=self._dpi,
             )
@@ -419,7 +424,7 @@ class DitVisualizer:
                     target=gt[0],
                     sample_id=sample["id"],
                     label=f"step_{step:06d}",
-                    channel_names=CHANNEL_NAMES,
+                    channel_names=channel_names,
                     output_dir=self._output_dir,
                     fps=self._video_fps,
                 )

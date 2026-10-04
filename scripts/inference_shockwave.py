@@ -32,7 +32,6 @@ from windinet.inference.model_loader import load_ltxv_components, select_vae_env
 from windinet.inference.pipeline import LTXConditionPipeline
 from windinet.scalar_embeddings import ScalarEmbedding
 from windinet.training.shockwave_data import (
-    CHANNEL_NAMES,
     ShockWaveDataset,
     load_channel_normalization,
     normalize_fields,
@@ -182,9 +181,10 @@ def load_scalar_embedding(checkpoint, scalar_cfg, device):
 
 
 def build_initial_condition(sample, stats, device):
-    """Normalized 4-channel IC frame [1, 1, 4, H, W] taken from simulation frame 0."""
-    fields = torch.stack([sample[name][0] for name in CHANNEL_NAMES])  # [4, H, W]
-    fields = fields.unsqueeze(0)  # [1, 4, H, W]
+    """Normalized IC frame [1, 1, C, H, W] taken from simulation frame 0, in the
+    channel layout the VAE was trained with (stats["channel_names"])."""
+    fields = torch.stack([sample[name][0] for name in stats["channel_names"]])  # [C, H, W]
+    fields = fields.unsqueeze(0)  # [1, C, H, W]
     fields = normalize_fields(
         fields,
         stats["channel_mean"],
@@ -322,7 +322,7 @@ def main():
 
         np.savez_compressed(
             out_path,
-            **{name_: pred[c].numpy().astype(np.float32) for c, name_ in enumerate(CHANNEL_NAMES)},
+            **{name_: pred[c].numpy().astype(np.float32) for c, name_ in enumerate(stats["channel_names"])},
             gamma=np.float32(sample["meta"]["gamma"]),
         )
 

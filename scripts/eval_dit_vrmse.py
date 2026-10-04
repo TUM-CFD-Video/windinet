@@ -83,7 +83,6 @@ from windinet.inference.pipeline import LTXConditionPipeline
 from windinet.losses import rmse_loss, vrms_loss, vrms_per_channel
 from windinet.scalar_embeddings import ScalarEmbedding
 from windinet.training.shockwave_data import (
-    CHANNEL_NAMES,
     ShockWaveDataset,
     build_shockwave_video,
     load_channel_normalization,
@@ -163,7 +162,7 @@ def load_scalar_embedding(checkpoint, scalar_cfg, device):
 
 
 def build_initial_condition(sample, stats, device):
-    fields = torch.stack([sample[name][0] for name in CHANNEL_NAMES]).unsqueeze(0)  # [1, 4, H, W]
+    fields = torch.stack([sample[name][0] for name in stats["channel_names"]]).unsqueeze(0)  # [1, C, H, W]
     fields = normalize_fields(fields, stats["channel_mean"], stats["channel_std"], stats["normalization_clip"])
     return fields.unsqueeze(1).to(device=device, dtype=DTYPE)  # [B, F, C, H, W]
 
@@ -341,7 +340,9 @@ def main():
     select_vae_env(ensure_checkpoint(vae_ckpt))  # must run BEFORE make_pipe: sets which VAE it loads
 
     stats = load_channel_normalization(cfg["normalization"])
-    print(f"Normalization from {cfg['normalization']}: clip={stats['normalization_clip']}")
+    channel_names = stats["channel_names"]
+    n_ch = len(channel_names)
+    print(f"Normalization from {cfg['normalization']}: channels={channel_names} clip={stats['normalization_clip']}")
     if args.untrained_dit:
         print("--untrained_dit: skipping latent-space provenance check (no DiT training happened to verify against)")
     else:
@@ -374,7 +375,7 @@ def main():
 
     per_sample = []
     sum_overall = {"vae_only": 0.0, "vae_dit": 0.0}
-    sum_channel = {"vae_only": [0.0] * 4, "vae_dit": [0.0] * 4}
+    sum_channel = {"vae_only": [0.0] * n_ch, "vae_dit": [0.0] * n_ch}
     sum_lat_vrmse, sum_lat_rmse, sum_lat_mse = 0.0, 0.0, 0.0
     sum_lat_channel = None  # lazily sized to the latent's own channel count on first sample
     sum_lat_channel_mse = None
@@ -386,11 +387,12 @@ def main():
         orig_F = sample["density"].shape[0]
         score_F = min(orig_F, args.metric_frames or orig_F)
 
-        # Ground truth, normalized, [1, 4, orig_F, H, W] -- same call
+        # Ground truth, normalized, [1, C, orig_F, H, W] -- same call
         # preprocess_dataset.py used to build the VAE's own training/eval input.
         gt_video = build_shockwave_video(
             sample, device=device, channel_mean=stats["channel_mean"],
             channel_std=stats["channel_std"], normalization_clip=stats["normalization_clip"],
+            channel_order=channel_names,
         )
         target = pad_to(gt_video, orig_F).float()
 
@@ -469,13 +471,13 @@ def main():
         per_sample.append({
             "id": sid, "gamma": float(sample["meta"]["gamma"]),
             "vae_only_vrmse": vo_overall, "vae_dit_vrmse": vd_overall,
-            "vae_only_per_channel": dict(zip(CHANNEL_NAMES, vo_channel)),
-            "vae_dit_per_channel": dict(zip(CHANNEL_NAMES, vd_channel)),
+            "vae_only_per_channel": dict(zip(channel_names, vo_channel)),
+            "vae_dit_per_channel": dict(zip(channel_names, vd_channel)),
             "latent_vrmse": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
         })
         sum_overall["vae_only"] += vo_overall
         sum_overall["vae_dit"] += vd_overall
-        for c in range(4):
+        for c in range(n_ch):
             sum_channel["vae_only"][c] += vo_channel[c]
             sum_channel["vae_dit"][c] += vd_channel[c]
         sum_lat_vrmse += lat_vrmse
@@ -487,12 +489,12 @@ def main():
 
         if sid in npz_ids:
             frames = [f for f in args.npz_frames if f < n_px]
-            gt_raw = torch.stack([sample[name] for name in CHANNEL_NAMES])  # [C, F, H, W]
+            gt_raw = torch.stack([sample[name] for name in channel_names])  # [C, F, H, W]
             npz_dir.mkdir(parents=True, exist_ok=True)
             np.savez_compressed(
                 npz_dir / f"{sid}.npz",
                 frames=np.array(frames),
-                channel_order=np.array(CHANNEL_NAMES),
+                channel_order=np.array(channel_names),
                 gamma=float(sample["meta"]["gamma"]),
                 gt_raw=gt_raw[:, frames].numpy().astype(np.float16),
                 gt_norm=target_cmp[0][:, frames].cpu().numpy().astype(np.float16),
@@ -501,15 +503,15 @@ def main():
                 channel_mean=np.array(stats["channel_mean"]),
                 channel_std=np.array(stats["channel_std"]),
                 normalization_clip=float(stats["normalization_clip"]),
-                vae_only_vrmse_chmean=sum(vo_channel) / 4,
-                vae_dit_vrmse_chmean=sum(vd_channel) / 4,
+                vae_only_vrmse_chmean=sum(vo_channel) / n_ch,
+                vae_dit_vrmse_chmean=sum(vd_channel) / n_ch,
             )
 
         if sid in vis_ids:
             # Physical-units ground truth, straight from the dataset -- same
             # approach dit_visualization.py's own periodic panels use (not
             # `target`, which is the normalized-space vrmse comparand above).
-            gt_physical = torch.stack([sample[name] for name in CHANNEL_NAMES]).unsqueeze(0)  # [1,C,F,H,W]
+            gt_physical = torch.stack([sample[name] for name in channel_names]).unsqueeze(0)  # [1,C,F,H,W]
             gt_physical = pad_to(gt_physical, orig_F)
 
             vae_recon_physical = denormalize_fields(
@@ -526,7 +528,7 @@ def main():
                     sample_id=sid,
                     label=label,
                     frame_numbers=args.frame_numbers,
-                    channel_names=CHANNEL_NAMES,
+                    channel_names=channel_names,
                     output_dir=args.out_dir,
                     dpi=args.dpi,
                 )
@@ -545,18 +547,19 @@ def main():
         "h5": h5_path,
         "checkpoint": str(checkpoint) if checkpoint else "untrained (stock pretrained transformer + random ScalarEmbedding)",
         "vae_checkpoint": str(vae_ckpt),
+        "channel_names": channel_names,
         "num_sim_frames": num_sim_frames,
         "num_frames_generated": num_frames,
         "metric_frames": args.metric_frames,
         "vae_only_vrmse_mean": sum_overall["vae_only"] / n,
         "vae_dit_vrmse_mean": sum_overall["vae_dit"] / n,
-        "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(CHANNEL_NAMES)},
-        "vae_dit_vrmse_per_channel": {name: sum_channel["vae_dit"][c] / n for c, name in enumerate(CHANNEL_NAMES)},
+        "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(channel_names)},
+        "vae_dit_vrmse_per_channel": {name: sum_channel["vae_dit"][c] / n for c, name in enumerate(channel_names)},
         # Mean of the per-channel VRMSEs (The Well's convention), same as the
         # VAE trainer's val_vrmse_chmean. The *_vrmse_mean above uses one pooled
         # variance over all channels and is kept for comparability.
-        "vae_only_vrmse_chmean": sum(sum_channel["vae_only"]) / (4 * n),
-        "vae_dit_vrmse_chmean": sum(sum_channel["vae_dit"]) / (4 * n),
+        "vae_only_vrmse_chmean": sum(sum_channel["vae_only"]) / (n_ch * n),
+        "vae_dit_vrmse_chmean": sum(sum_channel["vae_dit"]) / (n_ch * n),
         "latent_vrmse_mean": sum_lat_vrmse / n,
         "latent_rmse_mean": sum_lat_rmse / n,
         # Raw (unnormalized) latent MSE, per sim then averaged: the quantity the
@@ -580,7 +583,7 @@ def main():
     print(f"Delta (DiT forecasting cost on top of VAE recon): {delta:+.5f} ({pct:+.1f}%)")
     print(f"VAE-only  val_vrmse_chmean   : {summary['vae_only_vrmse_chmean']:.5f}")
     print(f"VAE+DiT   val_vrmse_chmean   : {summary['vae_dit_vrmse_chmean']:.5f}")
-    for name in CHANNEL_NAMES:
+    for name in channel_names:
         vo = summary["vae_only_vrmse_per_channel"][name]
         vd = summary["vae_dit_vrmse_per_channel"][name]
         print(f"  {name:12s} vae_only={vo:.5f}  vae+dit={vd:.5f}  delta={vd - vo:+.5f}")

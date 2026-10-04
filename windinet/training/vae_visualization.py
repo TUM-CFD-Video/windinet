@@ -36,8 +36,9 @@ def denormalize_fields(
     want physical units (visualization panels) see real density/pressure,
     not log-density/log-pressure.
     """
-    mean = tensor.new_tensor(channel_mean).view(1, 4, 1, 1, 1)
-    scale = tensor.new_tensor(channel_std).view(1, 4, 1, 1, 1) * normalization_clip
+    num_channels = len(channel_mean)
+    mean = tensor.new_tensor(channel_mean).view(1, num_channels, 1, 1, 1)
+    scale = tensor.new_tensor(channel_std).view(1, num_channels, 1, 1, 1) * normalization_clip
     out = tensor * scale + mean
     if log_transform_channels:
         order = channel_order or CHANNEL_NAMES

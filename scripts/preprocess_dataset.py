@@ -86,8 +86,8 @@ def _resolve_normalization(
     channel_mean: str | None,
     channel_std: str | None,
     normalization_clip: float | None,
-) -> tuple[list[float], list[float], float, str]:
-    """Determine the channel normalization the latents must be built with.
+) -> tuple[list[str], list[float], list[float], float, str]:
+    """Determine the channel layout and normalization the latents must be built with.
 
     The VAE was finetuned on fields normalized as ``(x - mean) / (std * clip)``
     and clamped to [-1, 1]. Encoding raw physical values instead would put the
@@ -96,14 +96,18 @@ def _resolve_normalization(
     therefore taken from the VAE run's own ``training_config.yaml`` by default
     (found next to the checkpoint), and only overridden explicitly.
 
-    Returns (mean, std, clip, source description).
+    Returns (channel names, mean, std, clip, source description). The channel
+    names are the VAE run's data.channel_order (all four fields, or a subset);
+    explicit --channel-mean/--channel-std imply the default four-channel layout.
     """
     explicit_mean = _parse_floats(channel_mean)
     explicit_std = _parse_floats(channel_std)
     if (explicit_mean is None) != (explicit_std is None):
         raise typer.BadParameter("--channel-mean and --channel-std must be given together")
     if explicit_mean is not None:
-        return explicit_mean, explicit_std, normalization_clip or 5.0, "command line"
+        if len(explicit_mean) != len(CHANNEL_NAMES):
+            raise typer.BadParameter(f"--channel-mean/--channel-std need {len(CHANNEL_NAMES)} values ({CHANNEL_NAMES})")
+        return list(CHANNEL_NAMES), explicit_mean, explicit_std, normalization_clip or 5.0, "command line"
 
     # Auto-discover: outputs/<run>/checkpoints/vae_*.safetensors
     #             -> outputs/<run>/training_config.yaml
@@ -116,7 +120,7 @@ def _resolve_normalization(
         )
     stats = load_channel_normalization(config_path)
     clip = normalization_clip if normalization_clip is not None else stats["normalization_clip"]
-    return stats["channel_mean"], stats["channel_std"], float(clip), str(config_path)
+    return stats["channel_names"], stats["channel_mean"], stats["channel_std"], float(clip), str(config_path)
 
 
 @app.command()
@@ -235,11 +239,12 @@ def main(
 
     # The fields must be normalized exactly as during VAE finetuning before they
     # are encoded, otherwise the latents are off-distribution and unusable.
-    norm_mean, norm_std, norm_clip, norm_source = _resolve_normalization(
+    channel_names, norm_mean, norm_std, norm_clip, norm_source = _resolve_normalization(
         Path(inflate_checkpoint), vae_config, channel_mean, channel_std, normalization_clip
     )
     logger.info(
-        f"Channel normalization from {norm_source}: mean={norm_mean}, std={norm_std}, clip={norm_clip}"
+        f"Channels {channel_names}, normalization from {norm_source}: "
+        f"mean={norm_mean}, std={norm_std}, clip={norm_clip}"
     )
     # Record the stats so decoding (inference) can invert them with the same
     # numbers, plus a fingerprint of the latent space these latents live in.
@@ -253,7 +258,7 @@ def main(
     (output_path / "normalization.json").write_text(
         json.dumps(
             {
-                "channel_names": CHANNEL_NAMES,
+                "channel_names": channel_names,
                 "channel_mean": norm_mean,
                 "channel_std": norm_std,
                 "normalization_clip": norm_clip,
@@ -303,7 +308,8 @@ def main(
                     channel_mean=norm_mean,
                     channel_std=norm_std,
                     normalization_clip=norm_clip,
-                )  # [1, 4, F, H, W], normalized to [-1, 1]
+                    channel_order=channel_names,
+                )  # [1, C, F, H, W], normalized to [-1, 1]
                 video = video.permute(0, 2, 1, 3, 4)  # [1, F, C, H, W] for encode_video
 
                 with torch.no_grad():

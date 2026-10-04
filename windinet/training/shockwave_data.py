@@ -297,7 +297,7 @@ def build_shockwave_video(
     channel_order: list[str] | None = None,
     log_transform_channels: list[str] | None = None,
 ) -> Tensor:
-    """Build a 4-channel shockwave video [B, 4, F, H, W].
+    """Build a shockwave video [B, C, F, H, W], C = len(channel_order) (default 4).
 
     Default channel layout:
         0 - density
@@ -305,8 +305,9 @@ def build_shockwave_video(
         2 - momentum_y
         3 - pressure
 
-    `channel_order` overrides which physical field lands in which stacked
-    channel index -- must be a permutation of CHANNEL_NAMES, positionally
+    `channel_order` overrides which physical fields are stacked, in which
+    channel index -- a permutation of CHANNEL_NAMES or a subset of it (e.g. the
+    3-channel ["density", "momentum_x", "momentum_y"] run), positionally
     aligned with `channel_mean`/`channel_std` (config.VaeDataConfig.channel_order
     validates both). Defaults to CHANNEL_NAMES, the layout every run before
     the 2026-08 channel-order sweep used.
@@ -335,7 +336,7 @@ def build_shockwave_video(
 
     order = channel_order or CHANNEL_NAMES
 
-    fields = {name: sample[name] for name in CHANNEL_NAMES}
+    fields = {name: sample[name] for name in order}
 
     # Ensure batch dimension
     for name, tensor in fields.items():
@@ -346,11 +347,11 @@ def build_shockwave_video(
         fields[name] = torch.log(fields[name].clamp(min=LOG_TRANSFORM_EPS))
 
     # each field: [B, T, H, W]
-    x = torch.stack([fields[name] for name in order], dim=1)  # [B, 4, F, H, W]
+    x = torch.stack([fields[name] for name in order], dim=1)  # [B, C, F, H, W]
 
     if channel_mean is not None and channel_std is not None:
-        mean = x.new_tensor(channel_mean).view(1, 4, 1, 1, 1)
-        std = x.new_tensor(channel_std).view(1, 4, 1, 1, 1)
+        mean = x.new_tensor(channel_mean).view(1, len(order), 1, 1, 1)
+        std = x.new_tensor(channel_std).view(1, len(order), 1, 1, 1)
         x = ((x - mean) / (std * normalization_clip)).clamp(-1.0, 1.0)
 
     x = pad_frames_8n1(x)
@@ -373,7 +374,10 @@ def load_channel_normalization(source: str | Path) -> dict:
     ``(x - mean) / (std * clip)`` clamped to [-1, 1], so any mismatch silently
     produces off-distribution latents or wrongly scaled physical outputs.
 
-    Returns a dict with ``channel_mean``, ``channel_std`` and ``normalization_clip``.
+    Returns a dict with ``channel_names``, ``channel_mean``, ``channel_std`` and
+    ``normalization_clip``. ``channel_names`` (the stacked field order) is the
+    json's ``channel_names`` or the config's ``channel_order``, falling back to
+    the 4-channel CHANNEL_NAMES for sources that predate recording it.
     """
     path = Path(source)
     if not path.is_file():
@@ -396,7 +400,11 @@ def load_channel_normalization(source: str | Path) -> dict:
     mean, std = payload.get("channel_mean"), payload.get("channel_std")
     if not mean or not std:
         raise ValueError(f"{path} has no channel_mean / channel_std")
+    names = list(payload.get("channel_names") or payload.get("channel_order") or CHANNEL_NAMES)
+    if len(names) != len(mean) or len(std) != len(mean):
+        raise ValueError(f"{path}: {len(names)} channel names vs {len(mean)} means / {len(std)} stds")
     return {
+        "channel_names": names,
         "channel_mean": list(mean),
         "channel_std": list(std),
         "normalization_clip": float(payload.get("normalization_clip", 5.0)),

@@ -495,8 +495,37 @@ class VaeTrainer:
         )
         return self._vae.decode(z, temb=temb, return_dict=True).sample
 
-    def _forward_pass(self, x: torch.Tensor) -> tuple[torch.Tensor, int, torch.Tensor, torch.Tensor, torch.Tensor]:
+    @property
+    def _sample_posterior(self) -> bool:
+        """Whether training decodes a reparameterized posterior sample.
+
+        True exactly when the KL term is active: KL(q(z|x) || N(0, I)) only
+        regularizes a VAE whose decoder sees z ~ q(z|x). Decoding the posterior
+        mean instead (what every run before 2026-10-04 did, KL or not) leaves
+        the variance term decoupled from reconstruction -- sigma costs nothing,
+        so KL just drives logvar to 0 and only its mean^2 part does anything.
+        Without KL the posterior stays deterministic (mean), as before.
+        """
+        lw = self._config.loss_weighting
+        return lw.weights.get("kl", 0.0) != 0.0 or "kl" in (getattr(lw, "loss_names", None) or [])
+
+    def _rescale_latents(self, z: torch.Tensor) -> torch.Tensor:
+        """Raw encoder-space latents -> the normalised latents _decode expects."""
+        norm_mean = self._vae.latents_mean.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
+        norm_std = self._vae.latents_std.view(1, -1, 1, 1, 1).to(z.device, z.dtype)
+        sf = float(getattr(self._vae.config, "scaling_factor", 1.0))
+        return (z - norm_mean) * sf / norm_std
+
+    def _forward_pass(
+        self, x: torch.Tensor, sample_posterior: bool = False
+    ) -> tuple[torch.Tensor, int, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Encode → decode through the VAE.
+
+        sample_posterior=True decodes z = mean + exp(logvar / 2) * eps (the
+        reparameterization trick) instead of the posterior mean -- training only,
+        see _sample_posterior. The returned latents stay the rescaled posterior
+        mean either way (the anchor/SDS terms regularize the encoder's mean),
+        and validation, visualization and DiT preprocessing always use the mean.
 
         Returns (reconstruction, original_frames, posterior_mean,
         posterior_logvar, latents) -- posterior_mean/posterior_logvar are
@@ -507,7 +536,12 @@ class VaeTrainer:
         """
         orig_F = x.shape[2]
         latents, posterior_mean, posterior_logvar = self._encode(x)
-        recon = self._decode(latents)
+        if sample_posterior:
+            eps = torch.randn_like(posterior_mean)
+            z = posterior_mean + torch.exp(0.5 * posterior_logvar) * eps
+            recon = self._decode(self._rescale_latents(z))
+        else:
+            recon = self._decode(latents)
         return recon[:, :, :orig_F], orig_F, posterior_mean, posterior_logvar, latents
 
     def _sync_grads(self) -> None:
@@ -819,6 +853,13 @@ class VaeTrainer:
         else:
             logger.info("Starting VAE decoder finetuning...")
 
+        sample_posterior = self._sample_posterior
+        if IS_MAIN_PROCESS:
+            logger.info(
+                "Training decodes "
+                + ("reparameterized posterior samples (KL active)" if sample_posterior else "the posterior mean")
+            )
+
         with live:
             for epoch in range(self._start_epoch, cfg.optimization.epochs + 1):
                 epoch_t0 = time.time()
@@ -855,7 +896,9 @@ class VaeTrainer:
                         log_transform_channels=cfg.data.log_transform_channels,
                     )
                     with self._accelerator.autocast():
-                        recon, _, posterior_mean, posterior_logvar, latents = self._forward_pass(x)
+                        recon, _, posterior_mean, posterior_logvar, latents = self._forward_pass(
+                            x, sample_posterior=sample_posterior
+                        )
                     # Match Accelerate's convert_outputs_to_fp32: losses (e.g. the
                     # SSIM conv) run in fp32, so cast the autocast output back.
                     recon = recon.float()

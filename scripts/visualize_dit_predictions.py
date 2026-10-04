@@ -26,10 +26,10 @@ from windinet.training.shockwave_data import CHANNEL_NAMES, ShockWaveDataset
 from windinet.training.vae_visualization import write_comparison_video
 
 
-def load_ground_truth(dataset: ShockWaveDataset, sample_id: str) -> dict[str, np.ndarray]:
+def load_ground_truth(dataset: ShockWaveDataset, sample_id: str, channel_names: list[str]) -> dict[str, np.ndarray]:
     idx = dataset.ids.index(sample_id)
     sample = dataset[idx]
-    return {name: sample[name].numpy() for name in CHANNEL_NAMES}  # [T,H,W]
+    return {name: sample[name].numpy() for name in channel_names}  # [T,H,W]
 
 
 def render_video(
@@ -42,11 +42,12 @@ def render_video(
     fps: int,
     dpi: int,
 ) -> None:
-    """One MP4 per sample: 4 rows (channels) x 3 columns (GT/Pred/Residual)."""
+    """One MP4 per sample: a row per channel x 3 columns (GT/Pred/Residual)."""
+    channel_names = list(pred)
     write_comparison_video(
-        prediction=np.stack([pred[name] for name in CHANNEL_NAMES]),
-        target=np.stack([gt[name] for name in CHANNEL_NAMES]),
-        channel_names=CHANNEL_NAMES,
+        prediction=np.stack([pred[name] for name in channel_names]),
+        target=np.stack([gt[name] for name in channel_names]),
+        channel_names=channel_names,
         out_path=out_path,
         title=f"{sample_id}  gamma={gamma:.4f}",
         fps=fps,
@@ -86,9 +87,10 @@ def main():
     for npz_path in npz_paths:
         sample_id = npz_path.stem
         data = np.load(npz_path)
-        pred = {name: data[name] for name in CHANNEL_NAMES}
+        # Whichever fields the run predicted (all four, or e.g. the 3-channel run's).
+        pred = {name: data[name] for name in CHANNEL_NAMES if name in data.files}
         gamma = float(data["gamma"])
-        gt = load_ground_truth(dataset, sample_id)
+        gt = load_ground_truth(dataset, sample_id, list(pred))
         render_video(
             pred=pred, gt=gt, sample_id=sample_id, gamma=gamma,
             out_path=out_dir / f"{sample_id}.mp4", fps=args.fps, dpi=args.dpi,
