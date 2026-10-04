@@ -12,7 +12,7 @@
 
 # jupiter sibling of jobs/sng_pvc/eval_vae_test.sbatch: launcher for
 # scripts/eval_vae_test.py (VAE-only reconstruction, pooled/chmean/per-channel
-# VRMSE, per-sim values kept) on the standalone 256x256 test.h5 -- the common
+# VRMSE, per-sim values kept) on the standalone test.h5 of the run's resolution -- the common
 # held-out set every Chapter 6 VAE arm is compared on. Forward-only, plain python.
 # Allocates the full node (1 node, 4 GPUs) like the other jupiter jobs; the
 # eval itself is plain python and runs on the first GPU.
@@ -21,7 +21,8 @@
 # derived from the run that jobs/jupiter/finetune_vae.sbatch trained with that
 # config (same patch_config_for_cluster call, so the paths always match):
 #   checkpoint: <output_dir>/checkpoints/vae_shockwave_best.safetensors
-#   output:     finetune_vae_outputs/jupiter/<run>/test_eval_256.json
+#   output:     finetune_vae_outputs/jupiter/<run>/test_eval_<256|512>.json
+#   test set:   the test.h5 beside the train.h5 the run trained on
 # Pass "auto" to keep a default while overriding a later argument, or "none"
 # as checkpoint for the freshly-inflated (unfinetuned) reference.
 #
@@ -63,22 +64,25 @@ echo "start_time=$(date -Is)"
 CONFIG=${1:?config yaml required}
 CHECKPOINT=${2:-auto}
 OUTPUT_JSON=${3:-auto}
-TEST_H5=${4:-/e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/256x256_ds/test.h5}
+TEST_H5=${4:-auto}
 NUM_SAMPLES=${5:-0}
 
-# The run's output_dir exactly as finetune_vae.sbatch resolves it.
-OUT_DIR=$("${PYTHON}" - "${CONFIG}" <<'EOF'
+# The run's output_dir and train.h5 exactly as finetune_vae.sbatch resolves them.
+read -r OUT_DIR DATA_ROOT < <("${PYTHON}" - "${CONFIG}" <<'EOF'
 import sys
 import yaml
 from windinet.cluster_config import patch_config_for_cluster
 cfg = yaml.safe_load(open(sys.argv[1]))
 patch_config_for_cluster(cfg, cluster="jupiter", num_processes=4, output_suffix="")
-print(cfg["output_dir"])
+print(cfg["output_dir"], cfg["data"]["data_root"])
 EOF
 )
 RUN=$(basename "${OUT_DIR}")
+RES_DIR=$(basename "$(dirname "${DATA_ROOT}")")   # 256x256_ds / 512x512_orig
+# Default test set: the test.h5 next to the train.h5 this run trained on.
+[[ "${TEST_H5}" == auto ]] && TEST_H5="$(dirname "${DATA_ROOT}")/test.h5"
 [[ "${CHECKPOINT}" == auto ]] && CHECKPOINT="${OUT_DIR}/checkpoints/vae_shockwave_best.safetensors"
-[[ "${OUTPUT_JSON}" == auto ]] && OUTPUT_JSON="finetune_vae_outputs/jupiter/${RUN}/test_eval_256.json"
+[[ "${OUTPUT_JSON}" == auto ]] && OUTPUT_JSON="finetune_vae_outputs/jupiter/${RUN}/test_eval_${RES_DIR%%x*}.json"
 SAMPLES_DIR="${SCRATCH}/wh_work/figure_data/vae_test/${RUN}"
 
 CKPT_ARGS=()

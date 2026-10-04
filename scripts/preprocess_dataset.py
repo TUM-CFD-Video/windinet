@@ -80,6 +80,15 @@ def _parse_floats(raw: str | None) -> list[float] | None:
     return None if raw is None else [float(v) for v in raw.split(",")]
 
 
+def _save_atomic(obj, path: Path) -> None:
+    """torch.save via a temp file + rename, so a job killed mid-write (e.g. at
+    its walltime) never leaves a truncated file that a resumed run would skip
+    as already done."""
+    tmp = path.with_name(path.name + ".tmp")
+    torch.save(obj, tmp)
+    tmp.replace(path)
+
+
 def _resolve_normalization(
     inflate_checkpoint: Path,
     vae_config: str | None,
@@ -316,7 +325,7 @@ def main(
                     latent_dict = encode_video(vae, video, device=torch.device(device), dtype=torch.bfloat16)
 
                 # Save latents (squeeze batch dim so DataLoader collation gives [B, seq, C])
-                torch.save({
+                _save_atomic({
                     "latents": latent_dict["latents"].squeeze(0).cpu(),
                     "num_frames": latent_dict["num_frames"],
                     "height": latent_dict["height"],
@@ -329,7 +338,7 @@ def main(
                     [scalars[name] for name in parsed_scalar_names],
                     dtype=torch.float32,
                 )
-                torch.save({
+                _save_atomic({
                     "scalars": scalar_tensor,
                     "scalar_names": parsed_scalar_names,
                 }, scalar_path)

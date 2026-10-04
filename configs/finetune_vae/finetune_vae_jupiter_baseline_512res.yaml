@@ -1,0 +1,95 @@
+# Jupiter baseline VAE at 512x512 (the dataset's native resolution).
+#
+# finetune_vae_jupiter_baseline_256res.yaml with only:
+#   data.data_root: 256x256_ds -> 512x512_orig. On jupiter the folder name is
+#     all that matters: patch_config_for_cluster maps it onto
+#     /e/project1/.../euler_mq_dataset/512x512_orig/train.h5 (downloaded with
+#     euler_mq_dataset/jupiter/download_from_hf.py 512x512_orig, ~1.5 TB).
+#   output_dir, wandb tags.
+# The channel normalization deliberately reuses the 256x256 statistics
+# (euler_mq_256_only_train.yaml): 256x256_ds is a downsampling of the same
+# simulations, and 128 vs 256 statistics already agreed within 0.2%.
+# Per-GPU batch drops 4 -> 1 at launch (BATCH_SIZE=1, accumulation 8, so the
+# effective batch is still 32): 4x the pixels per sample.
+#
+# Launch: bash jobs/jupiter/submit_baseline_512.sh
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/512x512_orig/train.h5"  # folder picks the resolution
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"  # 256 stats reused for 512 (see header)
+  normalization_clip: 5.0
+  num_sim_frames: 97  # 8*12+1, no padding (see header)
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  epochs: [10, 20]   # mid-training and final; replaces interval_epochs
+  num_samples: 3     # gamma min / median / max of the val split
+  frame_numbers: [25, 50, 75, 97]
+  dpi: 150
+  save_video: true   # + GT/Prediction/Residual MP4 over all frames per sample
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "jupiter", "baseline", "rmse-h1", "512res", "eval500", "f97"]
+
+seed: 42
+output_dir: "finetune_vae_jupiter_baseline_512res"
+clean_output_dir: true

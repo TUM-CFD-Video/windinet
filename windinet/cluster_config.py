@@ -11,6 +11,10 @@ clusters rather than a script that itself needs to move between them.
 """
 
 import os
+from pathlib import Path
+
+# Resolution folders of the euler_mq dataset (rha6696/euler_mq on HuggingFace).
+DATASET_RESOLUTIONS = ("128x128_ds", "256x256_ds", "512x512_orig")
 
 CLUSTER_DEFAULTS = {
     "lundquist": {
@@ -58,9 +62,14 @@ CLUSTER_DEFAULTS = {
     },
     "jupiter": {
         # Dataset on project storage (not purged), populated by
-        # euler_mq_dataset/jupiter/download_from_hf.py; 256x256_ds is this
-        # cluster's default resolution. Checkpoints go to scratch.
+        # euler_mq_dataset/jupiter/download_from_hf.py. data_root_template's
+        # {resolution} is the resolution folder named by the config's own
+        # data_root (e.g. 256x256_ds, 512x512_orig), so one config line picks
+        # the dataset. data_root stays the concrete 256x256 path for jobs
+        # submitted with older launchers that read it directly. Checkpoints go
+        # to scratch.
         "data_root": "/e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/256x256_ds/train.h5",
+        "data_root_template": "/e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/{resolution}/train.h5",
         "output_root": "/e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs",
         "num_dataloader_workers": 4,
         "effective_batch": 32,
@@ -102,7 +111,19 @@ def patch_config_for_cluster(
     defaults = CLUSTER_DEFAULTS[cluster]
     scratch = os.environ.get("SCRATCH", "")
 
-    cfg["data"]["data_root"] = data_root if data_root is not None else defaults["data_root"].format(scratch=scratch)
+    if data_root is None and "data_root_template" in defaults:
+        # The config's data_root names the resolution folder; this cluster
+        # maps it onto its own storage.
+        resolution = Path(cfg["data"]["data_root"]).parent.name
+        if resolution not in DATASET_RESOLUTIONS:
+            raise ValueError(
+                f"cannot infer the dataset resolution from data_root={cfg['data']['data_root']!r}: "
+                f"its folder must be one of {DATASET_RESOLUTIONS}"
+            )
+        data_root = defaults["data_root_template"].format(scratch=scratch, resolution=resolution)
+    elif data_root is None:
+        data_root = defaults["data_root"].format(scratch=scratch)
+    cfg["data"]["data_root"] = data_root
     cfg["data"]["num_dataloader_workers"] = defaults["num_dataloader_workers"]
 
     batch_size = cfg["optimization"]["batch_size"]

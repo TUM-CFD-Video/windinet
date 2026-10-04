@@ -19,8 +19,8 @@
 # VAE_CHECKPOINT is REQUIRED (env var). $1 (optional) overrides OUTPUT_NAME,
 # default = the VAE run directory name; latents land in
 # /e/scratch/e-dev-2026d09-262/wh_work/dit_preprocessed/<OUTPUT_NAME>/.
-# $2 (optional) overrides DATA_ROOT (default: CLUSTER_DEFAULTS["jupiter"],
-# the 256x256_ds train split).
+# $2 (optional) overrides DATA_ROOT (default: the train.h5 the VAE run trained
+# on, from its training_config.yaml -- 256x256_ds or 512x512_orig).
 #
 # EVAL_SIMS defaults to 500 = the Chapter 6 VAE held-out split (NOT sng_pvc's
 # old 675 default), so DiT val is on the same sims as the VAE's val_vrmse.
@@ -65,10 +65,16 @@ fi
 
 DEFAULT_OUTPUT_NAME=$(basename "$(dirname "$(dirname "${VAE_CHECKPOINT}")")")
 OUTPUT_NAME=${1:-${DEFAULT_OUTPUT_NAME}}
-DEFAULT_DATA_ROOT=$("${PYTHON}" -c "from windinet.cluster_config import CLUSTER_DEFAULTS; print(CLUSTER_DEFAULTS['jupiter']['data_root'])")
-DATA_ROOT=${2:-${DEFAULT_DATA_ROOT}}
 MAX_SAMPLES=${MAX_SAMPLES:-0}
 VAE_TRAINING_CONFIG="$(dirname "$(dirname "${VAE_CHECKPOINT}")")/training_config.yaml"
+# Default DATA_ROOT: the train.h5 the VAE itself trained on (its resolved
+# data.data_root), so the latents always come from the same resolution.
+if [[ -z "${2:-}" ]]; then
+    [[ -f "${VAE_TRAINING_CONFIG}" ]] || { echo "error: ${VAE_TRAINING_CONFIG} not found; pass DATA_ROOT as \$2" >&2; exit 1; }
+    DATA_ROOT=$("${PYTHON}" -c "import sys,yaml; print(yaml.safe_load(open(sys.argv[1]))['data']['data_root'])" "${VAE_TRAINING_CONFIG}")
+else
+    DATA_ROOT=$2
+fi
 if [[ -z "${NUM_SIM_FRAMES:-}" ]]; then
     [[ -f "${VAE_TRAINING_CONFIG}" ]] || { echo "error: ${VAE_TRAINING_CONFIG} not found; set NUM_SIM_FRAMES" >&2; exit 1; }
     NUM_SIM_FRAMES=$("${PYTHON}" -c "import sys,yaml; print(yaml.safe_load(open(sys.argv[1]))['data'].get('num_sim_frames') or '')" "${VAE_TRAINING_CONFIG}")

@@ -18,7 +18,7 @@
 # other stage of the jupiter pipeline.
 #
 # Defaults reproduce the thesis protocol (THESIS_RESULTS.md section 3, jobs
-# 546059-546065): the standalone 256x256 test.h5, all 500 sims, 20 sampler
+# 546059-546065): the run's standalone test.h5 (256 or 512), all 500 sims, 20 sampler
 # steps (configs/dit/inference_dit.yaml), frame 0 encoded with the posterior
 # mean, 3 gamma-spread npz samples for figures.
 #
@@ -33,8 +33,8 @@
 #                      encoded with; its run dir's training_config.yaml gives
 #                      the pixel normalization
 #   NUM_SAMPLES        optional, default 500
-# Env: TEST_H5 (default the jupiter 256x256 test.h5; "none" = the manifest's
-# val split instead), SAVE_VIS_SAMPLES (default 3), SAVE_NPZ_SAMPLES (default 3),
+# Env: TEST_H5 (default: the test.h5 beside the latents' train.h5, so 256 or 512
+# follows the run; "none" = the manifest's val split instead), SAVE_VIS_SAMPLES (default 3), SAVE_NPZ_SAMPLES (default 3),
 # NUM_INFERENCE_STEPS (default: config's 20).
 #
 # Results: logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json (tracked);
@@ -73,7 +73,11 @@ PREPROCESSED_ROOT=${1:?${USAGE}}
 DIT_CHECKPOINT=${2:?${USAGE}}
 VAE_CHECKPOINT=${3:?${USAGE}}
 NUM_SAMPLES=${4:-500}
-TEST_H5=${TEST_H5:-/e/project1/e-dev-2026d09-262/datasets/euler_mq_dataset/256x256_ds/test.h5}
+# Default test set: the test.h5 next to the train.h5 the latents were encoded
+# from (split_manifest.json's data_root), so the resolution always matches.
+if [[ -z "${TEST_H5:-}" ]]; then
+    TEST_H5=$("${PYTHON}" -c "import json,os,sys; print(os.path.join(os.path.dirname(json.load(open(sys.argv[1]))['data_root']), 'test.h5'))" "${PREPROCESSED_ROOT}/split_manifest.json")
+fi
 SAVE_VIS_SAMPLES=${SAVE_VIS_SAMPLES:-3}
 SAVE_NPZ_SAMPLES=${SAVE_NPZ_SAMPLES:-3}
 NUM_INFERENCE_STEPS=${NUM_INFERENCE_STEPS:-}
