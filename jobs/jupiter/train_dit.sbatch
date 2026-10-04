@@ -14,8 +14,8 @@
 # preprocess_dit_data.sbatch: trains on the latents it wrote under
 # /e/scratch/e-dev-2026d09-262/wh_work/dit_preprocessed/<PREPROCESSED_NAME>/.
 #
-# $1 PREPROCESSED_NAME (required), $2 BASE_CONFIG (default: the 30k-step
-# Chapter 6 baseline config). The config's __PREPROCESSED_ROOT__ placeholder
+# $1 PREPROCESSED_NAME (required), $2 BASE_CONFIG (default: the jupiter
+# baseline, configs/dit/train_dit_jupiter_baseline.yaml, 8k steps). The config's __PREPROCESSED_ROOT__ placeholder
 # is substituted at launch, same as the other clusters' DiT launchers.
 # STEPS=<n> (env) overrides optimization.steps.
 #
@@ -52,7 +52,7 @@ export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
 
 PREPROCESSED_NAME=${1:?usage: sbatch jobs/jupiter/train_dit.sbatch <PREPROCESSED_NAME> [BASE_CONFIG]}
-BASE_CONFIG=${2:-configs/dit/train_dit_jupiter_ch6_loss_rmse_h1_30k.yaml}
+BASE_CONFIG=${2:-configs/dit/train_dit_jupiter_baseline.yaml}
 STEPS=${STEPS:-}
 PREPROCESSED_ROOT="/e/scratch/e-dev-2026d09-262/wh_work/dit_preprocessed/${PREPROCESSED_NAME}"
 RUN_CONFIG=$(mktemp /tmp/wh_train_dit_XXXX.yaml)

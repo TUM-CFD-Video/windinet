@@ -37,7 +37,8 @@
 #
 # Submit from the repo root, windinet env active (sbatch inherits it):
 #   sbatch jobs/jupiter/finetune_vae.sbatch [configs/finetune_vae/<config>.yaml]
-# or the whole VAE -> encode -> DiT chain: bash jobs/jupiter/submit_baseline_pipeline.sh
+# or the whole baseline chain (VAE -> evals, encode -> DiT):
+#   bash jobs/jupiter/submit_baseline_pipeline.sh
 
 set -euo pipefail
 

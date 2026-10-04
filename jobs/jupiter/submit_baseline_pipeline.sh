@@ -1,24 +1,29 @@
 #!/bin/bash
-# Chapter 6 baseline on jupiter, chained with Slurm dependencies. Every job is
-# capped at the booster partition's 12h limit, so the two long stages are
-# split into a first job + resume jobs:
+# Jupiter baseline, end to end, chained with Slurm dependencies. Same recipe
+# as the thesis baseline (VAE "Full FT" + 8k-step DiT, THESIS_RESULTS.md), so
+# its test numbers are comparable to the thesis (VAE ch-mean 0.0800, VAE + DiT
+# ch-mean 0.4984):
 #
-#   VAE    finetune_vae_ch6_loss_rmse_h1_256res   4 GPUs  1 + NUM_VAE_RESUMES jobs
-#            each resume: afterany on the previous VAE job
-#   encode EVAL_SIMS=500                          1 GPU   afterok on the LAST VAE job
-#   DiT    train_dit_jupiter_ch6_loss_rmse_h1_30k 4 GPUs  1 + NUM_DIT_RESUMES jobs
-#            first: afterok on encode; each resume: afterany on the previous DiT job
+#   VAE      finetune_vae_jupiter_baseline_256res  4 GPUs  1 + NUM_VAE_RESUMES jobs
+#              each resume: afterany on the previous VAE job
+#   vaetest  eval_vae_test (test.h5, 500 sims)     4 GPUs  afterok on the LAST VAE job
+#   encode   EVAL_SIMS=500                         1 GPU   afterok on the LAST VAE job
+#   DiT      train_dit_jupiter_baseline (8k)       4 GPUs  1 + NUM_DIT_RESUMES jobs
+#              first: afterok on encode; each resume: afterany on the previous DiT job
+#   diteval  eval_dit_vrmse (test.h5, 500 sims)    1 GPU   afterok on the LAST DiT job
 #
-# Both launchers resume from the newest checkpoint on disk and exit 0 at once
-# if the run is already complete, so surplus resume jobs cost ~a minute each.
-# The last VAE job only exits 0 once the VAE has really finished (or was
-# already finished), so encode never starts on a half-trained VAE.
+# Both training launchers resume from the newest checkpoint on disk and exit 0
+# at once if the run is already complete, so surplus resume jobs cost ~a
+# minute each, and the last job of a stage only exits 0 once that stage has
+# really finished -- downstream stages never start on a half-trained model.
 #
-# NUM_VAE_RESUMES (default 0: the VAE takes ~3.5h, one 6h job) / NUM_DIT_RESUMES (default 3 ->
-# 48h total for 30k steps): DiT throughput is not measured on jupiter yet.
-# If the chain runs out before a stage finishes, just resubmit that stage's
-# sbatch with the same arguments (it continues), then chain the rest by hand.
-# SKIP_VAE=1 skips the VAE stage (checkpoint already on scratch).
+# NUM_VAE_RESUMES (default 0: the VAE takes ~3.5h, one 6h job).
+# NUM_DIT_RESUMES (default 1 -> 24h for 8k steps): DiT throughput on jupiter
+# is not measured yet (sng_pvc: 0.12 steps/s, 19.6h for 8k on 8 tiles). The
+# first DiT job's log gives the real steps/s; if the chain runs out before a
+# stage finishes, resubmit that stage's sbatch with the same arguments (it
+# continues), then chain the rest by hand.
+# SKIP_VAE=1 skips the VAE and vaetest stages (checkpoint already on scratch).
 #
 # If a job fails for real, its afterok dependents stay PENDING
 # (DependencyNeverSatisfied): scancel them and resubmit from the failed stage.
@@ -27,18 +32,21 @@
 #   bash jobs/jupiter/submit_baseline_pipeline.sh
 set -euo pipefail
 
-VAE_CONFIG=configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml
-DIT_CONFIG=configs/dit/train_dit_jupiter_ch6_loss_rmse_h1_30k.yaml
-VAE_RUN=finetune_vae_ch6_loss_rmse_h1_256res
+VAE_CONFIG=configs/finetune_vae/finetune_vae_jupiter_baseline_256res.yaml
+DIT_CONFIG=configs/dit/train_dit_jupiter_baseline.yaml
+VAE_RUN=finetune_vae_jupiter_baseline_256res
 VAE_DIR=/e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/${VAE_RUN}
 VAE_CKPT=${VAE_DIR}/checkpoints/vae_shockwave_best.safetensors
+PRE_ROOT=/e/scratch/e-dev-2026d09-262/wh_work/dit_preprocessed/${VAE_RUN}
+DIT_CKPT_DIR=/e/scratch/e-dev-2026d09-262/wh_work/dit_outputs/shockwave_dit_jupiter_baseline/checkpoints
 NUM_VAE_RESUMES=${NUM_VAE_RESUMES:-0}
-NUM_DIT_RESUMES=${NUM_DIT_RESUMES:-3}
+NUM_DIT_RESUMES=${NUM_DIT_RESUMES:-1}
 
 mkdir -p logs/jupiter
 for f in "$VAE_CONFIG" "$DIT_CONFIG"; do
     [ -e "$f" ] || { echo "error: missing $f" >&2; exit 1; }
 done
+grep -q "shockwave_dit_jupiter_baseline\"" "$DIT_CONFIG" || { echo "error: $DIT_CONFIG output_dir does not match DIT_CKPT_DIR" >&2; exit 1; }
 
 # submit_chain N DEP SCRIPT ARGS... -- first job afterok:DEP (if DEP set),
 # then N resume jobs each afterany on the previous; prints the last job id.
@@ -61,8 +69,10 @@ if [[ "${SKIP_VAE:-0}" == "1" ]]; then
     [ -e "${VAE_DIR}/.train_complete" ] || { echo "error: SKIP_VAE=1 but ${VAE_DIR}/.train_complete does not exist" >&2; exit 1; }
     echo "vae: skipped (${VAE_CKPT})"
 else
+    [ -e "${VAE_DIR}/.train_complete" ] && { echo "error: ${VAE_DIR} is already complete; use SKIP_VAE=1" >&2; exit 1; }
     echo "vae:"
     vae_last=$(submit_chain "$NUM_VAE_RESUMES" "" jobs/jupiter/finetune_vae.sbatch "$VAE_CONFIG")
+    echo "vaetest: $(sbatch --parsable --dependency="afterok:${vae_last}" jobs/jupiter/eval_vae_test.sbatch "$VAE_CONFIG")"
 fi
 
 pre_args=(--parsable)
@@ -72,4 +82,7 @@ pre_id=$(EVAL_SIMS=500 VAE_CHECKPOINT="$VAE_CKPT" \
 echo "encode: ${pre_id}"
 
 echo "dit:"
-submit_chain "$NUM_DIT_RESUMES" "$pre_id" jobs/jupiter/train_dit.sbatch "$VAE_RUN" "$DIT_CONFIG" >/dev/null
+dit_last=$(submit_chain "$NUM_DIT_RESUMES" "$pre_id" jobs/jupiter/train_dit.sbatch "$VAE_RUN" "$DIT_CONFIG")
+
+echo "diteval: $(sbatch --parsable --dependency="afterok:${dit_last}" \
+    jobs/jupiter/eval_dit_vrmse.sbatch "$PRE_ROOT" "$DIT_CKPT_DIR" "$VAE_CKPT")"
