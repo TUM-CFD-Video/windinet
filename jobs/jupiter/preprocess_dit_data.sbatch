@@ -4,7 +4,7 @@
 #SBATCH --partition=booster
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=16
 #SBATCH --time=08:00:00
 #SBATCH --output=logs/jupiter/%x_%j.log
@@ -12,7 +12,8 @@
 
 # Encode step of the jupiter DiT pipeline: turns a finetuned VAE checkpoint
 # into latents for train_dit.sbatch. scripts/preprocess_dataset.py is a
-# single-process encode loop, so 1 GPU. --time is a guess (sng_pvc needed
+# single-process encode loop (runs on the first GPU; the job takes the full
+# node, 1 node x 4 GPUs, like every other pipeline stage). --time is a guess (sng_pvc needed
 # >4h on one XPU tile for 256res; not measured on jupiter yet).
 #
 # VAE_CHECKPOINT is REQUIRED (env var). $1 (optional) overrides OUTPUT_NAME,

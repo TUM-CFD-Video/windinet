@@ -4,7 +4,7 @@
 #SBATCH --partition=booster
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=16
 #SBATCH --time=04:00:00  # 500 test sims took 1.5h on one sng_pvc tile (job 546059)
 #SBATCH --output=logs/jupiter/%x_%j.log
@@ -13,7 +13,9 @@
 # jupiter sibling of jobs/sng_pvc/eval_dit_vrmse.sbatch: launcher for
 # scripts/eval_dit_vrmse.py -- VAE-only reconstruction vs full VAE + DiT
 # rollout, pixel-space VRMSE (pooled / channel-mean / per channel / per gamma)
-# plus latent VRMSE, per-sim values kept. Forward-only, plain python, 1 GPU.
+# plus latent VRMSE, per-sim values kept. Forward-only, plain python: it runs
+# on the first GPU, but the job takes the full node (1 node, 4 GPUs) like every
+# other stage of the jupiter pipeline.
 #
 # Defaults reproduce the thesis protocol (THESIS_RESULTS.md section 3, jobs
 # 546059-546065): the standalone 256x256 test.h5, all 500 sims, 20 sampler
