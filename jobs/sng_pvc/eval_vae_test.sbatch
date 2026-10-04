@@ -52,6 +52,8 @@ NUM_SAMPLES=${5:-0}
 
 CKPT_ARGS=()
 [ "${CHECKPOINT}" != none ] && CKPT_ARGS=(--checkpoint "${CHECKPOINT}")
+# METRIC_FRAMES (optional env): score only the first N frames.
+[ -n "${METRIC_FRAMES:-}" ] && CKPT_ARGS+=(--metric-frames "${METRIC_FRAMES}")
 
 echo "config=${CONFIG} checkpoint=${CHECKPOINT} test_h5=${TEST_H5} num_samples=${NUM_SAMPLES} output=${OUTPUT_JSON}"
 printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Is)" "${SLURM_JOB_ID}" "${SLURM_JOB_NAME}" \

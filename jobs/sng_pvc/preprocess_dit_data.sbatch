@@ -33,7 +33,9 @@
 # VAE's val_vrmse (see jobs/lrz_ai/preprocess_dit_data.job's own header for
 # why). Set EVAL_SIMS=0 to disable the split; MAX_SAMPLES for a fast
 # smoke-test encode instead (cannot combine with EVAL_SIMS, same restriction
-# as preprocess_dataset.py itself).
+# as preprocess_dataset.py itself). NUM_SIM_FRAMES (optional) keeps only the
+# first N frames of each sim (97-frame experiment); must match the VAE run's
+# data.num_sim_frames.
 #
 # --time history: 04:00:00 -> 12:00:00 (2026-08-28, job 529527 hit the old
 # 4h limit and was CANCELLED mid-encode at 4500 samples/256res/1 tile;
@@ -97,6 +99,10 @@ if [[ "${MAX_SAMPLES}" != "0" ]]; then
     EXTRA_ARGS+=(--max-samples "${MAX_SAMPLES}")
 elif [[ "${EVAL_SIMS}" != "0" ]]; then
     EXTRA_ARGS+=(--eval-sims "${EVAL_SIMS}" --split-seed "${SPLIT_SEED}")
+fi
+if [[ -n "${NUM_SIM_FRAMES:-}" ]]; then
+    echo "NUM_SIM_FRAMES: ${NUM_SIM_FRAMES}"
+    EXTRA_ARGS+=(--num-sim-frames "${NUM_SIM_FRAMES}")
 fi
 
 python scripts/preprocess_dataset.py \

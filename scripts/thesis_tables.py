@@ -127,7 +127,8 @@ def vae_test() -> None:
         _group_rows(rows, 8),
         "VAE reconstruction VRMSE on the held-out test set (500 simulations, $256\\times256$). "
         "$\\Delta$ is the change of the channel-mean VRMSE relative to the baseline. "
-        "Lower is better.",
+        "Lower is better. The model trained at $128^2$ is applied directly to the "
+        "$256\\times256$ test data (the VAE is fully convolutional).",
         "tab:app_vae_test",
     )
 

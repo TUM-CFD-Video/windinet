@@ -144,6 +144,13 @@ if [ -n "${SIM_IDS:-}" ]; then
     echo "SIM_IDS: ${SIM_IDS} -> ${NPZ_DIR:-<out_dir>/samples}"
 fi
 [ -n "${NPZ_DIR:-}" ] && EXTRA_ARGS+=(--npz_dir "${NPZ_DIR}")
+# METRIC_FRAMES: score only the first N frames (101-frame baseline vs the
+# 97-frame arm on the same frames). The sim length itself follows the
+# preprocessed root's normalization.json (num_sim_frames), not this.
+if [ -n "${METRIC_FRAMES:-}" ]; then
+    echo "METRIC_FRAMES: ${METRIC_FRAMES}"
+    EXTRA_ARGS+=(--metric_frames "${METRIC_FRAMES}")
+fi
 
 if [ "${DIT_CHECKPOINT}" = "untrained" ]; then
     echo "DIT_CHECKPOINT=untrained: DiT-never-finetuned control, skipping checkpoint prewarm/load"

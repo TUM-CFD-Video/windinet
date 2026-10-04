@@ -45,6 +45,20 @@
 #   bash jobs/sng_pvc/ch6_submit.sh eval g4_ready g5
 #   bash jobs/sng_pvc/ch6_submit.sh vaetest vae_all   # any time after the VAEs exist
 #
+# Optional 97-frame experiment (arm "f97"): the baseline recipe with every
+# sim truncated to its first 97 frames (8*12+1, no padding to 105). Its
+# encode job gets NUM_SIM_FRAMES=97 automatically; its eval picks the length
+# up from the latents. Every other arm is untouched. To compare on the same
+# frames, score the 101-frame baseline on its first 97 with METRIC_FRAMES:
+#   bash jobs/sng_pvc/ch6_submit.sh pipeline f97
+#   ...after it finishes:
+#   bash jobs/sng_pvc/ch6_submit.sh eval f97
+#   bash jobs/sng_pvc/ch6_submit.sh vaetest f97
+#   METRIC_FRAMES=97 bash jobs/sng_pvc/ch6_submit.sh eval loss_rmse_h1
+#   METRIC_FRAMES=97 bash jobs/sng_pvc/ch6_submit.sh vaetest loss_rmse_h1
+# METRIC_FRAMES suffixes the outputs (test_eval_256_m97.json, figure_data
+# .../ARM_m97) so the 101-frame results are not overwritten.
+#
 # If an upstream job fails, its afterok dependents sit in PENDING with
 # reason DependencyNeverSatisfied: scancel them and resubmit that arm.
 #
@@ -99,6 +113,11 @@ vae_ckpt() {
     echo "${SCRATCH_ROOT}/finetune_vae_outputs_sng_pvc/$(vae_run "$1")/checkpoints/${f}"
 }
 
+sim_frames() {  # frame truncation for the encode step; empty = all 101
+    case "$1" in f97*) echo 97 ;; esac
+}
+METRIC_SUFFIX=${METRIC_FRAMES:+_m${METRIC_FRAMES}}
+
 need_file() {
     [ -e "$1" ] || { echo "error: missing $1" >&2; return 1; }
 }
@@ -115,7 +134,7 @@ submit_encode_and_dit() {  # $1=arm, $2=optional dependency
     local arm=$1 dep=${2:-} pre_args=(--parsable) pre_id dit_id
     need_file "$(dit_config "$arm")"
     [ -n "$dep" ] && pre_args+=(--dependency="afterok:${dep}")
-    pre_id=$(EVAL_SIMS=$EVAL_SIMS_CH6 VAE_CHECKPOINT="$(vae_ckpt "$arm")" \
+    pre_id=$(EVAL_SIMS=$EVAL_SIMS_CH6 VAE_CHECKPOINT="$(vae_ckpt "$arm")" NUM_SIM_FRAMES="$(sim_frames "$arm")" \
         sbatch "${pre_args[@]}" jobs/sng_pvc/preprocess_dit_data.sbatch "$(vae_run "$arm")")
     dit_id=$(sbatch --parsable --dependency="afterok:${pre_id}" \
         jobs/sng_pvc/train_dit.sbatch "$(vae_run "$arm")" "$(dit_config "$arm")")
@@ -125,7 +144,7 @@ submit_encode_and_dit() {  # $1=arm, $2=optional dependency
 cmd=${1:-}
 [ -n "$cmd" ] && shift || true
 arms=$(expand_arms "$@")
-[ -n "$arms" ] || { sed -n '2,50p' "$0"; exit 1; }
+[ -n "$arms" ] || { sed -n '2,64p' "$0"; exit 1; }
 
 case "$cmd" in
     vae)
@@ -173,7 +192,7 @@ case "$cmd" in
             # Chapter 6 DiTs are scored on the same standalone 256x256 test.h5
             # as the VAE test eval (vaetest), with figure fields saved to scratch.
             TEST_H5="${SCRATCH_ROOT}/euler_mq_dataset/256x256_ds/test.h5" \
-            SAVE_NPZ_SAMPLES=3 NPZ_DIR="${SCRATCH_ROOT}/figure_data/dit/${arm}" \
+            SAVE_NPZ_SAMPLES=3 NPZ_DIR="${SCRATCH_ROOT}/figure_data/dit/${arm}${METRIC_SUFFIX}" \
                 sbatch jobs/sng_pvc/eval_dit_vrmse.sbatch "$pre" "$dit" "$(vae_ckpt "$arm")" "$EVAL_SIMS_CH6"
         done
         ;;
@@ -185,12 +204,12 @@ case "$cmd" in
             need_file "$cfg"
             ckpt=$(vae_ckpt "$arm")
             need_file "$ckpt" || { echo "[$arm] skipped: VAE not trained" >&2; continue; }
-            out="finetune_vae_outputs/sng_pvc/$(vae_run "$arm")/test_eval_256.json"
+            out="finetune_vae_outputs/sng_pvc/$(vae_run "$arm")/test_eval_256${METRIC_SUFFIX}.json"
             echo "[$arm] vaetest=$(sbatch --parsable jobs/sng_pvc/eval_vae_test.sbatch "$cfg" "$ckpt" "$out" "$test_h5")"
         done
         ;;
     *)
-        sed -n '2,50p' "$0"
+        sed -n '2,64p' "$0"
         exit 1
         ;;
 esac

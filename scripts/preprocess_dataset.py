@@ -127,10 +127,11 @@ def main(
         default="LTXV_2B_0.9.6_DEV",
         help="LTX-Video model version for VAE encoding",
     ),
-    # num_sim_frames: int = typer.Option(
-    #     default=112,
-    #     help="Number of simulation frames to use (112 + 1 conditioning = 113 total)",
-    # ),
+    num_sim_frames: int = typer.Option(
+        default=None,
+        help="Keep only the first N simulation frames (e.g. 97 = 8*12+1, which the LTX VAE "
+        "encodes without padding). Must match the VAE run's data.num_sim_frames. Default: all.",
+    ),
     device: str = typer.Option(default=str(get_default_device()), help="Device for VAE encoding"),
     max_samples: int = typer.Option(default=0, help="Limit number of samples (0 = all)"),
     inflate_checkpoint: str = typer.Option(
@@ -182,7 +183,9 @@ def main(
     parsed_scalar_names = [s.strip() for s in scalar_names.split(",")]
 
     # Load dataset
-    dataset = ShockWaveDataset(data_root)
+    dataset = ShockWaveDataset(data_root, num_sim_frames=num_sim_frames)
+    if num_sim_frames is not None:
+        logger.info(f"Truncating every simulation to its first {num_sim_frames} frames")
     if max_samples > 0:
         if eval_sims > 0:
             raise typer.BadParameter(
@@ -257,6 +260,7 @@ def main(
                 "vae_checkpoint": str(Path(inflate_checkpoint).resolve()),
                 "latent_fingerprint": fingerprint,
                 "source": norm_source,
+                "num_sim_frames": num_sim_frames,
             },
             indent=2,
         )

@@ -254,6 +254,10 @@ def parse_args():
                           "eval_vae_test.py on the same id list")
     ap.add_argument("--npz_frames", type=int, nargs="+", default=[0, 25, 50, 75, 100],
                      help="0-indexed frames saved per npz sample (frame 0 = the conditioning IC)")
+    ap.add_argument("--metric_frames", type=int, default=None,
+                     help="Score only the first N frames (pixel space; latent space keeps every latent "
+                          "frame). For comparing a 101-frame model against a 97-frame one on the same "
+                          "frames: the model still runs on its own full length, only the metric is cropped.")
     ap.add_argument("--npz_dir", type=Path, default=None, help="Where the npz samples go (default: <out_dir>/samples)")
     ap.add_argument("--sim_ids", type=str, nargs="+", default=None,
                      help="Evaluate exactly these sim ids of the h5 (the manifest's data_root, or --test_h5) "
@@ -315,7 +319,19 @@ def main():
     scalar_checkpoint = None if args.untrained_dit else ensure_checkpoint(cfg["scalar_checkpoint"])
     num_inference_steps = cfg.get("num_inference_steps", 2)
     guidance_scale = cfg.get("guidance_scale", 1.0)
-    num_frames = cfg.get("num_frames", 105)
+    # Latents encoded from truncated sims (preprocess_dataset.py --num-sim-frames)
+    # record that length; the eval must use the same one, and the DiT then
+    # generates the matching 8k+1 length instead of the config's 105.
+    num_sim_frames = json.loads(
+        (args.preprocessed_data_root / "normalization.json").read_text()
+    ).get("num_sim_frames")
+    if num_sim_frames is not None:
+        num_frames = ((num_sim_frames - 1 + 7) // 8) * 8 + 1
+        print(f"Latents built from {num_sim_frames}-frame sims -> generating {num_frames} frames")
+    else:
+        num_frames = cfg.get("num_frames", 105)
+    if args.metric_frames is not None:
+        print(f"Scoring only the first {args.metric_frames} frames")
     image_cond_noise_scale = cfg.get("image_cond_noise_scale", 0.0)
     seed = cfg.get("seed", 42)
 
@@ -340,7 +356,7 @@ def main():
         num_tokens_per_scalar=sc.get("num_tokens_per_scalar", 4),
     )
 
-    dataset = ShockWaveDataset(h5_path)
+    dataset = ShockWaveDataset(h5_path, num_sim_frames=num_sim_frames)
     missing = [s for s in val_ids if s not in dataset.ids]
     if missing:
         raise SystemExit(f"val_ids not found in {h5_path}: {missing[:5]}...")
@@ -367,6 +383,7 @@ def main():
         sample = dataset[idx]
         H, W = sample["density"].shape[-2:]
         orig_F = sample["density"].shape[0]
+        score_F = min(orig_F, args.metric_frames or orig_F)
 
         # Ground truth, normalized, [1, 4, orig_F, H, W] -- same call
         # preprocess_dataset.py used to build the VAE's own training/eval input.
@@ -384,8 +401,8 @@ def main():
         vae_recon = vae_decode(pipe.vae, gt_latent, args.default_temb).float()
         vae_recon = pad_to(vae_recon, orig_F)
 
-        vo_overall = float(vrms_loss(vae_recon, target).item())
-        vo_channel = vrms_per_channel(vae_recon, target).tolist()
+        vo_overall = float(vrms_loss(vae_recon[:, :, :score_F], target[:, :, :score_F]).item())
+        vo_channel = vrms_per_channel(vae_recon[:, :, :score_F], target[:, :, :score_F]).tolist()
 
         # --- VAE+DiT pass: condition on frame 0 only, roll the rest out ---
         cond_video = build_initial_condition(sample, stats, device)
@@ -437,7 +454,7 @@ def main():
         # normalized-space metric.
         dit_pred = vae_decode(pipe.vae, pred_lat.to(DTYPE), args.default_temb).float()
         dit_pred = pad_to(dit_pred, orig_F)
-        n_px = min(dit_pred.shape[2], target.shape[2])
+        n_px = min(dit_pred.shape[2], target.shape[2], score_F)
         dit_pred, target_cmp = dit_pred[:, :, :n_px], target[:, :, :n_px]
 
         vd_overall = float(vrms_loss(dit_pred, target_cmp).item())
@@ -521,6 +538,9 @@ def main():
         "h5": h5_path,
         "checkpoint": str(checkpoint) if checkpoint else "untrained (stock pretrained transformer + random ScalarEmbedding)",
         "vae_checkpoint": str(vae_ckpt),
+        "num_sim_frames": num_sim_frames,
+        "num_frames_generated": num_frames,
+        "metric_frames": args.metric_frames,
         "vae_only_vrmse_mean": sum_overall["vae_only"] / n,
         "vae_dit_vrmse_mean": sum_overall["vae_dit"] / n,
         "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(CHANNEL_NAMES)},

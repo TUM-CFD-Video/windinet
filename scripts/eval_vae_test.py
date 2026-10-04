@@ -140,6 +140,11 @@ def main(
     output: str = typer.Option("vae_test_eval.json", help="Where to write the JSON report"),
     save_samples: int = typer.Option(3, help="Save fields of N gamma-spread test sims for figures (0 = none)"),
     sample_frames: list[int] = typer.Option([0, 25, 50, 75, 100], help="Frames saved per sample (repeat the option)"),
+    metric_frames: int = typer.Option(
+        None,
+        help="Score only the first N frames. For comparing a 101-frame VAE against a 97-frame "
+        "one on the same frames: the VAE still sees its full clip, only the metric is cropped.",
+    ),
     samples_dir: str = typer.Option(
         None,
         help="Where the sample .npz files go (default: $SCRATCH/windinet/figure_data/vae_test/<run>, "
@@ -159,7 +164,7 @@ def main(
     console.print(f"Test set: {test_h5} -- evaluating {len(indices)} of {len(dataset)} sims")
     sample_ids = pick_gamma_spread_ids([dataset.ids[i] for i in indices], save_samples)
     if samples_dir is None:
-        run_name = Path(output).resolve().parent.name
+        run_name = Path(output).resolve().parent.name + (f"_m{metric_frames}" if metric_frames else "")
         scratch = os.environ.get("SCRATCH")
         samples_dir = (
             str(Path(scratch) / "windinet" / "figure_data" / "vae_test" / run_name)
@@ -194,8 +199,9 @@ def main(
             )
             with torch.autocast(device_type=device.type, dtype=autocast_dtype, enabled=autocast_dtype is not None):
                 recon = _decode(vae, _encode(vae, x), cfg.adapter.default_temb)
-            recon = recon.float()[:, :, :orig_F]
-            target = x[:, :, :orig_F]
+            score_F = min(orig_F, metric_frames or orig_F)
+            recon = recon.float()[:, :, :score_F]
+            target = x[:, :, :score_F]
             ids = batch.get("id", [None] * recon.shape[0])
             for i in range(recon.shape[0]):
                 pred_i, target_i = recon[i : i + 1], target[i : i + 1]
@@ -208,7 +214,7 @@ def main(
                 row.update({f"vrmse_{name}": float(v) for name, v in zip(channel_order, per_channel.tolist())})
                 per_sim.append(row)
                 if ids[i] in sample_ids:
-                    frames = [f for f in sample_frames if f < orig_F]
+                    frames = [f for f in sample_frames if f < score_F]
                     gt_raw = torch.stack([batch[name][i] for name in channel_order])  # [C, F, H, W]
                     Path(samples_dir).mkdir(parents=True, exist_ok=True)
                     np.savez_compressed(
@@ -238,6 +244,8 @@ def main(
         "checkpoint": checkpoint,
         "test_h5": test_h5,
         "num_sims": len(per_sim),
+        "num_sim_frames": cfg.data.num_sim_frames,
+        "metric_frames": metric_frames,
         "mixed_precision": cfg.acceleration.mixed_precision_mode,
         "normalization_stats_file": str(cfg.data.normalization_stats_file),
         "channel_order": channel_order,
