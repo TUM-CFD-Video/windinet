@@ -664,14 +664,12 @@ REQUIRED_LOSS_NAMES = {"rmse", "h1", "ssim", "mlw"}
 # stay valid. Add one of these to loss_weighting.weights (fixed strategy) or
 # loss_names (gradnorm/softadapt) to opt in. "kl" additionally needs
 # VaeTrainer._encode's posterior mean/logvar to be non-None to actually do
-# anything -- see reconstruction_losses' docstring. "anchor" (added
-# 2026-08-16, windinet.losses.latent_anchor) similarly needs the rescaled
-# latents, which VaeTrainer._forward_pass always supplies. "sds" (added
+# anything -- see reconstruction_losses' docstring. "sds" (added
 # 2026-09-08, windinet.training.sds_loss) additionally needs sds.enabled=true
 # -- unlike the others here, it isn't computed for free; it's a full forward
 # pass through a frozen 2B-parameter transformer, gated by its own explicit
 # switch (see SdsLossConfig).
-OPTIONAL_LOSS_NAMES = {"h2", "pcc", "vrms", "kl", "anchor", "sds"}
+OPTIONAL_LOSS_NAMES = {"h2", "pcc", "vrms", "kl", "sds"}
 
 
 class LossWeightingConfig(ConfigBaseModel):
@@ -804,7 +802,7 @@ class SdsLossConfig(ConfigBaseModel):
 
     enabled: bool = Field(
         default=False,
-        description="Opt-in and expensive: unlike h2/pcc/vrms/kl/anchor (a few extra flops "
+        description="Opt-in and expensive: unlike h2/pcc/vrms/kl (a few extra flops "
         "on tensors already in memory), this runs a full forward pass through a frozen "
         "2B-parameter transformer every active training/eval step, so it needs an explicit "
         "switch rather than 'compute unconditionally, opt in via loss_weighting.weights' "

@@ -524,14 +524,14 @@ class VaeTrainer:
         sample_posterior=True decodes z = mean + exp(logvar / 2) * eps (the
         reparameterization trick) instead of the posterior mean -- training only,
         see _sample_posterior. The returned latents stay the rescaled posterior
-        mean either way (the anchor/SDS terms regularize the encoder's mean),
+        mean either way (the SDS term regularizes the encoder's mean),
         and validation, visualization and DiT preprocessing always use the mean.
 
         Returns (reconstruction, original_frames, posterior_mean,
         posterior_logvar, latents) -- posterior_mean/posterior_logvar are
         _encode's raw distribution, passed through for the optional KL loss;
         latents is the rescaled tensor, passed through for the optional
-        anchor loss (windinet.losses.latent_anchor). Callers that don't need
+        SDS loss (windinet.training.sds_loss). Callers that don't need
         either (e.g. _save_visualization) just discard them.
         """
         orig_F = x.shape[2]
@@ -916,7 +916,6 @@ class VaeTrainer:
                         mlw_eps=cfg.loss.mlw_eps,
                         latent_mean=posterior_mean.float(),
                         latent_logvar=posterior_logvar.float(),
-                        latents=latents.float(),
                         compute_mlw=cfg.loss_weighting.weights.get("mlw", 0.0) != 0.0,
                     )
 
@@ -1234,7 +1233,6 @@ class VaeTrainer:
                 mlw_eps=self._config.loss.mlw_eps,
                 latent_mean=posterior_mean.float(),
                 latent_logvar=posterior_logvar.float(),
-                latents=latents.float(),
                 compute_mlw=weights.get("mlw", 0.0) != 0.0,
             )
             losses["sds"] = (

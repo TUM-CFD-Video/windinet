@@ -37,10 +37,8 @@ sample on the same inputs, and reports:
     scaling, closer to what a downstream DiT actually perceives than a raw
     distance.
 
-Not included here (deliberately out of scope for now): the latent-anchor
-regularizer and the end-to-end pretrained-DiT denoising probe (step8) from
-latent_space_shift_measure.md -- both deferred until DiT stage 2 is further
-along.
+Not included here (deliberately out of scope for now): the end-to-end
+pretrained-DiT denoising probe (step8) from latent_space_shift_measure.md.
 
 ASSUMES ZERO-INIT (`adapter.inflate_init: zeros`): under zero-init, the
 freshly-inflated, never-finetuned encoder is *bit-identical* to the pretrained
