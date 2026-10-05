@@ -1,0 +1,303 @@
+4 GPUs x batch 4 x accum 2 -> effective batch 32; output_dir /e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/finetune_vae_jupiter_3ch_decoder_only_256res
+The following values were not passed to `accelerate launch` and had defaults used instead:
+	`--dynamo_backend` was set to a value of `'no'`
+To avoid this warning pass in values for each of the problematic parameters or run `accelerate config`.
+[W1004 13:59:22.659323262 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1004 14:00:14.719661128 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1004 14:00:14.747301311 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1004 14:00:14.884415778 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1004 14:00:14.966047067 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank0]:     app()
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank0]:     raise e
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank0]:     return get_command(self)(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank0]:     return self.main(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank0]:     return _main(
+[rank0]:            ^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank0]:     rv = self.invoke(ctx)
+[rank0]:          ^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank0]:     return ctx.invoke(self.callback, **ctx.params)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank0]:     return callback(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank0]:     return callback(**use_params)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank0]:     saved_path = trainer.train()
+[rank0]:                  ^^^^^^^^^^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 908, in train
+[rank0]:     losses = reconstruction_losses(
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/reconstruction.py", line 155, in reconstruction_losses
+[rank0]:     losses["ssim"] = ssim_module(
+[rank0]:                      ^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 191, in forward
+[rank0]:     ssim_map = _ssim(
+[rank0]:                ^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 99, in _ssim
+[rank0]:     mu_pred = gaussian(pred)
+[rank0]:               ^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 81, in forward
+[rank0]:     return F.conv2d(
+[rank0]:            ^^^^^^^^^
+[rank0]: RuntimeError: Given groups=4, weight of size [4, 1, 11, 11], expected input[388, 3, 256, 256] to have 4 channels, but got 3 channels instead
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank1]:     app()
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank1]:     raise e
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank1]:     return get_command(self)(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank1]:     return self.main(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank1]:     return _main(
+[rank1]:            ^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank1]:     rv = self.invoke(ctx)
+[rank1]:          ^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank1]:     return ctx.invoke(self.callback, **ctx.params)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank1]:     return callback(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank1]:     return callback(**use_params)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank1]:     saved_path = trainer.train()
+[rank1]:                  ^^^^^^^^^^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 908, in train
+[rank1]:     losses = reconstruction_losses(
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/reconstruction.py", line 155, in reconstruction_losses
+[rank1]:     losses["ssim"] = ssim_module(
+[rank1]:                      ^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank1]:     return forward_call(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 191, in forward
+[rank1]:     ssim_map = _ssim(
+[rank1]:                ^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 99, in _ssim
+[rank1]:     mu_pred = gaussian(pred)
+[rank1]:               ^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank1]:     return forward_call(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 81, in forward
+[rank1]:     return F.conv2d(
+[rank1]:            ^^^^^^^^^
+[rank1]: RuntimeError: Given groups=4, weight of size [4, 1, 11, 11], expected input[388, 3, 256, 256] to have 4 channels, but got 3 channels instead
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank2]:     app()
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank2]:     raise e
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank2]:     return get_command(self)(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank2]:     return self.main(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank2]:     return _main(
+[rank2]:            ^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank2]:     rv = self.invoke(ctx)
+[rank2]:          ^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank2]:     return ctx.invoke(self.callback, **ctx.params)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank2]:     return callback(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank2]:     return callback(**use_params)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank2]:     saved_path = trainer.train()
+[rank2]:                  ^^^^^^^^^^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 908, in train
+[rank2]:     losses = reconstruction_losses(
+[rank2]:              ^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/reconstruction.py", line 155, in reconstruction_losses
+[rank2]:     losses["ssim"] = ssim_module(
+[rank2]:                      ^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank2]:     return self._call_impl(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank2]:     return forward_call(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 191, in forward
+[rank2]:     ssim_map = _ssim(
+[rank2]:                ^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 99, in _ssim
+[rank2]:     mu_pred = gaussian(pred)
+[rank2]:               ^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank2]:     return self._call_impl(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank2]:     return forward_call(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 81, in forward
+[rank2]:     return F.conv2d(
+[rank2]:            ^^^^^^^^^
+[rank2]: RuntimeError: Given groups=4, weight of size [4, 1, 11, 11], expected input[388, 3, 256, 256] to have 4 channels, but got 3 channels instead
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank3]:     app()
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank3]:     raise e
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank3]:     return get_command(self)(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank3]:     return self.main(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank3]:     return _main(
+[rank3]:            ^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank3]:     rv = self.invoke(ctx)
+[rank3]:          ^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank3]:     return ctx.invoke(self.callback, **ctx.params)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank3]:     return callback(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank3]:     return callback(**use_params)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank3]:     saved_path = trainer.train()
+[rank3]:                  ^^^^^^^^^^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 908, in train
+[rank3]:     losses = reconstruction_losses(
+[rank3]:              ^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/reconstruction.py", line 155, in reconstruction_losses
+[rank3]:     losses["ssim"] = ssim_module(
+[rank3]:                      ^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank3]:     return self._call_impl(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank3]:     return forward_call(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 191, in forward
+[rank3]:     ssim_map = _ssim(
+[rank3]:                ^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 99, in _ssim
+[rank3]:     mu_pred = gaussian(pred)
+[rank3]:               ^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+[rank3]:     return self._call_impl(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+[rank3]:     return forward_call(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/losses/ssim.py", line 81, in forward
+[rank3]:     return F.conv2d(
+[rank3]:            ^^^^^^^^^
+[rank3]: RuntimeError: Given groups=4, weight of size [4, 1, 11, 11], expected input[388, 3, 256, 256] to have 4 channels, but got 3 channels instead
+W1004 14:00:29.112000 1327475 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 1327639 closing signal SIGTERM
+W1004 14:00:29.113000 1327475 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 1327640 closing signal SIGTERM
+W1004 14:00:29.113000 1327475 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 1327641 closing signal SIGTERM
+E1004 14:00:29.491000 1327475 torch/distributed/elastic/multiprocessing/api.py:1002] failed (exitcode: 1) local_rank: 0 (pid: 1327638) of binary: /e/project1/e-dev-2026d09-262/windinet_venv/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1423, in <module>
+    main()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1419, in main
+    launch_command(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1404, in launch_command
+    multi_gpu_launcher(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1029, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/run.py", line 1129, in run
+    elastic_launch(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 197, in __call__
+    return launch_agent(
+           ^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 386, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+scripts/finetune_vae.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-10-04_14:00:29
+  host      : jpbo-041-07-interconnect-1.jupiter.internal
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 1327639)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1327639
+[2]:
+  time      : 2026-10-04_14:00:29
+  host      : jpbo-041-07-interconnect-1.jupiter.internal
+  rank      : 2 (local_rank: 2)
+  exitcode  : -15 (pid: 1327640)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1327640
+[3]:
+  time      : 2026-10-04_14:00:29
+  host      : jpbo-041-07-interconnect-1.jupiter.internal
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 1327641)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1327641
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-10-04_14:00:29
+  host      : jpbo-041-07-interconnect-1.jupiter.internal
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1327638) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

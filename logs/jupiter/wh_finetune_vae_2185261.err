@@ -1,0 +1,108 @@
+4 GPUs x batch 4 x accum 2 -> effective batch 32; output_dir /e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/finetune_vae_jupiter_baseline_101f_s44_256res
+The following values were not passed to `accelerate launch` and had defaults used instead:
+	`--dynamo_backend` was set to a value of `'no'`
+To avoid this warning pass in values for each of the problematic parameters or run `accelerate config`.
+[W1005 19:00:09.982782286 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1005 19:02:32.965178806 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1005 19:02:32.965178198 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1005 19:02:32.965185461 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1005 19:02:32.991948934 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank0]:     app()
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank0]:     raise e
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank0]:     return get_command(self)(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank0]:     return self.main(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank0]:     return _main(
+[rank0]:            ^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank0]:     rv = self.invoke(ctx)
+[rank0]:          ^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank0]:     return ctx.invoke(self.callback, **ctx.params)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank0]:     return callback(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank0]:     return callback(**use_params)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank0]:     saved_path = trainer.train()
+[rank0]:                  ^^^^^^^^^^^^^^^
+[rank0]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 1001, in train
+[rank0]:     self._append_grad_norm(global_opt_step + 1, epoch, clip_norms[-1])
+[rank0]:     ^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: TypeError: VaeTrainer._append_grad_norm() missing 3 required positional arguments: 'step', 'epoch', and 'norm'
+W1005 19:03:13.677000 1646244 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 1646332 closing signal SIGTERM
+W1005 19:03:13.678000 1646244 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 1646333 closing signal SIGTERM
+W1005 19:03:13.679000 1646244 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 1646334 closing signal SIGTERM
+E1005 19:03:14.094000 1646244 torch/distributed/elastic/multiprocessing/api.py:1002] failed (exitcode: 1) local_rank: 0 (pid: 1646331) of binary: /e/project1/e-dev-2026d09-262/windinet_venv/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1423, in <module>
+    main()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1419, in main
+    launch_command(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1404, in launch_command
+    multi_gpu_launcher(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1029, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/run.py", line 1129, in run
+    elastic_launch(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 197, in __call__
+    return launch_agent(
+           ^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 386, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+scripts/finetune_vae.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-10-05_19:03:14
+  host      : jpbo-051-01-interconnect-1.jupiter.internal
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 1646332)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1646332
+[2]:
+  time      : 2026-10-05_19:03:14
+  host      : jpbo-051-01-interconnect-1.jupiter.internal
+  rank      : 2 (local_rank: 2)
+  exitcode  : -15 (pid: 1646333)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1646333
+[3]:
+  time      : 2026-10-05_19:03:14
+  host      : jpbo-051-01-interconnect-1.jupiter.internal
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 1646334)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1646334
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-10-05_19:03:13
+  host      : jpbo-051-01-interconnect-1.jupiter.internal
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1646331) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

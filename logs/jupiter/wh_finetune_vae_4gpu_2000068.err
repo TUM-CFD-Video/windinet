@@ -1,0 +1,73 @@
+The following values were not passed to `accelerate launch` and had defaults used instead:
+	`--mixed_precision` was set to a value of `'no'`
+	`--dynamo_backend` was set to a value of `'no'`
+To avoid this warning pass in values for each of the problematic parameters or run `accelerate config`.
+[W924 20:13:52.944083575 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W924 20:15:50.827233924 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W924 20:15:50.827233988 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W924 20:15:50.827233860 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W924 20:15:50.849216425 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+error: *** job 2000068 CANCELLED DUE TO TIME LIMIT ***
+W0924 22:13:33.101000 2788394 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 2788485 closing signal SIGTERM
+W0924 22:13:33.102000 2788394 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 2788486 closing signal SIGTERM
+E0924 22:13:33.103000 2788394 torch/distributed/elastic/multiprocessing/api.py:1002] failed (exitcode: -15) local_rank: 0 (pid: 2788483) of binary: /e/project1/e-dev-2026d09-262/windinet_venv/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1423, in <module>
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1419, in main
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1404, in launch_command
+    multi_gpu_launcher(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1029, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/run.py", line 1129, in run
+    elastic_launch(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 197, in __call__
+    return launch_agent(
+           ^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 386, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+=========================================================
+scripts/finetune_vae.py FAILED
+---------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-09-24_22:13:33
+  host      : r10-nod36.jupiter.internal
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 2788484)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2788484
+[2]:
+  time      : 2026-09-24_22:13:33
+  host      : r10-nod36.jupiter.internal
+  rank      : 2 (local_rank: 2)
+  exitcode  : -15 (pid: 2788485)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2788485
+[3]:
+  time      : 2026-09-24_22:13:33
+  host      : r10-nod36.jupiter.internal
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 2788486)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2788486
+---------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-09-24_22:13:33
+  host      : r10-nod36.jupiter.internal
+  rank      : 0 (local_rank: 0)
+  exitcode  : -15 (pid: 2788483)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2788483
+=========================================================
