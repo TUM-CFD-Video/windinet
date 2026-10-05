@@ -551,6 +551,7 @@ def main():
         "num_sim_frames": num_sim_frames,
         "num_frames_generated": num_frames,
         "metric_frames": args.metric_frames,
+        "num_inference_steps": num_inference_steps,
         "vae_only_vrmse_mean": sum_overall["vae_only"] / n,
         "vae_dit_vrmse_mean": sum_overall["vae_dit"] / n,
         "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(channel_names)},
