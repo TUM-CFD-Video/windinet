@@ -144,7 +144,7 @@ class VaeTrainer:
         self._init_wandb()
 
         self.ssim_loss = SSIMLoss(
-            channels=4,
+            channels=len(config.data.channel_order),
             window_size=11,
             sigma=1.5,
         ).to(self._accelerator.device)
@@ -496,6 +496,16 @@ class VaeTrainer:
         return self._vae.decode(z, temb=temb, return_dict=True).sample
 
     @property
+    def _append_grad_norm(self, step: int, epoch: int, norm: float) -> None:
+        """Append one optimizer step's pre-clip gradient norm to metrics/grad_norms.csv."""
+        path = Path(self._config.output_dir) / "metrics" / "grad_norms.csv"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        new_file = not path.exists()
+        with path.open("a") as handle:
+            if new_file:
+                handle.write("step,epoch,grad_norm\n")
+            handle.write(f"{step},{epoch},{norm:.6g}\n")
+
     def _sample_posterior(self) -> bool:
         """Whether training decodes a reparameterized posterior sample.
 
@@ -876,6 +886,9 @@ class VaeTrainer:
                 loss_sum = defaultdict(float)
 
                 grad_norm_sum = defaultdict(float)
+                # Pre-clip total gradient norm per optimizer step, to see the
+                # spikes that precede a collapse (see grad_norms.csv below).
+                clip_norms: list[float] = []
 
                 task = train_progress.add_task(
                     f"Epoch {epoch}", total=len(train_loader),
@@ -981,7 +994,11 @@ class VaeTrainer:
                         if self._accelerator.num_processes > 1:
                             self._sync_grads()
                         if cfg.optimization.max_grad_norm > 0:
-                            self._accelerator.clip_grad_norm_(self._trainable_params, cfg.optimization.max_grad_norm)
+                            total_norm = self._accelerator.clip_grad_norm_(self._trainable_params, cfg.optimization.max_grad_norm)
+                            if total_norm is not None:
+                                clip_norms.append(float(total_norm))
+                                if IS_MAIN_PROCESS:
+                                    self._append_grad_norm(global_opt_step + 1, epoch, clip_norms[-1])
 
                         optimizer.step()
                         if sched_type == "warmup_plateau":
@@ -1091,6 +1108,11 @@ class VaeTrainer:
                         "train_total_loss": avg_loss,
                         "val_total_loss": val_metrics["total_loss"],
                         "val_vrmse": val_metrics["vrmse"],
+                        # Pre-clip total gradient norm over this epoch's optimizer
+                        # steps, and how many of them were clipped.
+                        "grad_norm_mean": sum(clip_norms) / len(clip_norms) if clip_norms else float("nan"),
+                        "grad_norm_max": max(clip_norms) if clip_norms else float("nan"),
+                        "grad_norm_clipped": sum(n > cfg.optimization.max_grad_norm for n in clip_norms),
                         **{f"train_{name}": value for name, value in epoch_losses.items()},
                         # Every val_metrics key except the two already
                         # special-cased above -- dynamically covers h2/pcc/
