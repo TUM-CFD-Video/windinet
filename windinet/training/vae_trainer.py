@@ -495,7 +495,6 @@ class VaeTrainer:
         )
         return self._vae.decode(z, temb=temb, return_dict=True).sample
 
-    @property
     def _append_grad_norm(self, step: int, epoch: int, norm: float) -> None:
         """Append one optimizer step's pre-clip gradient norm to metrics/grad_norms.csv."""
         path = Path(self._config.output_dir) / "metrics" / "grad_norms.csv"
@@ -506,6 +505,7 @@ class VaeTrainer:
                 handle.write("step,epoch,grad_norm\n")
             handle.write(f"{step},{epoch},{norm:.6g}\n")
 
+    @property
     def _sample_posterior(self) -> bool:
         """Whether training decodes a reparameterized posterior sample.
 
