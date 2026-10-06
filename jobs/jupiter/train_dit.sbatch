@@ -27,6 +27,10 @@
 # the job exits 0 without training (the trainer would raise otherwise), so
 # a queued resume job is harmless when the first job finished in time.
 #
+# After training, output_dir minus checkpoints/ (metrics, visualization
+# panels + video.mp4) is mirrored into dit_outputs/jupiter/<run>/ in the repo
+# checkout, same as finetune_vae.sbatch.
+#
 # Submit from the repo root, windinet env active:
 #   sbatch jobs/jupiter/train_dit.sbatch <PREPROCESSED_NAME> [BASE_CONFIG]
 
@@ -108,3 +112,10 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Is)" "${SLURM_JOB_ID}" "${SLURM_JOB_NAME}
     --num_processes "${NUM_GPUS}" \
     --mixed_precision bf16 \
     scripts/train.py "${RUN_CONFIG}"
+
+# Mirror metrics/visualizations (incl. the step_*/<sample>/video.mp4 files)
+# into the repo checkout (not checkpoints/), same as finetune_vae.sbatch.
+LOCAL_DIR="dit_outputs/jupiter/$(basename "${OUT_DIR}")"
+mkdir -p "${LOCAL_DIR}"
+rsync -a --exclude='checkpoints/' --exclude='*.safetensors' --exclude='*.pt' "${OUT_DIR}/" "${LOCAL_DIR}/"
+echo "Mirrored (excl. checkpoints/) to ${LOCAL_DIR}"
