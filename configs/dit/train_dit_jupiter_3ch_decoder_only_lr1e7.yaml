@@ -1,0 +1,76 @@
+# Jupiter DiT on the 3-channel decoder-only VAE at learning rate 1e-7 (2026-10-06).
+# train_dit_jupiter_3ch_decoder_only.yaml with optimization.learning_rate 1e-5 -> 1e-7
+# (same cosine shape over 8000 steps), output_dir and tags. Tests whether the
+# 3ch DiT's poor result (ch-mean 0.616 vs 0.503 for the baseline's 3 channels)
+# comes from a learning rate too large for the stock-encoder latents.
+# Launch: bash jobs/jupiter/submit_3ch_lr.sh
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+  load_checkpoint: null
+
+conditioning:
+  first_frame_conditioning_p: 1.0
+
+scalar_conditioning:
+  enabled: true
+  scalar_names:
+    - "gamma"
+  scalar_ranges:
+    gamma: [1.0, 2.0]
+  embedding_dim: 4096
+  num_tokens_per_scalar: 4
+  fourier_features: 64
+  mlp_hidden_dim: 256
+  dropout: 0.1
+
+optimization:
+  learning_rate: 1e-7
+  steps: 8000
+  batch_size: 1
+  gradient_accumulation_steps: 8  # 4 GPUs x 1 x 8 = effective batch 32, same as sng_pvc's 8 tiles x 1 x 4
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "cosine"
+  scheduler_params:
+    eta_min: 1.0e-8
+  enable_gradient_checkpointing: true
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+data:
+  preprocessed_data_root: "__PREPROCESSED_ROOT__"
+  num_dataloader_workers: 4
+
+validation:
+  data_root: "__PREPROCESSED_ROOT__/val"
+  interval: 600
+  max_samples: 0
+
+checkpoints:
+  interval: 120
+  keep_last_n: 2
+
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  # Off on sng_pvc (XPU OUT_OF_RESOURCES after the first pass, jobs
+  # 534853/534884); on here (GH200). Rank 0 only, RNG saved/restored, so it
+  # does not change training.
+  enabled: true
+  steps: [8000]        # end of training only; replaces interval
+  num_samples: 3       # fixed, evenly spaced over the val split
+  frame_numbers: [25, 50, 75, 97]
+  save_video: true     # + GT/Prediction/Residual MP4 over all frames per sample
+
+wandb:
+  enabled: false
+  project: "shockwavenet"
+  tags: ["cfd", "full", "2b", "scalar-only", "jupiter", "256res", "eval500", "3ch-decoder-only", "lr1e7", "f97"]
+
+seed: 42
+output_dir: "/e/scratch/e-dev-2026d09-262/wh_work/dit_outputs/shockwave_dit_jupiter_3ch_decoder_only_lr1e7"
