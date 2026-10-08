@@ -61,8 +61,10 @@ class ModelConfig(_Base):
 
 
 class CondConfig(_Base):
-    kind: Literal["gamma", "text"] = Field(
-        default="gamma", description="tokens the DiT cross-attends to: a gamma embedding (Li) or a fixed text prompt"
+    kind: Literal["gamma", "gamma_adaln", "text"] = Field(
+        default="gamma",
+        description="gamma as cross-attention tokens (Li), gamma added to the time embedding that drives Wan's adaLN "
+        "(cross-attention gets one zero token), or a fixed text prompt",
     )
     first_frame: bool = Field(
         default=True, description="the first latent frame stays clean (timestep 0, no loss) and conditions the rest"

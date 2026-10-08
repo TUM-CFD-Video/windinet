@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import torch
+from torch import nn
 from diffusers import UniPCMultistepScheduler, WanTransformer3DModel
 from transformers import T5TokenizerFast, UMT5EncoderModel
 
@@ -35,6 +36,18 @@ def encode_text(prompts: list[str], device: torch.device | str, repo: str = REPO
 def autocast(precision: str, device: torch.device) -> torch.autocast:
     """'mixed': bf16 matmuls over fp32 weights; 'fp32' and 'bf16' (weights already bf16) run as they are."""
     return torch.autocast(device.type, torch.bfloat16, enabled=precision == "mixed" and device.type == "cuda")
+
+
+class Modulation:
+    """Forward hook on Wan's time embedding: adds `offset` [B, dim] (gamma through adaLN) when one is set; the
+    embedding is [B, dim] or, with per-token timesteps, [B, L, dim]."""
+
+    offset: torch.Tensor | None = None
+
+    def __call__(self, module: nn.Module, inputs: tuple, out: torch.Tensor) -> torch.Tensor:
+        if self.offset is None:
+            return out
+        return out + (self.offset[:, None] if out.ndim == 3 else self.offset).to(out)
 
 
 class WanDiT:
@@ -63,17 +76,22 @@ class WanDiT:
         self.scheduler = UniPCMultistepScheduler.from_pretrained(
             repo, subfolder="scheduler", local_files_only=True, flow_shift=shift
         )
+        self.modulation = Modulation()
+        self.transformer.condition_embedder.time_embedder.register_forward_hook(self.modulation)
         self.device, self.dtype = torch.device(device), dtype
 
     def velocity(
         self, latents: torch.Tensor, timestep: torch.Tensor, cond: torch.Tensor, clean: int = 0
     ) -> torch.Tensor:
         """The transformer's prediction (noise - x0) at `timestep` [B] in 0..1000; the first `clean` tokens (the
-        frame-major 2x2 patches of latent frame 0) get timestep 0."""
+        frame-major 2x2 patches of latent frame 0) get timestep 0. `cond`: tokens [B, L, 4096] for cross-attention,
+        or a vector [B, dim] added to the time embedding (adaLN), with one zero token for cross-attention."""
         if clean:
             timestep = timestep[:, None].expand(-1, latents[0, 0].numel() // 4).clone()
             timestep[:, :clean] = 0
-        out = self.transformer(latents.to(self.dtype), timestep, cond.to(self.dtype), return_dict=False)[0]
+        self.modulation.offset = cond if cond.ndim == 2 else None
+        tokens = cond if cond.ndim == 3 else cond.new_zeros(len(cond), 1, self.transformer.config.text_dim)
+        out = self.transformer(latents.to(self.dtype), timestep, tokens.to(self.dtype), return_dict=False)[0]
         return out.float()
 
     @torch.no_grad()
