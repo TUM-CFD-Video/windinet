@@ -89,6 +89,11 @@ class DitTrainConfig(_Base):
     warmup_steps: int = Field(default=0, description="linear warm-up from 1 % of the peak; 0 = none")
     lr_floor: float = Field(default=1e-3, description="final lr as a fraction of the peak (Li: 1e-8 / 1e-5)")
     max_grad_norm: float = Field(default=1.0, description="gradient clipping; 0 = off")
+    ema: float = Field(
+        default=0.0,
+        description="decay of the weight EMA that is evaluated and saved instead of the raw weights (warmed up as "
+        "min(ema, (1 + n) / (10 + n))); the raw weights are evaluated beside it (raw_* metrics); 0 = off",
+    )
     sigma_mean: float = Field(default=0.0, description="logit-normal timestep draw: mean of the logit")
     sigma_std: float = Field(default=1.0, description="logit-normal timestep draw: std of the logit")
     sigma_shift: float = Field(
