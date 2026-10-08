@@ -27,9 +27,17 @@ class DataConfig(_Base):
     test_gamma: float | None = Field(
         default=None, description="without test_h5: hold out this whole gamma instead (extrapolation test)"
     )
-    frames_per_sim: int = Field(default=2, description="random frames read per simulation per step")
+    frames_per_sim: int = Field(
+        default=2,
+        description="frames read per simulation: random ones in a training step, fixed ones in validation (clip: "
+        "consecutive, one clip, 4k + 1)",
+    )
     clip: bool = Field(
         default=False, description="the frames are consecutive and pass the VAE as one clip, not as single frames"
+    )
+    frame_stride: int = Field(
+        default=1,
+        description="whole trajectories (evaluation, latent encoding) take every n-th frame, 4k + 1 frames kept",
     )
     num_workers: int = Field(default=4, description="data-loader worker processes per training process")
 

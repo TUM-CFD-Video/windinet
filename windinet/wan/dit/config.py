@@ -87,6 +87,11 @@ class DitTrainConfig(_Base):
     batch_sims: int = Field(default=32, description="simulations per update (under torchrun: global, split over ranks)")
     micro_batch: int = Field(default=4, description="simulations per backward pass per process")
     lr: float = Field(default=1e-5, description="peak lr of the transformer and the conditioning")
+    patchify_lr: float | None = Field(
+        default=None,
+        description="peak lr of the patchify and unpatchify layers when widened for several latents (widen_patchify); "
+        "None = lr. Zero-initialised streams in a fresh run grow in faster with more than the backbone lr (1e-4)",
+    )
     weight_decay: float = Field(default=0.01, description="AdamW weight decay")
     warmup_steps: int = Field(default=0, description="linear warm-up from 1 % of the peak; 0 = none")
     lr_floor: float = Field(default=1e-3, description="final lr as a fraction of the peak (Li: 1e-8 / 1e-5)")

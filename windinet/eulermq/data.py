@@ -68,7 +68,7 @@ class FrameSampler(ShockWaveDataset):
 
     Only the chosen frames are read from HDF5. `seed` None: random frames per access (training), else fixed
     (evaluation). `consecutive`: a clip instead of frames spread over the trajectory. `frames_per_item` None:
-    the whole trajectory in order."""
+    the whole trajectory in order (every `stride`-th frame, 4k + 1 of them)."""
 
     def __init__(
         self,
@@ -77,23 +77,29 @@ class FrameSampler(ShockWaveDataset):
         frames_per_item: int | None,
         seed: int | None = None,
         consecutive: bool = False,
+        stride: int = 1,
     ):
         super().__init__(h5_path)
         self.ids = list(ids)
         self.k = frames_per_item
         self.seed = seed
         self.consecutive = consecutive
+        self.stride = stride
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, float]:
         self._init_file()
         sid = self.ids[idx]
         group = self._get_group(sid)
         n_frames = group[CHANNEL_NAMES[0]].shape[0]
-        k = self.k or n_frames
-        # fixed frames belong to the sim, not to its list position, so a sharded loader evaluates the same clips
-        rng = random if self.seed is None else random.Random(f"{self.seed}/{sid}")
-        start = rng.randrange(n_frames - k + 1)
-        frames = list(range(start, start + k)) if self.consecutive else sorted(rng.sample(range(n_frames), k))
+        if self.k is None:  # the whole trajectory, every stride-th frame, 4k + 1 of them (what Wan's VAE takes)
+            strided = range(0, n_frames, self.stride)
+            frames = list(strided)[: (len(strided) - 1) // 4 * 4 + 1]
+        else:
+            k = self.k
+            # fixed frames belong to the sim, not to its list position, so a sharded loader evaluates the same clips
+            rng = random if self.seed is None else random.Random(f"{self.seed}/{sid}")
+            start = rng.randrange(n_frames - k + 1)
+            frames = list(range(start, start + k)) if self.consecutive else sorted(rng.sample(range(n_frames), k))
         fields = np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)  # [k, 4, H, W]
         return torch.from_numpy(fields).float(), parse_gamma(sid)
 
