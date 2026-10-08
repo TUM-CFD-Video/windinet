@@ -38,7 +38,7 @@ def autocast(precision: str, device: torch.device) -> torch.autocast:
 
 
 class WanDiT:
-    """The pretrained transformer (or a fine-tuned one from a run folder) with Wan's scheduler."""
+    """The pretrained transformer (or a fine-tuned one from a run folder) with Wan's scheduler at time shift `shift`."""
 
     def __init__(
         self,
@@ -48,6 +48,7 @@ class WanDiT:
         load: str | None = None,
         train: bool = False,
         checkpointing: bool = False,
+        shift: float = 3.0,
     ):
         # local_files_only: the sharded loader would otherwise ask the Hub even in offline mode
         self.transformer = WanTransformer3DModel.from_pretrained(
@@ -59,7 +60,9 @@ class WanDiT:
         if checkpointing:
             self.transformer.enable_gradient_checkpointing()
         self.trainable_params = [p for p in self.transformer.parameters() if p.requires_grad]
-        self.scheduler = UniPCMultistepScheduler.from_pretrained(repo, subfolder="scheduler", local_files_only=True)
+        self.scheduler = UniPCMultistepScheduler.from_pretrained(
+            repo, subfolder="scheduler", local_files_only=True, flow_shift=shift
+        )
         self.device, self.dtype = torch.device(device), dtype
 
     def velocity(

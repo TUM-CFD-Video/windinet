@@ -91,7 +91,9 @@ class DitTrainConfig(_Base):
     max_grad_norm: float = Field(default=1.0, description="gradient clipping; 0 = off")
     sigma_mean: float = Field(default=0.0, description="logit-normal timestep draw: mean of the logit")
     sigma_std: float = Field(default=1.0, description="logit-normal timestep draw: std of the logit")
-    sigma_shift: float = Field(default=1.0, description="time shift of the draw as in Wan's scheduler (3 at 480p)")
+    sigma_shift: float = Field(
+        default=3.0, description="time shift of the draw, as in the sampler: Wan's scheduler default (3 at 480p)"
+    )
     eval_every: int = Field(default=1000, description="validation rollouts (and weight save) every n updates")
     log_every: int = Field(default=10, description="training-progress line every n updates")
     seed: int = Field(default=0, description="torch seed (+ rank under torchrun)")
@@ -99,6 +101,10 @@ class DitTrainConfig(_Base):
 
 class SamplingConfig(_Base):
     steps: int = Field(default=20, description="denoising steps of a rollout (UniPC)")
+    shift: float = Field(
+        default=3.0,
+        description="time shift of the sampler sigmas (Wan: 3 at 480p, 5 at 720p); training draw: train.sigma_shift",
+    )
     guidance: float = Field(default=1.0, description="classifier-free guidance scale; 1 = off")
     batch: int = Field(default=4, description="simulations per rollout batch in evaluation")
 
