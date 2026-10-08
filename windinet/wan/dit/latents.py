@@ -29,3 +29,14 @@ class LatentDataset(Dataset):
 def encode_info(dir: str | Path) -> dict:
     """encode.yaml of a latent folder: the adapter run and groups that produced it, and the provenance."""
     return yaml.safe_load((Path(dir) / "encode.yaml").read_text())
+
+
+def latent_id(sid: str, k: int = 0) -> str:
+    """File stem of a simulation's latents: the sim id as recorded, <sim id>_s<k> under eulermq.data.symmetry k."""
+    return sid if k == 0 else f"{sid}_s{k}"
+
+
+def with_augmentations(dir: str | Path, ids: list[str]) -> list[str]:
+    """`ids` plus the symmetric copies the folder holds (encode.yaml: augmentations)."""
+    n = encode_info(dir)["config"].get("augmentations", 1)
+    return [latent_id(sid, k) for sid in ids for k in range(n)]

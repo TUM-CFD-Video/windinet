@@ -104,6 +104,19 @@ class FrameSampler(ShockWaveDataset):
         return torch.from_numpy(fields).float(), parse_gamma(sid)
 
 
+def symmetry(fields: torch.Tensor, k: int) -> torch.Tensor:
+    """Element k (0..7) of the square's symmetry group D4 on fields [..., 4, H, W] (axis H = x): bit 0 swaps the axes,
+    bits 1 and 2 flip x and y. Momentum is a vector: its components swap and change sign with the axes."""
+    mx, my = FIELDS.index("momentum_x"), FIELDS.index("momentum_y")
+    if k & 1:
+        fields = fields.transpose(-2, -1)[..., [0, my, mx, 3], :, :]
+    for bit, dim, c in ((2, -2, mx), (4, -1, my)):
+        if k & bit:
+            fields = fields.flip(dim)  # a copy, so the sign change below leaves the input alone
+            fields[..., c, :, :] = -fields[..., c, :, :]
+    return fields
+
+
 def endless(loader):
     """Loop over a loader forever; unlike itertools.cycle it keeps no copy of what it yielded."""
     while True:

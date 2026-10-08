@@ -18,6 +18,11 @@ class EncodeConfig(_Base):
     load: str = Field(description="VAE-stage run folder: its adapter.pt and adapter groups (config.yaml)")
     out: str = Field(description="latent folder: <out>/<split>/<sim id>.pt and <out>/encode.yaml")
     sims: int | None = Field(default=None, description="first n sims per split (smoke); None = all")
+    augmentations: int = Field(
+        default=1,
+        description="copies of every train simulation under the square's symmetries (eulermq.data.symmetry, exact for "
+        "the Euler equations): 1 = as recorded, 8 = every rotation and reflection; files <sim id>_s<k>.pt",
+    )
 
 
 class SampleConfig(_Base):
