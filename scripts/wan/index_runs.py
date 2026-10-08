@@ -12,6 +12,7 @@ from pathlib import Path
 from windinet.experiment.runs import write_index
 
 if __name__ == "__main__":
-    stages = [Path(p) for p in sys.argv[1:]] or sorted({p.parent.parent for p in Path("results").rglob("metrics.json")})
+    found = {p.parent.parent for p in Path("results").rglob("metrics.json")}  # a run with stages is not a stage dir
+    stages = [Path(p) for p in sys.argv[1:]] or sorted(d for d in found if not (d / "config.yaml").exists())
     for stage in stages:
         print("wrote", write_index(stage))

@@ -1,5 +1,6 @@
 """Multi-GPU through torchrun: every rank trains on its slice of the data, gradients are averaged, evaluation
-sums are reduced, rank 0 writes. Without torchrun (one process) every function is a no-op."""
+sums are reduced, rank 0 writes. RANK, WORLD_SIZE and LOCAL_RANK are torchrun's, the same on every cluster; a script
+launched by srun alone (no torchrun) runs as one process. Without torchrun every function is a no-op."""
 
 from __future__ import annotations
 
@@ -32,10 +33,11 @@ def shard(items: list) -> list:
 
 
 def all_sum(*tensors: torch.Tensor) -> None:
-    """In place: each tensor becomes its sum over ranks."""
+    """In place: each tensor becomes its sum over ranks (None entries are skipped)."""
     if world > 1:
         for t in tensors:
-            dist.all_reduce(t)
+            if t is not None:
+                dist.all_reduce(t)
 
 
 def all_mean(*tensors: torch.Tensor) -> None:
