@@ -1,0 +1,109 @@
+# Jupiter 3-channel, full-finetune arm (2026-10-09): control for the 3ch decoder-only arm.
+#
+# finetune_vae_jupiter_3ch_decoder_only_256res.yaml with the encoder trained as in
+# the baseline (freeze_conv_in: false, unfreeze_encoder_trunk: true), plus
+# output_dir and tags. Seed 42 as in the decoder-only arm, so the two differ only in
+# whether the encoder is frozen. The decoder-only arm changed two things against the
+# baseline at once -- pressure dropped AND encoder frozen -- and its DiT (LR 1e-4, 8k)
+# trails the baseline's 3-channel mean by +0.029 (0.478 vs 0.449). This arm's DiT
+# splits that gap:
+#   ~0.478 (decoder-only) -> the missing pressure (an incomplete Euler state) dominates
+#   ~0.449 (baseline 3ch) -> the frozen stock encoder dominates
+# Launch: bash jobs/jupiter/submit_3ch_fullft.sh
+#
+# Header of the decoder-only config:
+# | Jupiter 3-channel, decoder-only arm -- experiment 3.
+# |
+# | Only density, momentum_x, momentum_y (no pressure). With 3 channels the VAE
+# | keeps its native pretrained conv_in/conv_out (inflate to n=3 copies the
+# | pretrained weights unchanged), and the whole encoder stays frozen
+# | (freeze_conv_in: true, unfreeze_encoder_trunk: false): only the decoder
+# | trains. The encoder is therefore exactly the stock LTX-Video encoder, so the
+# | DiT sees the pretrained latent distribution with no latent shift at all --
+# | separates "the dataset is hard for the DiT" from "fine-tuning shifted the
+# | latent space". Everything else as the baseline (97 frames, RMSE + 50*H1,
+# | LR 5e-5 cosine, 20 epochs). Compare against the baseline's channel-mean over
+# | the same three channels, not its 4-channel number.
+# | Launch: see jobs/jupiter/submit_experiments.sh
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  unfreeze_encoder_trunk: true
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  channel_order: ["density", "momentum_x", "momentum_y"]
+  num_sim_frames: 97  # 8*12+1, no padding (see header)
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  epochs: [10, 20]   # mid-training and final; replaces interval_epochs
+  num_samples: 3     # gamma min / median / max of the val split
+  frame_numbers: [25, 50, 75, 97]
+  dpi: 150
+  save_video: true   # + GT/Prediction/Residual MP4 over all frames per sample
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "jupiter", "3ch-fullft", "rmse-h1", "256res", "eval500", "f97"]
+
+seed: 42
+output_dir: "finetune_vae_jupiter_3ch_fullft_256res"
+clean_output_dir: true
