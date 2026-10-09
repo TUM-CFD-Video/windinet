@@ -15,3 +15,133 @@ To avoid this warning pass in values for each of the problematic parameters or r
   warnings.warn(
 /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
   warnings.warn(
+error: *** job 2189221 CANCELLED DUE TO TIME LIMIT ***
+--- Logging error ---
+Traceback (most recent call last):
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/_logging/_internal.py", line 1093, in emit
+    msg = self.format(record)
+          ^^^^^^^^^^^^^^^^^^^
+  File "/e/software/default/stages/2025/software/Python/3.12.3-GCCcore-13.3.0/lib/python3.12/logging/__init__.py", line 999, in format
+    return fmt.format(record)
+           ^^^^^^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/_logging/_internal.py", line 1024, in format
+    filepath = make_module_path_relative(record.pathname)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/_logging/_internal.py", line 954, in make_module_path_relative
+    return _make_module_path_relative(abs_path, tuple(sys.path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/_logging/_internal.py", line 935, in _make_module_path_relative
+    abs_path_resolved = pathlib.Path(abs_path).resolve()
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/e/software/default/stages/2025/software/Python/3.12.3-GCCcore-13.3.0/lib/python3.12/pathlib.py", line 1240, in resolve
+    s = self._flavour.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 435, in realpath
+  File "<frozen posixpath>", line 470, in _joinrealpath
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 86, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 2600710 got signal: 15
+Call stack:
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1423, in <module>
+    main()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1419, in main
+    launch_command(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1404, in launch_command
+    multi_gpu_launcher(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1029, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/run.py", line 1129, in run
+    elastic_launch(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 197, in __call__
+    return launch_agent(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 377, in launch_agent
+    result = agent.run()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/metrics/api.py", line 134, in wrapper
+    result = f(*args, **kwargs)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 745, in run
+    result = self._invoke_run(role)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 924, in _invoke_run
+    run_result = self._monitor_workers(self._worker_group)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/metrics/api.py", line 134, in wrapper
+    result = f(*args, **kwargs)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/local_elastic_agent.py", line 625, in _monitor_workers
+    result = self._pcontext.wait(0)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 622, in wait
+    return self._poll()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 990, in _poll
+    self.close()  # terminate all running procs
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 661, in close
+    self._close(death_sig=death_sig, timeout=timeout)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 1028, in _close
+    logger.warning(
+  File "/e/software/default/stages/2025/software/Python/3.12.3-GCCcore-13.3.0/lib/python3.12/logging/__init__.py", line 1551, in warning
+    self._log(WARNING, msg, args, **kwargs)
+  File "/e/software/default/stages/2025/software/Python/3.12.3-GCCcore-13.3.0/lib/python3.12/logging/__init__.py", line 1684, in _log
+    self.handle(record)
+  File "/e/software/default/stages/2025/software/Python/3.12.3-GCCcore-13.3.0/lib/python3.12/logging/__init__.py", line 1700, in handle
+    self.callHandlers(record)
+  File "/e/software/default/stages/2025/software/Python/3.12.3-GCCcore-13.3.0/lib/python3.12/logging/__init__.py", line 1762, in callHandlers
+    hdlr.handle(record)
+  File "/e/software/default/stages/2025/software/Python/3.12.3-GCCcore-13.3.0/lib/python3.12/logging/__init__.py", line 1028, in handle
+    self.emit(record)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/_logging/_internal.py", line 1100, in emit
+    self.handleError(record)
+Message: 'Sending process %s closing signal %s'
+Arguments: (2600798, 'SIGTERM')
+E1006 11:05:22.184000 2600710 torch/distributed/elastic/multiprocessing/api.py:1002] failed (exitcode: -15) local_rank: 0 (pid: 2600795) of binary: /e/project1/e-dev-2026d09-262/windinet_venv/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1423, in <module>
+    main()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1419, in main
+    launch_command(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1404, in launch_command
+    multi_gpu_launcher(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1029, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/run.py", line 1129, in run
+    elastic_launch(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 197, in __call__
+    return launch_agent(
+           ^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 386, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+=========================================================
+scripts/finetune_vae.py FAILED
+---------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-10-06_11:05:22
+  host      : jpbo-091-17-interconnect-1.jupiter.internal
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 2600796)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2600796
+[2]:
+  time      : 2026-10-06_11:05:22
+  host      : jpbo-091-17-interconnect-1.jupiter.internal
+  rank      : 2 (local_rank: 2)
+  exitcode  : -15 (pid: 2600797)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2600797
+[3]:
+  time      : 2026-10-06_11:05:22
+  host      : jpbo-091-17-interconnect-1.jupiter.internal
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 2600798)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2600798
+---------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-10-06_11:05:22
+  host      : jpbo-091-17-interconnect-1.jupiter.internal
+  rank      : 0 (local_rank: 0)
+  exitcode  : -15 (pid: 2600795)  (SIGTERM)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 2600795
+=========================================================
