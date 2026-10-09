@@ -668,8 +668,10 @@ REQUIRED_LOSS_NAMES = {"rmse", "h1", "ssim", "mlw"}
 # 2026-09-08, windinet.training.sds_loss) additionally needs sds.enabled=true
 # -- unlike the others here, it isn't computed for free; it's a full forward
 # pass through a frozen 2B-parameter transformer, gated by its own explicit
-# switch (see SdsLossConfig).
-OPTIONAL_LOSS_NAMES = {"h2", "pcc", "vrms", "kl", "sds"}
+# switch (see SdsLossConfig). "swd" (added 2026-10-09,
+# windinet.losses.sliced_wasserstein) is always computed and logged, like the
+# cheap ones; its sliced-Wasserstein estimator settings live in SwdLossConfig.
+OPTIONAL_LOSS_NAMES = {"h2", "pcc", "vrms", "kl", "sds", "swd"}
 
 
 class LossWeightingConfig(ConfigBaseModel):
@@ -871,6 +873,32 @@ class SdsLossConfig(ConfigBaseModel):
         return self
 
 
+class SwdLossConfig(ConfigBaseModel):
+    """Sliced-Wasserstein prior on the aggregate latent distribution (loss name "swd").
+
+    WAE-style alternative to KL: matches the distribution of all latent tokens
+    (rescaled posterior means, as the DiT sees them) to N(0, I), instead of
+    pulling each sample's posterior to the prior. See
+    windinet.losses.sliced_wasserstein for the estimator. Always computed (a
+    few matmuls and a sort, with its own RNG, so weight 0 changes nothing);
+    loss_weighting.weights.swd turns it into a training term.
+    """
+
+    num_projections: int = Field(
+        default=256,
+        gt=0,
+        description="Random unit directions per call. 128-channel latents; the estimator's "
+        "spread falls as 1/sqrt(num_projections).",
+    )
+    bank_size: int = Field(
+        default=32,
+        ge=0,
+        description="Previous sims (per rank, detached) the current tokens are ranked "
+        "against: 32 x 832 tokens at 256x256 / 97 frames. 0 ranks one sim's tokens "
+        "alone, which matches each sim to N(0, I) rather than the aggregate.",
+    )
+
+
 class VaeTrainerConfig(ConfigBaseModel):
     """Configuration for shockwave VAE decoder-and-adapter finetuning."""
 
@@ -881,6 +909,7 @@ class VaeTrainerConfig(ConfigBaseModel):
     loss: VaeReconstructionLossConfig = Field(default_factory=VaeReconstructionLossConfig)
     loss_weighting: LossWeightingConfig = Field(default_factory=LossWeightingConfig)
     sds: SdsLossConfig = Field(default_factory=SdsLossConfig)
+    swd: SwdLossConfig = Field(default_factory=SwdLossConfig)
     visualization: VaeVisualizationConfig = Field(default_factory=VaeVisualizationConfig)
     acceleration: AccelerationConfig = Field(default_factory=AccelerationConfig)
     checkpoints: CheckpointsConfig = Field(default_factory=CheckpointsConfig)

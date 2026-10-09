@@ -15,6 +15,7 @@ from .mlw import mlw_loss
 from .pcc import pcc_loss
 from .vrms import vrms_loss, vrms_per_channel
 from .kl_divergence import kl_divergence_loss
+from .sliced_wasserstein import SlicedWassersteinPrior
 from .reconstruction import reconstruction_losses
 
 
@@ -28,5 +29,6 @@ __all__ = [
     "vrms_loss",
     "vrms_per_channel",
     "kl_divergence_loss",
+    "SlicedWassersteinPrior",
     "reconstruction_losses",
 ]

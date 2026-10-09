@@ -53,6 +53,7 @@ from windinet.vae_adapter import (
 
 from windinet.losses import (
     reconstruction_losses,
+    SlicedWassersteinPrior,
     SSIMLoss,
     vrms_loss,
     vrms_per_channel,
@@ -160,6 +161,14 @@ class VaeTrainer:
         # SdsLossConfig's docstring for the loss itself.
         self._sds_loss = (
             SdsDistillationLoss(config.sds, self._accelerator.device) if config.sds.enabled else None
+        )
+        # Cheap and stateful (a bank of recent latents), so always on: logged as
+        # train_swd/val_swd in every run, a training term only when weighted.
+        self._swd_prior = SlicedWassersteinPrior(
+            num_projections=config.swd.num_projections,
+            bank_size=config.swd.bank_size,
+            device=self._accelerator.device,
+            seed=config.seed + self._accelerator.process_index,
         )
 
     # ------------------------------------------------------------------
@@ -941,6 +950,10 @@ class VaeTrainer:
                         if self._sds_loss is not None and cfg.loss_weighting.weights.get("sds", 0.0) != 0.0
                         else recon.new_zeros(())
                     )
+                    # Aggregate-posterior prior (WAE). Without a weight it is only
+                    # logged, so keep it out of the graph.
+                    with torch.set_grad_enabled(cfg.loss_weighting.weights.get("swd", 0.0) != 0.0):
+                        losses["swd"] = self._swd_prior(latents)
 
                     grad_norms = None
 
@@ -1262,6 +1275,8 @@ class VaeTrainer:
                 if self._sds_loss is not None and weights.get("sds", 0.0) != 0.0
                 else recon.new_zeros(())
             )
+            # Ranked against the training bank, which eval leaves untouched.
+            losses["swd"] = self._swd_prior(latents, update_bank=False)
             # .get(name, 0.0): see the matching comment in train()'s backward
             # total_loss -- an opt-in loss absent from this config's weights
             # contributes 0 rather than KeyError.
