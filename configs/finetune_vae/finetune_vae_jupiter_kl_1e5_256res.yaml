@@ -1,3 +1,7 @@
+# SUPERSEDED 2026-10-09: this weight was set for the old KL summed over latent
+# elements; windinet/losses/kl_divergence.py now averages them, so the same weight
+# is ~1e5x stronger. Kept as the record of the collapsed runs -- do not rerun as-is;
+# the per-element sweep is finetune_vae_jupiter_klmean_*_s44_256res.yaml.
 # Jupiter KL arm, weight 1e-5 -- experiment 2 (KL sweep 1e-7 / 1e-5 / 1e-3).
 #
 # finetune_vae_jupiter_baseline_256res.yaml plus loss_weighting.weights.kl: 1e-5.

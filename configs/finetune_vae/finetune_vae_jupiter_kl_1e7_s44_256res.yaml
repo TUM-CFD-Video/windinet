@@ -1,3 +1,7 @@
+# SUPERSEDED 2026-10-09: this weight was set for the old KL summed over latent
+# elements; windinet/losses/kl_divergence.py now averages them, so the same weight
+# is ~1e5x stronger. Kept as the record of the collapsed runs -- do not rerun as-is;
+# the per-element sweep is finetune_vae_jupiter_klmean_*_s44_256res.yaml.
 # Seed-44 rerun (2026-10-05) of finetune_vae_jupiter_kl_1e7_256res.yaml: seed 42 -> 44,
 # output_dir and tags only. The seed-42 KL arms were caught by the same
 # mid-training collapse as the seed-42 baseline; seed 44 trained the baseline

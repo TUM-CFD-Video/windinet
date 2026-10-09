@@ -1,17 +1,15 @@
-# SUPERSEDED 2026-10-09: this weight was set for the old KL summed over latent
-# elements; windinet/losses/kl_divergence.py now averages them, so the same weight
-# is ~1e5x stronger. Kept as the record of the collapsed runs -- do not rerun as-is;
-# the per-element sweep is finetune_vae_jupiter_klmean_*_s44_256res.yaml.
-# Jupiter KL arm, weight 1e-3 -- experiment 2 (KL sweep 1e-7 / 1e-5 / 1e-3).
-#
-# finetune_vae_jupiter_baseline_256res.yaml plus loss_weighting.weights.kl: 1e-3.
-# KL is KL(q(z|x) || N(0, I)), summed over every latent element per sample.
-# Unlike the thesis KL arms, training now decodes a reparameterized posterior
-# sample z = mu + sigma * eps whenever kl > 0 (VaeTrainer._sample_posterior);
-# the thesis arms decoded the posterior mean, which left the variance term
-# decoupled from reconstruction. Validation, test eval and DiT preprocessing
-# still use the posterior mean.
-# Launch: see jobs/jupiter/submit_experiments.sh
+# KL sweep with the per-element KL (2026-10-09), weight 1e-4.
+# finetune_vae_jupiter_baseline_s44_256res.yaml (test ch-mean 0.0799) plus
+# loss_weighting.weights.kl: 1.0e-4; output_dir and tags. KL(q(z|x) || N(0, I))
+# is now averaged over latent elements (windinet/losses/kl_divergence.py); the
+# collapsed finetune_vae_jupiter_kl_* arms summed it, so their 1e-7 equals ~1e-2
+# here. The stock posterior sits at ~7.05 nats per element (baseline s44 train_kl
+# 7.5e5 / 106496), so 1e-5 / 1e-4 / 1e-3 put the KL term at ~0.1% / 1.2% / 12% of
+# the baseline's epoch-1 total loss (0.057), ~0.5% / 5% / 50% of its epoch-20 one
+# (0.014). The old 1e-7 sum was ~130% at epoch 1.
+# Training decodes z = mu + sigma * eps whenever kl > 0; validation, test eval and
+# DiT preprocessing use the posterior mean.
+# Launch: bash jobs/jupiter/submit_klmean.sh
 
 model:
   model_source: "LTXV_2B_0.9.6_DEV"
@@ -57,7 +55,7 @@ loss_weighting:
     h1: 50.0
     ssim: 0.0
     mlw: 0.0
-    kl: 1.0e-3
+    kl: 1.0e-4
 
 loss:
   wavelet: "db2"
@@ -88,8 +86,8 @@ checkpoints:
 wandb:
   enabled: false
   project: "windinet"
-  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "jupiter", "kl1e-3", "rmse-h1", "256res", "eval500", "f97"]
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "jupiter", "klmean1e-4", "s44", "rmse-h1", "256res", "eval500", "f97"]
 
-seed: 42
-output_dir: "finetune_vae_jupiter_kl_1e3_256res"
+seed: 44
+output_dir: "finetune_vae_jupiter_klmean_1e4_s44_256res"
 clean_output_dir: true
