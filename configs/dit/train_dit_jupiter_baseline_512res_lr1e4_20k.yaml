@@ -1,0 +1,89 @@
+# Jupiter baseline DiT at 512x512, LR 1e-4, 20000 steps (2026-10-09), on
+# finetune_vae_jupiter_baseline_512res's latents.
+# train_dit_jupiter_baseline_512res.yaml with optimization.learning_rate 1e-5 -> 1e-4,
+# optimization.steps 8000 -> 20000 (own cosine schedule over 20000, not a truncation),
+# visualization.steps, output_dir and tags. At 256x256, LR 1e-4 at 8k (ch-mean 0.433)
+# matched LR 1e-5 at 30k (0.430); the 512 8k run at 1e-5 gave 0.441. 8k steps took
+# 7h27m here (job 2189227, ~1070 steps/h).
+# Launch: bash jobs/jupiter/submit_lr1e4_long.sh
+#
+# Header of train_dit_jupiter_baseline_512res.yaml:
+# | Jupiter baseline DiT at 512x512, on finetune_vae_jupiter_baseline_512res's latents.
+# |
+# | train_dit_jupiter_baseline.yaml with only output_dir and tags changed: the
+# | resolution comes from the latents (13 x 16 x 16 latent tokens per sim at
+# | 512x512 vs 13 x 8 x 8 at 256x256), so steps, LR, effective batch and
+# | everything else stay identical. 4x the tokens make each step several times
+# | slower; submit_baseline_512.sh queues resume jobs for that.
+# |
+# | Launch: bash jobs/jupiter/submit_baseline_512.sh
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+  load_checkpoint: null
+
+conditioning:
+  first_frame_conditioning_p: 1.0
+
+scalar_conditioning:
+  enabled: true
+  scalar_names:
+    - "gamma"
+  scalar_ranges:
+    gamma: [1.0, 2.0]
+  embedding_dim: 4096
+  num_tokens_per_scalar: 4
+  fourier_features: 64
+  mlp_hidden_dim: 256
+  dropout: 0.1
+
+optimization:
+  learning_rate: 1e-4
+  steps: 20000
+  batch_size: 1
+  gradient_accumulation_steps: 8  # 4 GPUs x 1 x 8 = effective batch 32, same as sng_pvc's 8 tiles x 1 x 4
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "cosine"
+  scheduler_params:
+    eta_min: 1.0e-8
+  enable_gradient_checkpointing: true
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+data:
+  preprocessed_data_root: "__PREPROCESSED_ROOT__"
+  num_dataloader_workers: 4
+
+validation:
+  data_root: "__PREPROCESSED_ROOT__/val"
+  interval: 600
+  max_samples: 0
+
+checkpoints:
+  interval: 120
+  keep_last_n: 2
+
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  # Off on sng_pvc (XPU OUT_OF_RESOURCES after the first pass, jobs
+  # 534853/534884); on here (GH200). Rank 0 only, RNG saved/restored, so it
+  # does not change training.
+  enabled: true
+  steps: [20000]        # end of training only; replaces interval
+  num_samples: 3       # fixed, evenly spaced over the val split
+  frame_numbers: [25, 50, 75, 97]
+  save_video: true     # + GT/Prediction/Residual MP4 over all frames per sample
+
+wandb:
+  enabled: false
+  project: "shockwavenet"
+  tags: ["cfd", "full", "2b", "scalar-only", "jupiter", "512res", "eval500", "lr1e4", "20k-steps", "f97"]
+
+seed: 42
+output_dir: "/e/scratch/e-dev-2026d09-262/wh_work/dit_outputs/shockwave_dit_jupiter_baseline_512res_lr1e4_20k"
