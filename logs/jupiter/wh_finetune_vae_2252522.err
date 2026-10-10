@@ -1,0 +1,23 @@
+4 GPUs x batch 4 x accum 2 -> effective batch 32; output_dir /e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/finetune_vae_jupiter_swd_1e2_s44_256res
+The following values were not passed to `accelerate launch` and had defaults used instead:
+	`--dynamo_backend` was set to a value of `'no'`
+To avoid this warning pass in values for each of the problematic parameters or run `accelerate config`.
+[W1009 18:15:30.931427704 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1009 18:17:03.732739067 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1009 18:17:03.732735579 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1009 18:17:03.732735739 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1009 18:17:03.781897341 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/home/jusers/li96/jupiter/windinet/windinet/losses/sliced_wasserstein.py:75: UserWarning: Specified kernel cache directory could not be created! This disables kernel caching. Specified directory is /e/home/jusers/li96/jupiter/.cache/torch/kernels. This warning will appear only once per process. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/cuda/jit_utils.cpp:1504.)
+  target = torch.special.ndtri((ranks[:n_cur].float() + 0.5) / n)
+/e/home/jusers/li96/jupiter/windinet/windinet/losses/sliced_wasserstein.py:75: UserWarning: Specified kernel cache directory could not be created! This disables kernel caching. Specified directory is /e/home/jusers/li96/jupiter/.cache/torch/kernels. This warning will appear only once per process. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/cuda/jit_utils.cpp:1504.)
+  target = torch.special.ndtri((ranks[:n_cur].float() + 0.5) / n)
+/e/home/jusers/li96/jupiter/windinet/windinet/losses/sliced_wasserstein.py:75: UserWarning: Specified kernel cache directory could not be created! This disables kernel caching. Specified directory is /e/home/jusers/li96/jupiter/.cache/torch/kernels. This warning will appear only once per process. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/cuda/jit_utils.cpp:1504.)
+  target = torch.special.ndtri((ranks[:n_cur].float() + 0.5) / n)
