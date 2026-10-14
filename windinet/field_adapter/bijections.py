@@ -64,7 +64,8 @@ class PreNorm(nn.Module):
 
 
 class Mix(nn.Module):
-    """Linear channel mix n -> 3, initialised as identity (field i -> colour i). Inverse is the pseudo-inverse."""
+    """Linear channel mix n -> n_out (3: a colour image), initialised as identity (field i -> channel i).
+    Inverse is the pseudo-inverse."""
 
     def __init__(self, n_in: int, n_out: int = 3):
         super().__init__()
@@ -101,10 +102,10 @@ class SoftClip(nn.Module):
 class FieldAdapter(nn.Module):
     """The full chain; ``forward`` fields -> rgb, ``inverse`` rgb -> fields."""
 
-    def __init__(self, mean: list[float], std: list[float], log_channels: list[bool], lo=None, hi=None):
+    def __init__(self, mean: list[float], std: list[float], log_channels: list[bool], lo=None, hi=None, channels=3):
         super().__init__()
         self.prenorm = PreNorm(mean, std, log_channels, lo, hi)
-        self.mix = Mix(len(mean), 3)
+        self.mix = Mix(len(mean), channels)
         self.clip = SoftClip()
         self.stages = [self.prenorm, self.mix, self.clip]
 

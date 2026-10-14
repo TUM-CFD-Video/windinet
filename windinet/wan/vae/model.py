@@ -12,6 +12,8 @@ import math
 
 import torch
 from diffusers import AutoencoderKLWan
+from torch import nn
+from torch.nn.functional import pad
 from torch.utils.checkpoint import checkpoint
 
 from windinet.wan import REPO
@@ -20,7 +22,8 @@ TEMPORAL = 4  # frames per latent frame
 
 
 class WanVAE:
-    """`train`: 'none' (frozen), 'decoder' (decoder + post_quant_conv, latents unchanged) or 'all'."""
+    """`train`: 'none' (frozen), 'decoder' (decoder + post_quant_conv, latents unchanged) or 'all'.
+    `channels` > 3: the VAE reads and writes that many channels (`widen_io`)."""
 
     def __init__(
         self,
@@ -28,9 +31,12 @@ class WanVAE:
         dtype: torch.dtype = torch.float32,
         repo: str = REPO,
         train: str = "none",
+        channels: int = 3,
     ):
         # fp32 on purpose: the Wan pipeline keeps its VAE in fp32
         vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=dtype)
+        if channels > 3:
+            widen_io(vae, channels)
         self.vae = vae.to(device).eval().requires_grad_(False)
         trainable = {"none": [], "decoder": [vae.decoder, vae.post_quant_conv], "all": [vae]}[train]
         for module in trainable:
@@ -58,6 +64,17 @@ class WanVAE:
 
     def decode(self, z: torch.Tensor) -> torch.Tensor:
         return self.vae.decode(z * self.latents_std + self.latents_mean).sample
+
+
+def widen_io(vae: AutoencoderKLWan, channels: int) -> None:
+    """Zero-initialised extra input slots of encoder.conv_in and output slots of decoder.conv_out: on the first three
+    channels the widened VAE is the pretrained one, the new channels start ignored and decoded as zero."""
+    for conv, dim in ((vae.encoder.conv_in, 1), (vae.decoder.conv_out, 0)):
+        extra = channels - conv.weight.shape[dim]
+        conv.weight = nn.Parameter(pad(conv.weight, [0, 0] * (conv.weight.ndim - 1 - dim) + [0, extra]))
+        if dim == 0:
+            conv.bias = nn.Parameter(pad(conv.bias, (0, extra)))
+        conv.in_channels, conv.out_channels = conv.weight.shape[1], conv.weight.shape[0]
 
 
 def _checkpointed(block_forward):

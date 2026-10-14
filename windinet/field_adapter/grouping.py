@@ -1,7 +1,8 @@
 """Which fields each colour image carries, and how the images are merged back to fields.
 
-A group is a list of at most three field names; each group gets its own FieldAdapter
-and its own VAE pass. Default (ablations, experiment 3): (rho, p) and (m_x, m_y).
+A group is a list of field names; each group gets its own FieldAdapter and its own VAE pass. Up to three fields
+make a colour image; a larger group widens the VAE to as many channels. Default (ablations, experiment 3): (rho, p)
+and (m_x, m_y).
 A field in no group is dropped; a field in several groups is averaged on the way back.
 """
 
@@ -38,14 +39,15 @@ def _norm_args(names: list[str], stats: dict[str, dict]) -> dict:
 
 
 class GroupedAdapter(nn.Module):
-    """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order."""
+    """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order; `channels` per image."""
 
     def __init__(self, groups: list[list[str]], stats: dict[str, dict]):
         super().__init__()
         self.groups = groups
         self.fields = [n for n in FIELDS if any(n in g for g in groups)]
+        self.channels = max(3, *map(len, groups))
         self.base_norm = PreNorm(**_norm_args(self.fields, stats))
-        self.adapters = nn.ModuleList(FieldAdapter(**_norm_args(g, stats)) for g in groups)
+        self.adapters = nn.ModuleList(FieldAdapter(**_norm_args(g, stats), channels=self.channels) for g in groups)
 
     def select(self, x: torch.Tensor) -> torch.Tensor:
         """Dataset fields [B, 4, ...] -> the grouped ones [B, len(fields), ...]."""

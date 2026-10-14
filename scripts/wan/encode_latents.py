@@ -42,7 +42,7 @@ def main(
     setup()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     adapter = load_adapter(run, device)
-    vae = WanVAE(device=device)
+    vae = WanVAE(device=device, channels=adapter.channels)
     sets = {k: (h5, ids[: cfg.sims]) for k, (h5, ids) in cfg.data.splits().items()}
     if rank == 0:
         out_dir.mkdir(parents=True, exist_ok=True)

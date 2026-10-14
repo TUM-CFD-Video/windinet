@@ -66,7 +66,8 @@ def build(cfg: DitStageConfig, device: torch.device) -> tuple:
     if encode_info(cfg.latents.dir)["groups"] != vae_cfg["adapter"]["groups"]:
         raise typer.BadParameter(f"{cfg.latents.dir} was encoded with other groups than {run}")
     adapter = load_adapter(run, device)
-    vaes = [WanVAE(device=device) for _ in range(len(adapter.groups) if vae_cfg["train"]["vae_per_group"] else 1)]
+    n_vaes = len(adapter.groups) if vae_cfg["train"]["vae_per_group"] else 1
+    vaes = [WanVAE(device=device, channels=adapter.channels) for _ in range(n_vaes)]
     load_weights(run, adapter, vaes, device)
     dtype = torch.bfloat16 if cfg.model.precision == "bf16" else torch.float32
     dit = WanDiT(

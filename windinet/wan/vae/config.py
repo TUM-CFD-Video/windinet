@@ -54,7 +54,8 @@ class DataConfig(_Base):
 class AdapterConfig(_Base):
     groups: list[list[str]] = Field(
         default=[["density", "pressure"], ["momentum_x", "momentum_y"]],
-        description="field names per colour image, at most three each; one VAE pass per group; other fields dropped",
+        description="field names per image (up to three: a colour image; more widen the VAE's in and out convolutions "
+        "to that many channels); one VAE pass per group; other fields dropped",
     )
 
 

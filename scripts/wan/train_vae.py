@@ -71,7 +71,7 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
         from windinet.wan.vae.model import WanVAE  # diffusers only when a VAE is used
 
         n_vaes = len(cfg.adapter.groups) if cfg.train.vae_per_group else 1
-        vaes = [WanVAE(device=device, train=cfg.train.vae_parts) for _ in range(n_vaes)]
+        vaes = [WanVAE(device=device, train=cfg.train.vae_parts, channels=adapter.channels) for _ in range(n_vaes)]
     if cfg.load:
         load_weights(Path(cfg.load), adapter, vaes, device)
     else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw

@@ -40,6 +40,23 @@ def test_grouped_adapter_drops_fields_in_no_group():
     assert torch.allclose(a.inverse(a(x)), x, atol=1e-4)
 
 
+def test_widened_vae_starts_as_the_pretrained_one():
+    from diffusers import AutoencoderKLWan
+
+    from windinet.wan.vae.model import widen_io
+
+    vae = AutoencoderKLWan(base_dim=8, num_res_blocks=1, dim_mult=[1, 1, 1, 1], z_dim=4).eval()
+    x = torch.randn(1, 4, 5, 32, 32)
+    with torch.no_grad():
+        z3 = vae.encode(x[:, :3]).latent_dist.mode()
+        widen_io(vae, 4)
+        z = vae.encode(x).latent_dist.mode()
+        y = vae.decode(z).sample
+    assert torch.allclose(z, z3) and y.shape[1] == 4 and y[:, 3].abs().max() == 0
+    a = GroupedAdapter([FIELDS[:4]], STATS)
+    assert a.channels == 4 and a(torch.rand(2, 4, 8, 8) + 0.1)[0].shape[1] == 4
+
+
 def test_vrmse_equals_the_ltx_baselines_metric():
     x, x_hat = torch.rand(7, 4, 8, 8), torch.rand(7, 4, 8, 8)
     his = vrms_per_channel(x_hat.movedim(0, 1)[None], x.movedim(0, 1)[None])  # his layout: [B, C, T, H, W]
