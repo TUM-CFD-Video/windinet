@@ -17,7 +17,7 @@ train:
   steps: 1000
   batch_sims: 6
   micro_batch: 6
-  lr: 3.0e-3         # adapter from scratch; behind a loaded adapter: 0 = fixed, 1.0e-4 = continues
+  adapter_lr: 3.0e-3 # adapter from scratch; behind a loaded adapter: 0 = fixed, 1.0e-4 = continues
   vae_parts: decoder
   vae_lr: 1.0e-6     # the LTX recipe's 5e-5 diverges for the Wan decoder (field_adapter ablations, section 7)
   warmup_steps: 100

@@ -55,7 +55,8 @@ def settings(cfg: dict) -> str:
     train, load = cfg.get("train", {}), cfg.get("load")
     parts = [f"from {Path(load).name}" + (f" @ {cfg['load_step']}" if cfg.get("load_step") else "")] if load else []
     if train.get("steps"):
-        parts.append(f"{train['steps']} steps, lr {train.get('lr', 0):g}, batch {train.get('batch_sims', 1)}")
+        lr = train.get("lr", train.get("adapter_lr", 0))
+        parts.append(f"{train['steps']} steps, lr {lr:g}, batch {train.get('batch_sims', 1)}")
     else:
         parts.append("eval only")
     return ", ".join(parts)

@@ -65,7 +65,7 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
     the clipped metric uses."""
     stats = load_field_stats(cfg.data.stats_json)
     adapter = GroupedAdapter(cfg.adapter.groups, stats).to(device)
-    adapter.requires_grad_(cfg.train.lr > 0)  # lr 0 = fixed adapter: no gradient through the encoder for it
+    adapter.requires_grad_(cfg.train.adapter_lr > 0)  # fixed adapter: no gradient through the encoder for it
     vaes = []
     if cfg.vae == "wan":
         from windinet.wan.vae.model import WanVAE  # diffusers only when a VAE is used
@@ -82,11 +82,12 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
     return adapter, vaes, norm
 
 
-def optimizer(cfg: TrainConfig, adapter: GroupedAdapter, vae_params: list) -> tuple:
-    """A param group per lr: the adapter and, when fine-tuned, the VAE."""
-    groups = [{"params": list(adapter.parameters()), "lr": cfg.lr}]
-    if vae_params:
-        groups.append({"params": vae_params, "lr": cfg.vae_lr})
+def optimizer(cfg: TrainConfig, adapter: GroupedAdapter, vaes: list) -> tuple:
+    """A param group per lr: the adapter, the fine-tuned VAE and, with io_lr, its in and out convolutions."""
+    io = [p for vae in vaes for p in vae.io_params] if cfg.io_lr else []
+    rest = [p for vae in vaes for p in vae.trainable_params if all(p is not q for q in io)]
+    groups = [{"params": list(adapter.parameters()), "lr": cfg.adapter_lr}]
+    groups += [{"params": ps, "lr": lr} for ps, lr in ((rest, cfg.vae_lr), (io, cfg.io_lr)) if ps]
     return adamw(groups, cfg.steps, cfg.warmup_steps, cfg.lr_floor)
 
 
@@ -161,7 +162,7 @@ def main(
     report("init", init, adapter.fields)
 
     vae_params = [p for vae in vaes for p in vae.trainable_params]
-    opt, sched = optimizer(cfg.train, adapter, vae_params)
+    opt, sched = optimizer(cfg.train, adapter, vaes)
     params = [p for g in opt.param_groups for p in g["params"]]
     w0 = [p.detach().cpu() for p in vae_params]  # start weights for the drift; read at evals only
     steps, history = [], []  # per update / per evaluation

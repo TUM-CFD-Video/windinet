@@ -42,6 +42,8 @@ class WanVAE:
         for module in trainable:
             module.requires_grad_(True)
         self.trainable_params = [p for p in vae.parameters() if p.requires_grad]
+        io = (vae.encoder.conv_in, vae.decoder.conv_out)  # the field interface: its own lr in the VAE stage
+        self.io_params = [p for m in io for p in m.parameters() if p.requires_grad]
         if trainable:  # recompute each block in backward: the full graph of a clip needs several times the memory
             for block in [*vae.encoder.down_blocks, *vae.decoder.up_blocks]:
                 block.forward = _checkpointed(block.forward)

@@ -68,20 +68,23 @@ class TrainConfig(_Base):
     steps: int = Field(default=600, description="0 = evaluate only")
     batch_sims: int = Field(default=1, description="simulations per update (under torchrun: global, split over ranks)")
     micro_batch: int = Field(default=1, description="clips (frames without data.clip) per backward pass")
-    lr: float = Field(default=3e-3, description="adapter lr; 0 = adapter fixed")
+    adapter_lr: float = Field(default=3e-3, description="peak lr of the adapter; 0 = adapter fixed")
     vae_parts: Literal["none", "decoder", "all"] = Field(
         default="none", description="which part of the Wan VAE to fine-tune alongside the adapter"
     )
-    vae_lr: float = Field(default=5e-5, description="peak lr of the VAE parameters")
     vae_per_group: bool = Field(
         default=False, description="one VAE (and so one fine-tuned decoder) per image group instead of one shared"
+    )
+    vae_lr: float = Field(default=5e-5, description="peak lr of the VAE parameters")
+    io_lr: float | None = Field(
+        default=None, description="peak lr of the VAE's in and out convolutions (the field interface); None = vae_lr"
     )
     warmup_steps: int = Field(
         default=0,
         description="linear warm-up from 1 % of the peak, then cosine decay (the LTX recipe); 0 = constant lr",
     )
     lr_floor: float = Field(
-        default=0.02, description="final lr as a fraction of the peak, per parameter group (LTX: 1e-6 / 5e-5)"
+        default=0.02, description="end of the cosine decay as a fraction of each peak lr (LTX: 1e-6 / 5e-5)"
     )
     max_grad_norm: float = Field(default=0.0, description="gradient clipping; 0 = off")
     eval_every: int = Field(default=300, description="validation (and weight save) every n updates")

@@ -99,7 +99,9 @@ class DitTrainConfig(_Base):
     )
     weight_decay: float = Field(default=0.01, description="AdamW weight decay")
     warmup_steps: int = Field(default=0, description="linear warm-up from 1 % of the peak; 0 = none")
-    lr_floor: float = Field(default=1e-3, description="final lr as a fraction of the peak (Li: 1e-8 / 1e-5)")
+    lr_floor: float = Field(
+        default=1e-3, description="end of the cosine decay as a fraction of each peak lr (Li: 1e-8 / 1e-5)"
+    )
     max_grad_norm: float = Field(default=1.0, description="gradient clipping; 0 = off")
     ema: float = Field(
         default=0.0,
