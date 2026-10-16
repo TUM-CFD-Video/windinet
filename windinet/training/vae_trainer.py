@@ -608,13 +608,19 @@ class VaeTrainer:
         # partition stays reproducible across runs.
         split_generator = torch.Generator().manual_seed(cfg.seed)
         perm = torch.randperm(len(full_dataset), generator=split_generator).tolist()
-        if cfg.data.overfit_sims is not None:
+        if cfg.data.overfit_sim_ids is not None:
+            missing = [sid for sid in cfg.data.overfit_sim_ids if sid not in full_dataset.ids]
+            if missing:
+                raise ValueError(f"overfit_sim_ids not in {cfg.data.data_root}: {missing}")
+            # Named sims replace the head of the shuffled perm used below.
+            perm = [full_dataset.ids.index(sid) for sid in cfg.data.overfit_sim_ids]
+        if cfg.data.overfit_sims is not None or cfg.data.overfit_sim_ids is not None:
             # Diagnostic mode: the same handful of sims for both loaders. val is
             # then a memorization score, not a generalization score -- the point
             # is to see how far reconstruction can go when generalization is not
             # in the way. Taken from the head of the same shuffled perm, so these
             # sims span gamma regimes rather than being one contiguous block.
-            k = min(cfg.data.overfit_sims, len(full_dataset))
+            k = len(perm) if cfg.data.overfit_sim_ids is not None else min(cfg.data.overfit_sims, len(full_dataset))
             repeat = cfg.data.overfit_repeat
             # The train subset repeats the same k indices so one epoch holds
             # `repeat` optimizer steps; eval sees each sim once.

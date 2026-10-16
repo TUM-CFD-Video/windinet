@@ -62,6 +62,9 @@ export HDF5_USE_FILE_LOCKING=FALSE  # 4 ranks open train.h5 concurrently
 
 BASE_CONFIG=${1:-configs/finetune_vae/finetune_vae_ch6_loss_rmse_h1_256res.yaml}
 BATCH_SIZE=${BATCH_SIZE:-4}
+# EFFECTIVE_BATCH overrides the cluster's effective batch 32 (gradient accumulation
+# is derived from it), e.g. 4 = one sim per GPU per step for the overfit diagnostic.
+EFFECTIVE_BATCH=${EFFECTIVE_BATCH:-}
 RUN_CONFIG=$(mktemp /tmp/wh_finetune_vae_XXXX.yaml)
 JOB_START_EPOCH=$(date +%s)
 trap 'echo "end_time=$(date -Is) elapsed=$(( $(date +%s) - JOB_START_EPOCH ))s"; rm -f "${RUN_CONFIG}"' EXIT
@@ -71,15 +74,17 @@ echo "job=${SLURM_JOB_ID} node=$(hostname) gpus=${CUDA_VISIBLE_DEVICES:-}"
 echo "start_time=$(date -Is)"
 
 # Prints "done" if this run already finished, else "train".
-STATUS=$("${PYTHON}" - "${BASE_CONFIG}" "${RUN_CONFIG}" "${NUM_GPUS}" "${BATCH_SIZE}" <<'EOF'
+STATUS=$("${PYTHON}" - "${BASE_CONFIG}" "${RUN_CONFIG}" "${NUM_GPUS}" "${BATCH_SIZE}" "${EFFECTIVE_BATCH}" <<'EOF'
 import sys
 from pathlib import Path
 import yaml
 from windinet.cluster_config import patch_config_for_cluster
 src, dst, num_processes, batch_size = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+effective_batch = int(sys.argv[5]) if sys.argv[5] else None
 cfg = yaml.safe_load(open(src))
 cfg["optimization"]["batch_size"] = batch_size
-patch_config_for_cluster(cfg, cluster="jupiter", num_processes=num_processes, output_suffix="")
+patch_config_for_cluster(cfg, cluster="jupiter", num_processes=num_processes, output_suffix="",
+                         effective_batch=effective_batch)
 out = Path(cfg["output_dir"])
 last = out / "checkpoints" / "vae_shockwave_last.safetensors"
 status = "train"
@@ -92,7 +97,7 @@ elif last.exists() and last.with_name(last.stem + ".state.pt").exists():
     print(f"resuming from {last}", file=sys.stderr)
 yaml.safe_dump(cfg, open(dst, "w"), sort_keys=False)
 print(f"{num_processes} GPUs x batch {batch_size} x accum {cfg['optimization']['gradient_accumulation_steps']} "
-      f"-> effective batch 32; output_dir {cfg['output_dir']}", file=sys.stderr)
+      f"-> effective batch {effective_batch or 32}; output_dir {cfg['output_dir']}", file=sys.stderr)
 print(status)
 EOF
 )

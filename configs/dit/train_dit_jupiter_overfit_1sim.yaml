@@ -1,0 +1,83 @@
+# Single-trajectory overfit, DiT side (2026-10-17): train_dit_jupiter_baseline_s44_lr1e4.yaml
+# (the 8k reference, 0.4333) trained only on the baseline s44 latents of 2507_gamma1.3999999762,
+# the sim finetune_vae_jupiter_overfit_1sim_256res overfits. The latents come from the
+# regular baseline s44 VAE, so this isolates the DiT's capacity: its pixel VRMSE on that
+# sim (eval with SIM_IDS, TEST_H5=none) is bounded below by the VAE's vae_only on it.
+# Changes: data.overfit_sim_ids + overfit_repeat 64; accum 8 -> 1 (effective batch 4 =
+# the same sim on each GPU); steps 8000 -> 4000 (cosine over 4000); checkpoints every 1000;
+# validation every 1000 steps on 50 held-out sims (shows generalization falling away);
+# visualization off (it draws from the val split; the eval saves this sim's npz instead).
+#
+# Launch: bash jobs/jupiter/submit_overfit_1sim.sh
+#
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+  load_checkpoint: null
+
+conditioning:
+  first_frame_conditioning_p: 1.0
+
+scalar_conditioning:
+  enabled: true
+  scalar_names:
+    - "gamma"
+  scalar_ranges:
+    gamma: [1.0, 2.0]
+  embedding_dim: 4096
+  num_tokens_per_scalar: 4
+  fourier_features: 64
+  mlp_hidden_dim: 256
+  dropout: 0.1
+
+optimization:
+  learning_rate: 1e-4
+  steps: 4000
+  batch_size: 1
+  gradient_accumulation_steps: 1  # 4 GPUs x 1 x 1 = effective batch 4 (one sim)
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "cosine"
+  scheduler_params:
+    eta_min: 1.0e-8
+  enable_gradient_checkpointing: true
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+data:
+  preprocessed_data_root: "__PREPROCESSED_ROOT__"
+  num_dataloader_workers: 4
+  overfit_sim_ids: ["2507_gamma1.3999999762"]
+  overfit_repeat: 64
+
+validation:
+  data_root: "__PREPROCESSED_ROOT__/val"
+  interval: 1000
+  max_samples: 50
+
+checkpoints:
+  interval: 1000
+  keep_last_n: 2
+
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: {}
+
+visualization:
+  # Off on sng_pvc (XPU OUT_OF_RESOURCES after the first pass, jobs
+  # 534853/534884); on here (GH200). Rank 0 only, RNG saved/restored, so it
+  # does not change training.
+  enabled: false
+  steps: [4000]        # end of training only; replaces interval
+  num_samples: 3       # fixed, evenly spaced over the val split
+  frame_numbers: [25, 50, 75, 97]
+  save_video: true     # + GT/Prediction/Residual MP4 over all frames per sample
+
+wandb:
+  enabled: false
+  project: "shockwavenet"
+  tags: ["cfd", "full", "2b", "scalar-only", "jupiter", "256res", "eval500", "lr1e4", "f97", "s44", "overfit-1sim"]
+
+seed: 42
+output_dir: "/e/scratch/e-dev-2026d09-262/wh_work/dit_outputs/shockwave_dit_jupiter_overfit_1sim"

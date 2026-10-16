@@ -42,7 +42,7 @@ from torch.optim.lr_scheduler import (
     PolynomialLR,
     StepLR,
 )
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 from windinet.utils import logger, convert_checkpoint, get_gpu_memory_gb
 from windinet.config import LtxvTrainerConfig
@@ -1127,6 +1127,18 @@ class LtxvTrainer:
                 data_sources=data_sources,
             )
             logger.debug(f"Loaded dataset with {len(self._dataset):,} samples from sources: {list(data_sources)}")
+            overfit_ids = self._config.data.overfit_sim_ids
+            if overfit_ids is not None:
+                stems = [Path(p).stem for p in next(iter(self._dataset.sample_files.values()))]
+                missing = [sid for sid in overfit_ids if sid not in stems]
+                if missing:
+                    raise ValueError(f"overfit_sim_ids not in {self._config.data.preprocessed_data_root}: {missing}")
+                indices = [stems.index(sid) for sid in overfit_ids]
+                self._dataset = Subset(self._dataset, indices * self._config.data.overfit_repeat)
+                logger.warning(
+                    f"OVERFIT DIAGNOSTIC: training only on {overfit_ids} "
+                    f"(repeated {self._config.data.overfit_repeat}x per pass)."
+                )
 
         dataloader = DataLoader(
             self._dataset,

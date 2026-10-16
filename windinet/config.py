@@ -170,6 +170,20 @@ class DataConfig(ConfigBaseModel):
 
     preprocessed_data_root: str = Field(description="Path to folder containing preprocessed training data")
     num_dataloader_workers: int = Field(default=2, ge=0)
+    overfit_sim_ids: list[str] | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Diagnostic: train only on these simulation ids of preprocessed_data_root "
+            "(latent file stems, e.g. '2507_gamma1.3999999762'). Shows how far the DiT can "
+            "fit a trajectory when generalization is not in the way. Never use for a real run."
+        ),
+    )
+    overfit_repeat: int = Field(
+        default=1,
+        ge=1,
+        description="overfit_sim_ids only: how many times the subset is repeated per dataloader pass.",
+    )
 
 
 class ValidationConfig(ConfigBaseModel):
@@ -342,11 +356,20 @@ class VaeDataConfig(ConfigBaseModel):
             "for these exact samples. Never use for a real run."
         ),
     )
+    overfit_sim_ids: list[str] | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Diagnostic like overfit_sims, but on these exact simulation ids (e.g. "
+            "'2507_gamma1.3999999762'), so a DiT overfit run (DataConfig.overfit_sim_ids) "
+            "can target the same trajectory. Mutually exclusive with overfit_sims."
+        ),
+    )
     overfit_repeat: int = Field(
         default=1,
         ge=1,
         description=(
-            "overfit_sims only: how many times the subset is repeated per epoch. Sets the "
+            "overfit_sims / overfit_sim_ids only: how many times the subset is repeated per epoch. Sets the "
             "optimizer steps per epoch, since validation runs once per epoch and would "
             "otherwise dominate the runtime of a tiny training set."
         ),
@@ -437,6 +460,12 @@ class VaeDataConfig(ConfigBaseModel):
                 f"{sorted(expected)}, got {values}"
             )
         return values
+
+    @model_validator(mode="after")
+    def validate_overfit(self):
+        if self.overfit_sims is not None and self.overfit_sim_ids is not None:
+            raise ValueError("set either overfit_sims or overfit_sim_ids, not both")
+        return self
 
     @model_validator(mode="after")
     def validate_normalization_stats(self):

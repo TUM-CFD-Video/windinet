@@ -1,0 +1,94 @@
+# Single-trajectory overfit, VAE side (2026-10-17): the baseline s44 recipe
+# trained AND evaluated on one sim (2507_gamma1.3999999762: chosen by the user, median
+# gamma 1.40, in the DiT train split too), to see how far the VAE can fit one
+# trajectory when generalization is out of the picture. val_vrmse_chmean in
+# metrics/metrics.csv is that sim's pixel VRMSE (same definition as test eval);
+# compare with the baseline s44 VAE on the same sim (vae_only in the DiT overfit eval).
+# Changes vs finetune_vae_jupiter_baseline_s44_256res.yaml: data.overfit_sim_ids +
+# overfit_repeat 400, epochs 20 -> 30, launched with BATCH_SIZE=1 EFFECTIVE_BATCH=4
+# (one copy per GPU, accum 1): 100 optimizer steps/epoch, 3000 in all (baseline:
+# ~1250 steps at effective batch 32). Visualization of the one sim at epochs 10/30.
+#
+# Launch: bash jobs/jupiter/submit_overfit_1sim.sh
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: 97  # 8*12+1, no padding (see header)
+  eval_sims: 500  # ignored under overfit_sim_ids
+  overfit_sim_ids: ["2507_gamma1.3999999762"]
+  overfit_repeat: 400
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 30
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  epochs: [10, 30]
+  num_samples: 1     # the one sim
+  frame_numbers: [25, 50, 75, 97]
+  dpi: 150
+  save_video: true   # + GT/Prediction/Residual MP4 over all frames per sample
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "jupiter", "baseline", "overfit-1sim", "s44", "rmse-h1", "256res", "eval500", "f97"]
+
+seed: 44
+output_dir: "finetune_vae_jupiter_overfit_1sim_256res"
+clean_output_dir: true

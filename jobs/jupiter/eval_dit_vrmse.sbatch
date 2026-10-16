@@ -35,7 +35,8 @@
 #   NUM_SAMPLES        optional, default 500
 # Env: TEST_H5 (default: the test.h5 beside the latents' train.h5, so 256 or 512
 # follows the run; "none" = the manifest's val split instead), SAVE_VIS_SAMPLES (default 3), SAVE_NPZ_SAMPLES (default 3),
-# NUM_INFERENCE_STEPS (default: config's 20).
+# NUM_INFERENCE_STEPS (default: config's 20), SIM_IDS (space-separated: evaluate only these
+# sims, any split, with an npz for each; pair with TEST_H5=none for training sims).
 #
 # Results: logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json (tracked);
 # panels there are gitignored, npz figure fields go to scratch.
@@ -99,6 +100,7 @@ done
 EXTRA_ARGS=()
 [[ "${TEST_H5}" != none ]] && EXTRA_ARGS+=(--test_h5 "${TEST_H5}")
 [[ -n "${NUM_INFERENCE_STEPS}" ]] && EXTRA_ARGS+=(--num_inference_steps "${NUM_INFERENCE_STEPS}")
+[[ -n "${SIM_IDS:-}" ]] && EXTRA_ARGS+=(--sim_ids ${SIM_IDS})
 [[ "${SAVE_NPZ_SAMPLES}" != 0 ]] && EXTRA_ARGS+=(--save_npz_samples "${SAVE_NPZ_SAMPLES}" --npz_dir "${NPZ_DIR}")
 
 echo "PREPROCESSED_ROOT=${PREPROCESSED_ROOT}"
