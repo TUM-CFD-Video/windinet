@@ -55,10 +55,12 @@ def _wavelet_loss_spatial(
         .reshape(B * T * C, H, W)
     )
 
-
+    # Reflect padding: smooth continuation across open (non-periodic)
+    # boundaries; matches cfd_bench MultilevelWaveletLoss.
     pred_coeffs = ptwt.wavedec2(
         pred,
         wavelet=wavelet,
+        mode="reflect",
         level=level,
         axes=(-2, -1),
     )
@@ -66,6 +68,7 @@ def _wavelet_loss_spatial(
     target_coeffs = ptwt.wavedec2(
         target,
         wavelet=wavelet,
+        mode="reflect",
         level=level,
         axes=(-2, -1),
     )
@@ -149,12 +152,14 @@ def _wavelet_loss_temporal(
         pred_coeffs = ptwt.wavedec(
             pred_flat[start:start + chunk],
             wavelet=wavelet,
+            mode="reflect",
             level=level,
             axis=-1,
         )
         target_coeffs = ptwt.wavedec(
             target_flat[start:start + chunk],
             wavelet=wavelet,
+            mode="reflect",
             level=level,
             axis=-1,
         )
