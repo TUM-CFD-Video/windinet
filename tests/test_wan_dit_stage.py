@@ -61,4 +61,7 @@ def test_benchmark_scores_the_cfd_bench_frames_the_stride_reaches(tmp_path):
     assert m["bench_frames"] == [40, 50, 60, 70, 80, 90]
     assert m["bench_rmse"] < 1e-3 and m["bench_vrmse"] < 1e-3 and m["bench_ssim"] < 1e-3 and m["bench_mlw"] < 1e-3
     bench.add(x, torch.zeros_like(x))
-    assert bench.metrics()["bench_vrmse"] > 0.4  # a flat prediction scores about 1 on this sim, averaged with the 0
+    m = bench.metrics()
+    assert m["bench_vrmse"] > 0.4 and abs(m["bench_vrmse_std"] - m["bench_vrmse"]) < 1e-5  # 0 and ~1: std = mean
+    vae = Benchmark(tmp_path / "stats.json", list(FIELDS), 2, "cpu", prefix="bench_vae")
+    assert "bench_vae_frames" in vae.metrics()

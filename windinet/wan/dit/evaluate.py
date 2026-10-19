@@ -37,10 +37,12 @@ def evaluate(
     aggregate = Aggregate(adapter.fields, device)
     by_gamma, n_gamma = torch.zeros(len(gammas), device=device), torch.zeros(len(gammas), device=device)  # VRMSE
     ids, seen, examples = loaders[0].dataset.ids, 0, {}
-    bench = Benchmark(cfg.data.stats_json, adapter.fields, cfg.data.frame_stride, device) if cfg.benchmark else None
+    args = (cfg.data.stats_json, adapter.fields, cfg.data.frame_stride, device)
+    bench, vae_bench = (Benchmark(*args), Benchmark(*args, prefix="bench_vae")) if cfg.benchmark else (None, None)
     for (latents, gamma), (frames, _) in zip(*loaders, strict=True):
         gamma = gamma.to(device)
         pred = decode(adapter, rollout(dit, cond, latents.to(device), gamma, cfg), vaes)
+        recon = decode(adapter, latents.to(device), vaes) if bench else None  # the round trip: his vae_only row
         truth = adapter.select(frames.to(device).flatten(0, 1)).unflatten(0, (len(frames), -1))
         truth = truth[:, : pred.shape[1]]  # the frames the (possibly truncated) latents cover
         for j, (p, x, g) in enumerate(zip(pred, truth, gamma, strict=True)):
@@ -49,12 +51,13 @@ def evaluate(
             n_gamma[gammas.index(g)] += 1
             if bench:
                 bench.add(p, x)
+                vae_bench.add(recon[j], x)
             if g in (gammas[0], gammas[-1]) and g not in examples:
                 examples[g] = (ids[seen + j], x.cpu(), p.cpu())
         seen += len(gamma)
     aggregate.reduce()
     all_sum(by_gamma, n_gamma)
     metrics = aggregate.metrics(cfg.data.frame_stride)
-    metrics |= bench.metrics() if bench else {}
+    metrics |= bench.metrics() | vae_bench.metrics() if bench else {}
     metrics |= {f"vrmse_mean_gamma{g:g}": (by_gamma[i] / n_gamma[i]).item() for i, g in enumerate(gammas) if n_gamma[i]}
     return metrics, examples
