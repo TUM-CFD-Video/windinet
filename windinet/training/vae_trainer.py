@@ -1307,7 +1307,13 @@ class VaeTrainer:
         self._set_trainable_modules_mode(True)
 
         if self._accelerator.num_processes > 1:
-            keys = list(sums.keys())
+            # A rank whose shard is empty (eval set smaller than world_size,
+            # e.g. the 1-sim overfit run) never fills ``sums``, so its tensor
+            # would be shorter than the others' and all_reduce would hang.
+            # Agree on the key union first; missing keys contribute 0.
+            gathered_keys: list[list[str]] = [[] for _ in range(self._accelerator.num_processes)]
+            dist.all_gather_object(gathered_keys, sorted(sums.keys()))
+            keys = sorted(set().union(*gathered_keys))
             # float32, matching every other tensor dtype in this trainer (see
             # load_vae(..., dtype=torch.float32) etc.) -- fp64 collectives
             # aren't reliably supported on the XPU/oneCCL backend this runs
