@@ -246,11 +246,11 @@ BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw")
 
 
 def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
-    """RMSE, VRMSE, 1-SSIM, MLW for one sim, [1, C, T, H, W] restricted to the scored frames.
+    """RMSE, VRMSE (per field, then mean), 1-SSIM, MLW for one sim, [1, C, T, H, W] restricted to the scored frames.
     Same definitions as cfd_bench/windinet_benchmark_inference.py."""
     return {
         "rmse": float(rmse_loss(pred, target).item()),
-        "vrmse": float(vrms_loss(pred, target).item()),
+        "vrmse": float(vrms_per_channel(pred, target).mean().item()),  # per field, then mean (Li eq. 5.11, The Well)
         "ssim": float(ssim_fn(pred, target).item()),
         "mlw": float(mlw_loss(pred, target).item()),
     }
