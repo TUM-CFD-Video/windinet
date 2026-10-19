@@ -5,7 +5,8 @@
 # sim (eval with SIM_IDS, TEST_H5=none) is bounded below by the VAE's vae_only on it.
 # Changes: data.overfit_sim_ids + overfit_repeat 64; accum 8 -> 1 (effective batch 4 =
 # the same sim on each GPU); steps 8000 -> 4000 (cosine over 4000); checkpoints every 1000;
-# validation every 1000 steps on 50 held-out sims (shows generalization falling away);
+# validation off (held-out sims say nothing about fitting this one; the eval on the sim is
+# the result);
 # visualization off (it draws from the val split; the eval saves this sim's npz instead).
 #
 # Launch: bash jobs/jupiter/submit_overfit_1sim.sh
@@ -52,9 +53,7 @@ data:
   overfit_repeat: 64
 
 validation:
-  data_root: "__PREPROCESSED_ROOT__/val"
-  interval: 1000
-  max_samples: 50
+  data_root: null  # off: an overfit run is judged by the eval on its own sim
 
 checkpoints:
   interval: 1000
