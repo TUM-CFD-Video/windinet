@@ -1,5 +1,8 @@
+import json
+
 import torch
 
+from windinet.eulermq.data import FIELDS
 from windinet.experiment.runs import settings
 from windinet.wan.dit.conditioning import GammaTokens
 from windinet.wan.dit.flow import draw_sigmas, noised, velocity_target
@@ -44,3 +47,18 @@ def test_settings_phrase_for_a_dit_run():
         "gamma tokens, clean first frame, from pretrained Wan 2.1, 8000 steps, lr 1e-05, batch 32, "
         "20-step rollouts, decoders of rgb3_two_stage"
     )
+
+
+def test_benchmark_scores_the_cfd_bench_frames_the_stride_reaches(tmp_path):
+    from windinet.wan.dit.benchmark import Benchmark
+
+    stats = {f: {"mean": 0.0, "std": 1.0} for f in FIELDS}
+    (tmp_path / "stats.json").write_text(json.dumps({"data_normalization_stats": stats}))
+    x = torch.rand(49, 4, 16, 16)  # 101 frames at stride 2: frames 0, 2, ..., 96
+    bench = Benchmark(tmp_path / "stats.json", list(FIELDS), 2, "cpu")
+    bench.add(x, x)
+    m = bench.metrics()
+    assert m["bench_frames"] == [40, 50, 60, 70, 80, 90]
+    assert m["bench_rmse"] < 1e-3 and m["bench_vrmse"] < 1e-3 and m["bench_ssim"] < 1e-3 and m["bench_mlw"] < 1e-3
+    bench.add(x, torch.zeros_like(x))
+    assert bench.metrics()["bench_vrmse"] > 0.4  # a flat prediction scores about 1 on this sim, averaged with the 0

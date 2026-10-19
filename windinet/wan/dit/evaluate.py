@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from windinet.experiment.distributed import all_sum
 from windinet.experiment.metrics import Aggregate
 from windinet.field_adapter import GroupedAdapter
+from windinet.wan.dit.benchmark import Benchmark
 from windinet.wan.dit.config import DitStageConfig
 from windinet.wan.dit.model import WanDiT
 from windinet.wan.dit.rollout import rollout
@@ -36,6 +37,7 @@ def evaluate(
     aggregate = Aggregate(adapter.fields, device)
     by_gamma, n_gamma = torch.zeros(len(gammas), device=device), torch.zeros(len(gammas), device=device)  # VRMSE
     ids, seen, examples = loaders[0].dataset.ids, 0, {}
+    bench = Benchmark(cfg.data.stats_json, adapter.fields, cfg.data.frame_stride, device) if cfg.benchmark else None
     for (latents, gamma), (frames, _) in zip(*loaders, strict=True):
         gamma = gamma.to(device)
         pred = decode(adapter, rollout(dit, cond, latents.to(device), gamma, cfg), vaes)
@@ -45,11 +47,14 @@ def evaluate(
             g = round(g.item(), 3)
             by_gamma[gammas.index(g)] += aggregate.add(p, x)[0].mean()
             n_gamma[gammas.index(g)] += 1
+            if bench:
+                bench.add(p, x)
             if g in (gammas[0], gammas[-1]) and g not in examples:
                 examples[g] = (ids[seen + j], x.cpu(), p.cpu())
         seen += len(gamma)
     aggregate.reduce()
     all_sum(by_gamma, n_gamma)
     metrics = aggregate.metrics(cfg.data.frame_stride)
+    metrics |= bench.metrics() if bench else {}
     metrics |= {f"vrmse_mean_gamma{g:g}": (by_gamma[i] / n_gamma[i]).item() for i, g in enumerate(gammas) if n_gamma[i]}
     return metrics, examples

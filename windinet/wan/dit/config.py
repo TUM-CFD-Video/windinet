@@ -139,6 +139,11 @@ class DitStageConfig(_Base):
     sampling: SamplingConfig = SamplingConfig()
     vae: str = Field(description="VAE-stage run folder: the adapter and the (fine-tuned) decoders behind the latents")
     load: str | None = Field(default=None, description="DiT run folder to continue from: its dit.pt and cond.pt")
+    benchmark: bool = Field(
+        default=False,
+        description="also cfd_bench's metrics (Harish): RMSE, VRMSE, 1-SSIM, MLW on frames 40, 50, ..., 100 in Li's "
+        "clipped normalised space, prediction and truth clamped to [-1, 1]",
+    )
     results_dir: str = Field(default="results/wan/dit", description="one folder per run is created here")
     weights_dir: str | None = Field(
         default=None, description="where dit.pt (5.7 GB) and cond.pt go, symlinked from the run folder; None = the run"

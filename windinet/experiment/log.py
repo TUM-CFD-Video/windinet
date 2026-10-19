@@ -35,6 +35,9 @@ def log_metrics(tag: str, metrics: dict[str, float], loss: float | None = None, 
     windows = {k[len(prefix) :].replace("_", "-"): v for k, v in metrics.items() if k.startswith(prefix)}
     if windows:
         lines.append(f"{pad} | per frame  " + "  ".join(f"{w} {v:.3f}" for w, v in windows.items()))
+    if "bench_rmse" in metrics:
+        bench = "  ".join(f"{k} {metrics[f'bench_{k}']:.3f}" for k in ("rmse", "vrmse", "ssim", "mlw"))
+        lines.append(f"{pad} | cfd_bench  frames {metrics['bench_frames']}  {bench} (ssim = 1 - SSIM)")
     print("\n".join(lines))
 
 
