@@ -74,7 +74,7 @@ averaged over sims) to the frames the cfd_bench model predicts -- copy
 
     python scripts/eval_dit_vrmse.py configs/dit/inference_dit_lrz_ai.yaml \\
         --eval_h5 /scratch/project_465003416/pretrained_video_datasets/euler_mq/256x256_ds/test.h5 \\
-        --score_frames 40 50 60 70 80 90 100 \\
+        --score_frames 40 50 60 70 80 90 100 --clamp_prediction \\
         --checkpoint ... --scalar_checkpoint ... --vae_checkpoint ... --out_dir ...
 
 The existing vrmse keys keep their all-frames definition.
@@ -269,6 +269,9 @@ def parse_args():
     ap.add_argument("--score_frames", type=int, nargs="+", default=None,
                      help="0-indexed frames the benchmark metrics are computed on (default: all). "
                           "Use cfd_bench's scored_frames, e.g. 40 50 60 70 80 90 100")
+    ap.add_argument("--clamp_prediction", action="store_true",
+                     help="Clamp the predictions to [-1, 1] (like the target) for the benchmark block only; "
+                          "must match cfd_bench's infer_loss_windinet.yaml clamp_prediction")
     ap.add_argument("--num_samples", type=int, default=None,
                      help="How many val sims to evaluate (default: all in the manifest)")
     ap.add_argument("--checkpoint", type=Path, default=None, help="Override transformer checkpoint")
@@ -480,9 +483,14 @@ def main():
             raise SystemExit(f"--score_frames {score_frames} exceeds the {n_px} frames available for {sid}")
         frame_idx = torch.as_tensor(score_frames, device=target_cmp.device)
         target_scored = target_cmp.index_select(2, frame_idx)
+        vae_only_scored = vae_recon[:, :, :n_px].index_select(2, frame_idx)
+        vae_dit_scored = dit_pred.index_select(2, frame_idx)
+        if args.clamp_prediction:
+            vae_only_scored = vae_only_scored.clamp(-1.0, 1.0)
+            vae_dit_scored = vae_dit_scored.clamp(-1.0, 1.0)
         bench = {
-            "vae_only": benchmark_metrics(vae_recon[:, :, :n_px].index_select(2, frame_idx), target_scored, ssim_fn),
-            "vae_dit": benchmark_metrics(dit_pred.index_select(2, frame_idx), target_scored, ssim_fn),
+            "vae_only": benchmark_metrics(vae_only_scored, target_scored, ssim_fn),
+            "vae_dit": benchmark_metrics(vae_dit_scored, target_scored, ssim_fn),
         }
         for label, values in bench.items():
             for m in BENCHMARK_METRICS:
@@ -557,8 +565,10 @@ def main():
         "best_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[-5:]],
         "benchmark": {
             "scored_frames": args.score_frames if args.score_frames is not None else "all",
+            "clamp_prediction": bool(args.clamp_prediction),
             "notes": "each metric once per sim over the scored frames and all channels, then the plain "
-                     "mean over sims; ssim is 1 - SSIM; target clamped to [-1, 1], prediction not",
+                     "mean over sims; ssim is 1 - SSIM; target clamped to [-1, 1], prediction clamped "
+                     "only if clamp_prediction",
             **{
                 label: {
                     m: {"mean": float(torch.tensor(v, dtype=torch.float64).mean()),
