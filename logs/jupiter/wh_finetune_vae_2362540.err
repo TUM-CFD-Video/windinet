@@ -1,0 +1,402 @@
+4 GPUs x batch 1 x accum 1 -> effective batch 4; output_dir /e/scratch/e-dev-2026d09-262/wh_work/finetune_vae_outputs/finetune_vae_jupiter_overfit_1sim_256res
+The following values were not passed to `accelerate launch` and had defaults used instead:
+	`--dynamo_backend` was set to a value of `'no'`
+To avoid this warning pass in values for each of the problematic parameters or run `accelerate config`.
+[W1017 00:57:10.738816366 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1017 00:58:13.412760260 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1017 00:58:13.418886639 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1017 00:58:13.534070937 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+[W1017 00:58:13.622903098 socket.cpp:764] [c10d] The client socket cannot be initialized to connect to [localhost]:29500 (errno: 97 - Address family not supported by protocol).
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[rank2]:[E1017 01:09:30.245740327 ProcessGroupNCCL.cpp:741] [PG GUID 0(default_pg) Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600007 milliseconds before timing out.
+[rank2]:[E1017 01:09:30.247038927 ProcessGroupNCCL.cpp:2390] [PG ID 0 PG GUID 0(default_pg) Rank 2]  failure detected by watchdog at work sequence id: 22402 PG status: last enqueued work: 22402, last started work: -1 (), last completed work: 22401
+[rank1]:[E1017 01:09:30.263010881 ProcessGroupNCCL.cpp:741] [PG GUID 0(default_pg) Rank 1] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600023 milliseconds before timing out.
+[rank1]:[E1017 01:09:30.263130878 ProcessGroupNCCL.cpp:2390] [PG ID 0 PG GUID 0(default_pg) Rank 1]  failure detected by watchdog at work sequence id: 22402 PG status: last enqueued work: 22402, last started work: -1 (), last completed work: 22401
+[rank2]:[E1017 01:09:30.274384361 ProcessGroupNCCL.cpp:785] Stack trace of the failed collective: 
+#0 all_reduce from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:3906
+#1 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83
+#2 _evaluate from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1317
+#3 decorate_context from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/utils/_contextlib.py:124
+#4 train from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1098
+#5 main from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:37
+#6 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1524
+#7 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:483
+#8 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:740
+#9 _main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:187
+#10 main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:964
+#11 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:801
+#12 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1137
+#13 <module> from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:43
+
+[rank1]:[E1017 01:09:30.274384169 ProcessGroupNCCL.cpp:785] Stack trace of the failed collective: 
+#0 all_reduce from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:3906
+#1 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83
+#2 _evaluate from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1317
+#3 decorate_context from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/utils/_contextlib.py:124
+#4 train from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1098
+#5 main from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:37
+#6 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1524
+#7 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:483
+#8 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:740
+#9 _main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:187
+#10 main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:964
+#11 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:801
+#12 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1137
+#13 <module> from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:43
+
+[rank2]:[E1017 01:09:30.274504807 ProcessGroupNCCL.cpp:2732] [PG ID 0 PG GUID 0(default_pg) Rank 2] First PG on this rank to signal dumping.
+[rank1]:[E1017 01:09:30.274516518 ProcessGroupNCCL.cpp:2732] [PG ID 0 PG GUID 0(default_pg) Rank 1] First PG on this rank to signal dumping.
+[rank3]:[E1017 01:09:30.320909720 ProcessGroupNCCL.cpp:741] [PG GUID 0(default_pg) Rank 3] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600083 milliseconds before timing out.
+[rank3]:[E1017 01:09:30.321010806 ProcessGroupNCCL.cpp:2390] [PG ID 0 PG GUID 0(default_pg) Rank 3]  failure detected by watchdog at work sequence id: 22402 PG status: last enqueued work: 22402, last started work: -1 (), last completed work: 22401
+[rank3]:[E1017 01:09:30.321340272 ProcessGroupNCCL.cpp:785] Stack trace of the failed collective: 
+#0 all_reduce from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:3906
+#1 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83
+#2 _evaluate from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1317
+#3 decorate_context from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/utils/_contextlib.py:124
+#4 train from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1098
+#5 main from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:37
+#6 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1524
+#7 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:483
+#8 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:740
+#9 _main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:187
+#10 main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:964
+#11 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:801
+#12 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1137
+#13 <module> from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:43
+
+[rank3]:[E1017 01:09:30.321431951 ProcessGroupNCCL.cpp:2732] [PG ID 0 PG GUID 0(default_pg) Rank 3] First PG on this rank to signal dumping.
+[rank2]:[E1017 01:09:30.495553775 ProcessGroupNCCL.cpp:1982] [PG ID 0 PG GUID 0(default_pg) Rank 2] Received a dump signal due to a collective timeout from this local rank and we will try our best to dump the debug info. Last enqueued NCCL work: 22402, last completed NCCL work: 22401.This is most likely caused by incorrect usages of collectives, e.g., wrong sizes used across ranks, the order of collectives is not same for all ranks or the scheduled collective, for some reason, didn't run. Additionally, this can be caused by GIL deadlock or other reasons such as network errors or bugs in the communications library (e.g. NCCL), etc. 
+[rank2]:[E1017 01:09:30.495649773 ProcessGroupNCCL.cpp:1694] [PG ID 0 PG GUID 0(default_pg) Rank 2] ProcessGroupNCCL preparing to dump debug info. Include stack trace: 1, only active collectives: 0
+[rank3]:[E1017 01:09:30.496209122 ProcessGroupNCCL.cpp:1982] [PG ID 0 PG GUID 0(default_pg) Rank 3] Received a dump signal due to a collective timeout from this local rank and we will try our best to dump the debug info. Last enqueued NCCL work: 22402, last completed NCCL work: 22401.This is most likely caused by incorrect usages of collectives, e.g., wrong sizes used across ranks, the order of collectives is not same for all ranks or the scheduled collective, for some reason, didn't run. Additionally, this can be caused by GIL deadlock or other reasons such as network errors or bugs in the communications library (e.g. NCCL), etc. 
+[rank3]:[E1017 01:09:30.496281025 ProcessGroupNCCL.cpp:1694] [PG ID 0 PG GUID 0(default_pg) Rank 3] ProcessGroupNCCL preparing to dump debug info. Include stack trace: 1, only active collectives: 0
+[rank0]:[E1017 01:09:30.610694220 ProcessGroupNCCL.cpp:1917] [PG ID 0 PG GUID 0(default_pg) Rank 0] Observed flight recorder dump signal from another rank via TCPStore.
+[rank0]:[E1017 01:09:30.610874760 ProcessGroupNCCL.cpp:1982] [PG ID 0 PG GUID 0(default_pg) Rank 0] Received a dump signal due to a collective timeout from  rank 3 and we will try our best to dump the debug info. Last enqueued NCCL work: 22402, last completed NCCL work: 22401.This is most likely caused by incorrect usages of collectives, e.g., wrong sizes used across ranks, the order of collectives is not same for all ranks or the scheduled collective, for some reason, didn't run. Additionally, this can be caused by GIL deadlock or other reasons such as network errors or bugs in the communications library (e.g. NCCL), etc. 
+[rank0]:[E1017 01:09:30.611016294 ProcessGroupNCCL.cpp:1694] [PG ID 0 PG GUID 0(default_pg) Rank 0] ProcessGroupNCCL preparing to dump debug info. Include stack trace: 1, only active collectives: 0
+[rank1]:[E1017 01:09:30.703155670 ProcessGroupNCCL.cpp:1982] [PG ID 0 PG GUID 0(default_pg) Rank 1] Received a dump signal due to a collective timeout from this local rank and we will try our best to dump the debug info. Last enqueued NCCL work: 22402, last completed NCCL work: 22401.This is most likely caused by incorrect usages of collectives, e.g., wrong sizes used across ranks, the order of collectives is not same for all ranks or the scheduled collective, for some reason, didn't run. Additionally, this can be caused by GIL deadlock or other reasons such as network errors or bugs in the communications library (e.g. NCCL), etc. 
+[rank1]:[E1017 01:09:30.703280979 ProcessGroupNCCL.cpp:1694] [PG ID 0 PG GUID 0(default_pg) Rank 1] ProcessGroupNCCL preparing to dump debug info. Include stack trace: 1, only active collectives: 0
+[rank0]:[E1017 01:09:30.054737399 ProcessGroupNCCL.cpp:741] [PG GUID 0(default_pg) Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=18, NumelOut=18, Timeout(ms)=600000) ran for 600056 milliseconds before timing out.
+[rank0]:[E1017 01:09:30.054877076 ProcessGroupNCCL.cpp:2390] [PG ID 0 PG GUID 0(default_pg) Rank 0]  failure detected by watchdog at work sequence id: 22402 PG status: last enqueued work: 22402, last started work: -1 (), last completed work: 22401
+[rank0]:[E1017 01:09:30.055107952 ProcessGroupNCCL.cpp:785] Stack trace of the failed collective: 
+#0 all_reduce from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:3906
+#1 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83
+#2 _evaluate from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1317
+#3 decorate_context from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/utils/_contextlib.py:124
+#4 train from /e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py:1098
+#5 main from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:37
+#6 wrapper from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1524
+#7 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:483
+#8 invoke from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:740
+#9 _main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:187
+#10 main from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py:964
+#11 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py:801
+#12 __call__ from /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py:1137
+#13 <module> from /e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py:43
+
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank3]:     app()
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank3]:     raise e
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank3]:     return get_command(self)(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank3]:     return self.main(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank3]:     return _main(
+[rank3]:            ^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank3]:     rv = self.invoke(ctx)
+[rank3]:          ^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank3]:     return ctx.invoke(self.callback, **ctx.params)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank3]:     return callback(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank3]:     return callback(**use_params)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank3]:     saved_path = trainer.train()
+[rank3]:                  ^^^^^^^^^^^^^^^
+[rank3]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 1107, in train
+[rank3]:     val_metrics["vrmse"]
+[rank3]:     ~~~~~~~~~~~^^^^^^^^^
+[rank3]: KeyError: 'vrmse'
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank2]:     app()
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank2]:     raise e
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank2]:     return get_command(self)(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank2]:     return self.main(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank2]:     return _main(
+[rank2]:            ^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank2]:     rv = self.invoke(ctx)
+[rank2]:          ^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank2]:     return ctx.invoke(self.callback, **ctx.params)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank2]:     return callback(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank2]:     return callback(**use_params)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank2]:     saved_path = trainer.train()
+[rank2]:                  ^^^^^^^^^^^^^^^
+[rank2]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 1107, in train
+[rank2]:     val_metrics["vrmse"]
+[rank2]:     ~~~~~~~~~~~^^^^^^^^^
+[rank2]: KeyError: 'vrmse'
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 43, in <module>
+[rank1]:     app()
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1154, in __call__
+[rank1]:     raise e
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1137, in __call__
+[rank1]:     return get_command(self)(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 801, in __call__
+[rank1]:     return self.main(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 964, in main
+[rank1]:     return _main(
+[rank1]:            ^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/core.py", line 187, in _main
+[rank1]:     rv = self.invoke(ctx)
+[rank1]:          ^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 740, in invoke
+[rank1]:     return ctx.invoke(self.callback, **ctx.params)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/_click/core.py", line 483, in invoke
+[rank1]:     return callback(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/typer/main.py", line 1524, in wrapper
+[rank1]:     return callback(**use_params)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/scripts/finetune_vae.py", line 37, in main
+[rank1]:     saved_path = trainer.train()
+[rank1]:                  ^^^^^^^^^^^^^^^
+[rank1]:   File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_trainer.py", line 1107, in train
+[rank1]:     val_metrics["vrmse"]
+[rank1]:     ~~~~~~~~~~~^^^^^^^^^
+[rank1]: KeyError: 'vrmse'
+[rank2]:[E1017 01:10:30.301267671 ProcessGroupNCCL.cpp:802] [PG GUID 0(default_pg) Rank 2] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank2]:[E1017 01:10:30.301288790 ProcessGroupNCCL.cpp:816] [PG GUID 0(default_pg) Rank 2] To avoid data inconsistency, we are taking the entire process down.
+[rank2]:[E1017 01:10:30.301907307 ProcessGroupNCCL.cpp:2192] [PG ID 0 PG GUID 0(default_pg) Rank 2] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600007 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000f680d558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f680e148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f680e228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000df056280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000df06a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000df06b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x4000421ed23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x400040660ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x4000406cb85c in /usr/lib64/libc.so.6)
+
+terminate called after throwing an instance of 'c10::DistBackendError'
+  what():  [PG ID 0 PG GUID 0(default_pg) Rank 2] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600007 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000f680d558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f680e148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f680e228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000df056280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000df06a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000df06b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x4000421ed23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x400040660ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x4000406cb85c in /usr/lib64/libc.so.6)
+
+Exception raised from run at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2198 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000f680d558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f680e148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f680e228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::Watchdog::run() + 0x5b8 (0x4000df06b928 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: <unknown function> + 0xdd23c (0x4000421ed23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #5: <unknown function> + 0x80ff8 (0x400040660ff8 in /usr/lib64/libc.so.6)
+frame #6: <unknown function> + 0xeb85c (0x4000406cb85c in /usr/lib64/libc.so.6)
+
+[rank1]:[E1017 01:10:30.339758590 ProcessGroupNCCL.cpp:802] [PG GUID 0(default_pg) Rank 1] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank1]:[E1017 01:10:30.339781886 ProcessGroupNCCL.cpp:816] [PG GUID 0(default_pg) Rank 1] To avoid data inconsistency, we are taking the entire process down.
+[rank1]:[E1017 01:10:30.340328947 ProcessGroupNCCL.cpp:2192] [PG ID 0 PG GUID 0(default_pg) Rank 1] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 1] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600023 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000f55bd558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f55be148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f55be228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000dde06280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000dde1a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000dde1b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x400040f9d23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x40003f410ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x40003f47b85c in /usr/lib64/libc.so.6)
+
+terminate called after throwing an instance of 'c10::DistBackendError'
+  what():  [PG ID 0 PG GUID 0(default_pg) Rank 1] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 1] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600023 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000f55bd558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f55be148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f55be228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000dde06280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000dde1a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000dde1b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x400040f9d23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x40003f410ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x40003f47b85c in /usr/lib64/libc.so.6)
+
+Exception raised from run at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2198 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000f55bd558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f55be148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000f55be228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::Watchdog::run() + 0x5b8 (0x4000dde1b928 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: <unknown function> + 0xdd23c (0x400040f9d23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #5: <unknown function> + 0x80ff8 (0x40003f410ff8 in /usr/lib64/libc.so.6)
+frame #6: <unknown function> + 0xeb85c (0x40003f47b85c in /usr/lib64/libc.so.6)
+
+[rank3]:[E1017 01:10:30.834631495 ProcessGroupNCCL.cpp:802] [PG GUID 0(default_pg) Rank 3] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank3]:[E1017 01:10:30.834666055 ProcessGroupNCCL.cpp:816] [PG GUID 0(default_pg) Rank 3] To avoid data inconsistency, we are taking the entire process down.
+[rank3]:[E1017 01:10:30.835266363 ProcessGroupNCCL.cpp:2192] [PG ID 0 PG GUID 0(default_pg) Rank 3] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 3] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600083 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000c86bd558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000c86be148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000c86be228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000b0f06280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000b0f1a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000b0f1b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x40001409d23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x400012510ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x40001257b85c in /usr/lib64/libc.so.6)
+
+terminate called after throwing an instance of 'c10::DistBackendError'
+  what():  [PG ID 0 PG GUID 0(default_pg) Rank 3] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 3] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600083 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000c86bd558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000c86be148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000c86be228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000b0f06280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000b0f1a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000b0f1b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x40001409d23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x400012510ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x40001257b85c in /usr/lib64/libc.so.6)
+
+Exception raised from run at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2198 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000c86bd558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000c86be148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000c86be228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::Watchdog::run() + 0x5b8 (0x4000b0f1b928 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: <unknown function> + 0xdd23c (0x40001409d23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #5: <unknown function> + 0x80ff8 (0x400012510ff8 in /usr/lib64/libc.so.6)
+frame #6: <unknown function> + 0xeb85c (0x40001257b85c in /usr/lib64/libc.so.6)
+
+[rank0]:[E1017 01:10:31.574211353 ProcessGroupNCCL.cpp:802] [PG GUID 0(default_pg) Rank 0] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
+[rank0]:[E1017 01:10:31.574244344 ProcessGroupNCCL.cpp:816] [PG GUID 0(default_pg) Rank 0] To avoid data inconsistency, we are taking the entire process down.
+[rank0]:[E1017 01:10:31.574809550 ProcessGroupNCCL.cpp:2192] [PG ID 0 PG GUID 0(default_pg) Rank 0] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=18, NumelOut=18, Timeout(ms)=600000) ran for 600056 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000da31d558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000da31e148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000da31e228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000c2b66280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000c2b7a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000c2b7b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x400025cfd23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x400024170ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x4000241db85c in /usr/lib64/libc.so.6)
+
+terminate called after throwing an instance of 'c10::DistBackendError'
+  what():  [PG ID 0 PG GUID 0(default_pg) Rank 0] Process group watchdog thread terminated with exception: [PG GUID 0(default_pg) Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=22402, OpType=ALLREDUCE, NumelIn=18, NumelOut=18, Timeout(ms)=600000) ran for 600056 milliseconds before timing out.
+Exception raised from checkTimeout at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:744 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000da31d558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000da31e148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000da31e228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x210 (0x4000c2b66280 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0xc90 (0x4000c2b7a010 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0x108 (0x4000c2b7b478 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdd23c (0x400025cfd23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #7: <unknown function> + 0x80ff8 (0x400024170ff8 in /usr/lib64/libc.so.6)
+frame #8: <unknown function> + 0xeb85c (0x4000241db85c in /usr/lib64/libc.so.6)
+
+Exception raised from run at /__w/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2198 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0xc8 (0x4000da31d558 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #1: c10::DistError::DistError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000da31e148 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #2: c10::DistBackendError::DistBackendError(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x78 (0x4000da31e228 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libc10.so)
+frame #3: c10d::ProcessGroupNCCL::Watchdog::run() + 0x5b8 (0x4000c2b7b928 in /e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: <unknown function> + 0xdd23c (0x400025cfd23c in /e/software/default/stages/2025/software/GCCcore/13.3.0/lib64/libstdc++.so.6)
+frame #5: <unknown function> + 0x80ff8 (0x400024170ff8 in /usr/lib64/libc.so.6)
+frame #6: <unknown function> + 0xeb85c (0x4000241db85c in /usr/lib64/libc.so.6)
+
+W1017 01:10:33.421000 2217304 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 2217390 closing signal SIGTERM
+W1017 01:10:33.422000 2217304 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 2217391 closing signal SIGTERM
+W1017 01:10:33.422000 2217304 torch/distributed/elastic/multiprocessing/api.py:1028] Sending process 2217392 closing signal SIGTERM
+E1017 01:10:33.813000 2217304 torch/distributed/elastic/multiprocessing/api.py:1002] failed (exitcode: -6) local_rank: 3 (pid: 2217393) of binary: /e/project1/e-dev-2026d09-262/windinet_venv/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1423, in <module>
+    main()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1419, in main
+    launch_command(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1404, in launch_command
+    multi_gpu_launcher(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/accelerate/commands/launch.py", line 1029, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/run.py", line 1129, in run
+    elastic_launch(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 197, in __call__
+    return launch_agent(
+           ^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 386, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+========================================================
+scripts/finetune_vae.py FAILED
+--------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-10-17_01:10:33
+  host      : r3-nod47.jupiter.internal
+  rank      : 0 (local_rank: 0)
+  exitcode  : -6 (pid: 2217390)  (SIGABRT)
+  error_file: <N/A>
+  traceback : Signal 6 (SIGABRT) received by PID 2217390
+[2]:
+  time      : 2026-10-17_01:10:33
+  host      : r3-nod47.jupiter.internal
+  rank      : 1 (local_rank: 1)
+  exitcode  : -6 (pid: 2217391)  (SIGABRT)
+  error_file: <N/A>
+  traceback : Signal 6 (SIGABRT) received by PID 2217391
+[3]:
+  time      : 2026-10-17_01:10:33
+  host      : r3-nod47.jupiter.internal
+  rank      : 2 (local_rank: 2)
+  exitcode  : -6 (pid: 2217392)  (SIGABRT)
+  error_file: <N/A>
+  traceback : Signal 6 (SIGABRT) received by PID 2217392
+--------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-10-17_01:10:33
+  host      : r3-nod47.jupiter.internal
+  rank      : 3 (local_rank: 3)
+  exitcode  : -6 (pid: 2217393)  (SIGABRT)
+  error_file: <N/A>
+  traceback : Signal 6 (SIGABRT) received by PID 2217393
+========================================================

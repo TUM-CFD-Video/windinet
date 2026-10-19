@@ -1,0 +1,53 @@
+/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+There are modules in AutoencoderKLLTXVideo that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+There are modules in LTXVideoTransformer3DModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+Traceback (most recent call last):
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/PIL/ImageFile.py", line 663, in _save
+    fh = fp.fileno()
+         ^^^^^^^^^
+AttributeError: '_idat' object has no attribute 'fileno'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/PIL/Image.py", line 2711, in save
+    save_handler(self, fp, filename)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/PIL/PngImagePlugin.py", line 1522, in _save
+    ImageFile._save(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/PIL/ImageFile.py", line 667, in _save
+    _encode_tile(im, fp, tile, bufsize, None, exc)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/PIL/ImageFile.py", line 694, in _encode_tile
+    fp.write(data)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/PIL/PngImagePlugin.py", line 1146, in write
+    self.chunk(self.fp, b"IDAT", data)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/PIL/PngImagePlugin.py", line 1133, in putchunk
+    fp.write(byte_data)
+OSError: [Errno 122] Disk quota exceeded
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/e/home/jusers/li96/jupiter/windinet/scripts/eval_dit_vrmse.py", line 605, in <module>
+    main()
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/e/home/jusers/li96/jupiter/windinet/scripts/eval_dit_vrmse.py", line 525, in main
+    save_reconstruction_panels(
+  File "/e/home/jusers/li96/jupiter/windinet/windinet/training/vae_visualization.py", line 113, in save_reconstruction_panels
+    fig.savefig(path, dpi=dpi)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/matplotlib/figure.py", line 3515, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/matplotlib/backend_bases.py", line 2289, in print_figure
+    result = print_method(
+             ^^^^^^^^^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/matplotlib/backend_bases.py", line 2146, in <lambda>
+    print_method = functools.wraps(meth)(lambda *args, **kwargs: meth(
+                                                                 ^^^^^
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/matplotlib/backends/backend_agg.py", line 537, in print_png
+    self._print_pil(filename_or_obj, "png", pil_kwargs, metadata)
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/matplotlib/backends/backend_agg.py", line 486, in _print_pil
+    mpl.image.imsave(
+  File "/e/project1/e-dev-2026d09-262/windinet_venv/lib/python3.12/site-packages/matplotlib/image.py", line 1729, in imsave
+    image.save(fname, **pil_kwargs)
