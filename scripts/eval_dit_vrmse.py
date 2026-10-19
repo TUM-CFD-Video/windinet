@@ -100,7 +100,11 @@ from windinet.training.shockwave_data import (
     normalize_fields,
     pick_gamma_spread_ids,
 )
-from windinet.training.vae_visualization import denormalize_fields, save_reconstruction_panels
+from windinet.training.vae_visualization import (
+    denormalize_fields,
+    save_reconstruction_panels,
+    save_reconstruction_video,
+)
 from windinet.utils import get_default_device
 from windinet.vae_adapter import latent_space_fingerprint
 
@@ -267,6 +271,10 @@ def parse_args():
                      help="1-indexed frame numbers to render panels for (default matches "
                           "DitVisualizationConfig's own default)")
     ap.add_argument("--dpi", type=int, default=150, help="Panel image DPI")
+    ap.add_argument("--save_video", action="store_true",
+                     help="Also write a GT/Prediction/Residual MP4 over every frame for each visualized sample "
+                          "(<out_dir>/visualizations/{vae_only,vae_dit}/<sample_id>/video.mp4)")
+    ap.add_argument("--video_fps", type=int, default=8, help="--save_video frame rate")
     ap.add_argument("--out_dir", type=Path, default=Path("outputs/eval_dit_vrmse"))
     ap.add_argument("--test_h5", type=Path, default=None,
                      help="Evaluate every sim of this standalone test.h5 instead of the manifest's val_ids "
@@ -586,6 +594,16 @@ def main():
                     output_dir=args.out_dir,
                     dpi=args.dpi,
                 )
+                if args.save_video:
+                    save_reconstruction_video(
+                        prediction=pred_physical[0],
+                        target=gt_physical[0],
+                        sample_id=sid,
+                        label=label,
+                        channel_names=channel_names,
+                        output_dir=args.out_dir,
+                        fps=args.video_fps,
+                    )
 
         if device.type == "cuda":
             torch.cuda.empty_cache()

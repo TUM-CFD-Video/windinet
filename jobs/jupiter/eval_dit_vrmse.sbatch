@@ -34,7 +34,7 @@
 #                      the pixel normalization
 #   NUM_SAMPLES        optional, default 500
 # Env: TEST_H5 (default: the test.h5 beside the latents' train.h5, so 256 or 512
-# follows the run; "none" = the manifest's val split instead), SAVE_VIS_SAMPLES (default 3), SAVE_NPZ_SAMPLES (default 3),
+# follows the run; "none" = the manifest's val split instead), SAVE_VIS_SAMPLES (default 3), SAVE_NPZ_SAMPLES (default 3), SAVE_VIDEO (1 = MP4s too),
 # NUM_INFERENCE_STEPS (default: config's 20), SIM_IDS (space-separated: evaluate only these
 # sims, any split, with an npz for each; pair with TEST_H5=none for training sims).
 #
@@ -104,6 +104,8 @@ EXTRA_ARGS=()
 # cfd_bench comparison (Harish, 2026-10-19): SCORE_FRAMES="40 50 60 70 80 90 100" CLAMP_PREDICTION=1
 [[ -n "${SCORE_FRAMES:-}" ]] && EXTRA_ARGS+=(--score_frames ${SCORE_FRAMES})
 [[ "${CLAMP_PREDICTION:-0}" == 1 ]] && EXTRA_ARGS+=(--clamp_prediction)
+# SAVE_VIDEO=1: an MP4 over all frames for each visualized sample (next to its PNG panels).
+[[ "${SAVE_VIDEO:-0}" == 1 ]] && EXTRA_ARGS+=(--save_video)
 [[ "${SAVE_NPZ_SAMPLES}" != 0 ]] && EXTRA_ARGS+=(--save_npz_samples "${SAVE_NPZ_SAMPLES}" --npz_dir "${NPZ_DIR}")
 
 echo "PREPROCESSED_ROOT=${PREPROCESSED_ROOT}"
