@@ -63,6 +63,21 @@ passes -- vae_only and vae_dit -- under
 <out_dir>/visualizations/{vae_only,vae_dit}/<sample_id>/frame_XXXX.png --
 so the before/after gap from adding the DiT can be read off visually, same
 layout the training-time panels use.
+
+Benchmark against cfd_bench (cfd_bench/windinet_benchmark_inference.py):
+--eval_h5 evaluates every sim in another h5 (cfd_bench's test.h5) instead of
+the manifest's val_ids, and --score_frames restricts the "benchmark" block
+(RMSE, VRMSE, 1-SSIM, MLW, each once per sim over the scored frames, then
+averaged over sims) to the frames the cfd_bench model predicts -- copy
+"scored_frames" from its benchmark_metrics.json. E.g. sequence_info
+[4, 1, 10] predicts frames 40, 50, ..., 100:
+
+    python scripts/eval_dit_vrmse.py configs/dit/inference_dit_lrz_ai.yaml \\
+        --eval_h5 /scratch/project_465003416/pretrained_video_datasets/euler_mq/256x256_ds/test.h5 \\
+        --score_frames 40 50 60 70 80 90 100 \\
+        --checkpoint ... --scalar_checkpoint ... --vae_checkpoint ... --out_dir ...
+
+The existing vrmse keys keep their all-frames definition.
 """
 
 import argparse
@@ -79,7 +94,7 @@ from windinet.checkpoints import ensure_checkpoint
 from windinet.config import ScalarConditioningConfig
 from windinet.inference.model_loader import load_ltxv_components, select_vae_env
 from windinet.inference.pipeline import LTXConditionPipeline
-from windinet.losses import rmse_loss, vrms_loss, vrms_per_channel
+from windinet.losses import SSIMLoss, mlw_loss, rmse_loss, vrms_loss, vrms_per_channel
 from windinet.scalar_embeddings import ScalarEmbedding
 from windinet.training.shockwave_data import (
     CHANNEL_NAMES,
@@ -227,12 +242,33 @@ def pick_gamma_spread_ids(val_ids: list[str], n: int) -> set[str]:
     return {val_ids[i] for i in picks}
 
 
+BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw")
+
+
+def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
+    """RMSE, VRMSE, 1-SSIM, MLW for one sim, [1, C, T, H, W] restricted to the scored frames.
+    Same definitions as cfd_bench/windinet_benchmark_inference.py."""
+    return {
+        "rmse": float(rmse_loss(pred, target).item()),
+        "vrmse": float(vrms_loss(pred, target).item()),
+        "ssim": float(ssim_fn(pred, target).item()),
+        "mlw": float(mlw_loss(pred, target).item()),
+    }
+
+
 def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument("config", type=Path, help="Path to inference YAML config")
-    ap.add_argument("--preprocessed_data_root", type=Path, required=True,
+    ap.add_argument("--preprocessed_data_root", type=Path, default=None,
                      help="Same preprocessed_data_root the DiT training config used -- gives the "
-                          "h5 path and the exact held-out val_ids via split_manifest.json")
+                          "h5 path and the exact held-out val_ids via split_manifest.json "
+                          "(required unless --eval_h5 is given)")
+    ap.add_argument("--eval_h5", type=Path, default=None,
+                     help="Evaluate every sim in this h5 (e.g. cfd_bench's test.h5) instead of the "
+                          "manifest's val_ids")
+    ap.add_argument("--score_frames", type=int, nargs="+", default=None,
+                     help="0-indexed frames the benchmark metrics are computed on (default: all). "
+                          "Use cfd_bench's scored_frames, e.g. 40 50 60 70 80 90 100")
     ap.add_argument("--num_samples", type=int, default=None,
                      help="How many val sims to evaluate (default: all in the manifest)")
     ap.add_argument("--checkpoint", type=Path, default=None, help="Override transformer checkpoint")
@@ -281,12 +317,19 @@ def main():
     cfg = load_config(args)
     device = get_default_device()
 
-    manifest_path = args.preprocessed_data_root / "split_manifest.json"
-    manifest = json.loads(manifest_path.read_text())
-    h5_path = manifest["data_root"]
-    val_ids = manifest["val_ids"]
-    print(f"Held-out split: {len(val_ids)} sims (seed={manifest['split_seed']}) from {manifest_path}")
-    print(f"h5: {h5_path}")
+    if args.eval_h5 is not None:
+        h5_path = str(args.eval_h5)
+        val_ids = ShockWaveDataset(h5_path).ids
+        print(f"Evaluating every sim in {h5_path}: {len(val_ids)} sims")
+    else:
+        if args.preprocessed_data_root is None:
+            raise SystemExit("--preprocessed_data_root is required unless --eval_h5 is given")
+        manifest_path = args.preprocessed_data_root / "split_manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        h5_path = manifest["data_root"]
+        val_ids = manifest["val_ids"]
+        print(f"Held-out split: {len(val_ids)} sims (seed={manifest['split_seed']}) from {manifest_path}")
+        print(f"h5: {h5_path}")
 
     if args.num_samples is not None:
         val_ids = val_ids[: args.num_samples]
@@ -343,6 +386,8 @@ def main():
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     per_sample = []
+    ssim_fn = SSIMLoss(channels=len(CHANNEL_NAMES)).to(device)
+    bench_values = {"vae_only": {m: [] for m in BENCHMARK_METRICS}, "vae_dit": {m: [] for m in BENCHMARK_METRICS}}
     sum_overall = {"vae_only": 0.0, "vae_dit": 0.0}
     sum_channel = {"vae_only": [0.0] * 4, "vae_dit": [0.0] * 4}
     sum_lat_vrmse, sum_lat_rmse = 0.0, 0.0
@@ -429,12 +474,27 @@ def main():
         vd_overall = float(vrms_loss(dit_pred, target_cmp).item())
         vd_channel = vrms_per_channel(dit_pred, target_cmp).tolist()
 
+        # Benchmark block: all four metrics on the scored frames only.
+        score_frames = args.score_frames if args.score_frames is not None else list(range(n_px))
+        if max(score_frames) >= n_px:
+            raise SystemExit(f"--score_frames {score_frames} exceeds the {n_px} frames available for {sid}")
+        frame_idx = torch.as_tensor(score_frames, device=target_cmp.device)
+        target_scored = target_cmp.index_select(2, frame_idx)
+        bench = {
+            "vae_only": benchmark_metrics(vae_recon[:, :, :n_px].index_select(2, frame_idx), target_scored, ssim_fn),
+            "vae_dit": benchmark_metrics(dit_pred.index_select(2, frame_idx), target_scored, ssim_fn),
+        }
+        for label, values in bench.items():
+            for m in BENCHMARK_METRICS:
+                bench_values[label][m].append(values[m])
+
         per_sample.append({
             "id": sid, "gamma": float(sample["meta"]["gamma"]),
             "vae_only_vrmse": vo_overall, "vae_dit_vrmse": vd_overall,
             "vae_only_per_channel": dict(zip(CHANNEL_NAMES, vo_channel)),
             "vae_dit_per_channel": dict(zip(CHANNEL_NAMES, vd_channel)),
             "latent_vrmse": lat_vrmse, "latent_rmse": lat_rmse,
+            "benchmark": bench,
         })
         sum_overall["vae_only"] += vo_overall
         sum_overall["vae_dit"] += vd_overall
@@ -495,6 +555,19 @@ def main():
         "latent_vrmse_per_channel": mean_lat_channel,
         "worst_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[:5]],
         "best_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[-5:]],
+        "benchmark": {
+            "scored_frames": args.score_frames if args.score_frames is not None else "all",
+            "notes": "each metric once per sim over the scored frames and all channels, then the plain "
+                     "mean over sims; ssim is 1 - SSIM; target clamped to [-1, 1], prediction not",
+            **{
+                label: {
+                    m: {"mean": float(torch.tensor(v, dtype=torch.float64).mean()),
+                        "std_over_sims": float(torch.tensor(v, dtype=torch.float64).std(unbiased=False))}
+                    for m, v in values.items()
+                }
+                for label, values in bench_values.items()
+            },
+        },
         "per_sample": per_sample,
     }
     (args.out_dir / "vrmse_summary.json").write_text(json.dumps(summary, indent=2))
@@ -514,6 +587,10 @@ def main():
     print(f"  latent_vrmse : {summary['latent_vrmse_mean']:.5f}")
     print(f"  latent_rmse  : {summary['latent_rmse_mean']:.5f}")
     print(f"  worst 5 latent channels: {summary['worst_5_latent_channels']}")
+    print(f"\nBenchmark metrics (comparable to cfd_bench), frames {summary['benchmark']['scored_frames']}:")
+    for label in ("vae_only", "vae_dit"):
+        print(f"  {label:9s} " + "  ".join(
+            f"{m}={summary['benchmark'][label][m]['mean']:.5f}" for m in BENCHMARK_METRICS))
     print(f"\nSaved: {args.out_dir / 'vrmse_summary.json'}")
     if vis_ids:
         print(f"Saved GT/Prediction/Residual panels for {len(vis_ids)} sample(s) spanning the gamma "
