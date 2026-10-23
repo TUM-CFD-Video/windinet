@@ -17,6 +17,8 @@ Expected input dataset::
                 momentum_y     [T, H, W]
                 pressure       [T, H, W]
                 metadata such as gamma
+        (or a 2D-SRBA file -- the dataset is the VAE run's data.dataset, see
+        windinet.training.shockwave_data.DATASETS)
 
 Output structure (compatible with PrecomputedDataset)::
 
@@ -64,6 +66,8 @@ from windinet.vae_adapter import latent_space_fingerprint
 
 from windinet.training.shockwave_data import (
     CHANNEL_NAMES,
+    DATASETS,
+    DEFAULT_DATASET,
     ShockWaveDataset,
     build_shockwave_video,
     extract_scalars,
@@ -95,7 +99,7 @@ def _resolve_normalization(
     channel_mean: str | None,
     channel_std: str | None,
     normalization_clip: float | None,
-) -> tuple[list[str], list[float], list[float], float, str]:
+) -> tuple[list[str], list[float], list[float], float, str, str]:
     """Determine the channel layout and normalization the latents must be built with.
 
     The VAE was finetuned on fields normalized as ``(x - mean) / (std * clip)``
@@ -105,9 +109,10 @@ def _resolve_normalization(
     therefore taken from the VAE run's own ``training_config.yaml`` by default
     (found next to the checkpoint), and only overridden explicitly.
 
-    Returns (channel names, mean, std, clip, source description). The channel
-    names are the VAE run's data.channel_order (all four fields, or a subset);
-    explicit --channel-mean/--channel-std imply the default four-channel layout.
+    Returns (channel names, mean, std, clip, source description, dataset). The
+    channel names are the VAE run's data.channel_order (all four fields, or a
+    subset) and the dataset its data.dataset; explicit --channel-mean/--channel-std
+    imply the default four-channel euler_mq layout.
     """
     explicit_mean = _parse_floats(channel_mean)
     explicit_std = _parse_floats(channel_std)
@@ -116,7 +121,7 @@ def _resolve_normalization(
     if explicit_mean is not None:
         if len(explicit_mean) != len(CHANNEL_NAMES):
             raise typer.BadParameter(f"--channel-mean/--channel-std need {len(CHANNEL_NAMES)} values ({CHANNEL_NAMES})")
-        return list(CHANNEL_NAMES), explicit_mean, explicit_std, normalization_clip or 5.0, "command line"
+        return list(CHANNEL_NAMES), explicit_mean, explicit_std, normalization_clip or 5.0, "command line", DEFAULT_DATASET
 
     # Auto-discover: outputs/<run>/checkpoints/vae_*.safetensors
     #             -> outputs/<run>/training_config.yaml
@@ -129,7 +134,10 @@ def _resolve_normalization(
         )
     stats = load_channel_normalization(config_path)
     clip = normalization_clip if normalization_clip is not None else stats["normalization_clip"]
-    return stats["channel_names"], stats["channel_mean"], stats["channel_std"], float(clip), str(config_path)
+    return (
+        stats["channel_names"], stats["channel_mean"], stats["channel_std"], float(clip), str(config_path),
+        stats["dataset"],
+    )
 
 
 @app.command()
@@ -154,8 +162,9 @@ def main(
         "finetuned decoder are loaded so latents match the VAE that will decode them.",
     ),
     scalar_names: str = typer.Option(
-        default="gamma",
-        help="Comma-separated scalar conditioning names to extract",
+        default=None,
+        help="Comma-separated scalar conditioning names to extract. Default: the "
+        "dataset's own conditioning scalar (euler_mq: gamma, srba: mach).",
     ),
     vae_config: str = typer.Option(
         default=None,
@@ -193,10 +202,30 @@ def main(
     val_latents_dir = output_path / "val" / "latents"
     val_scalars_dir = output_path / "val" / "scalars"
 
+    # The fields must be normalized exactly as during VAE finetuning before they
+    # are encoded, otherwise the latents are off-distribution and unusable.
+    # Resolved before the dataset is opened: the VAE run also says which
+    # dataset data_root holds.
+    if not inflate_checkpoint:
+        raise typer.BadParameter(
+            "--inflate-checkpoint is required: the base VAE reads only 3 channels and "
+            "cannot encode the 4-channel CFD fields. Pass the finetuned inflate VAE, e.g. "
+            "outputs/vae_meaninit_wsd15_h1x2_lr1x_2gpu/checkpoints/vae_shockwave_best.safetensors"
+        )
+    channel_names, norm_mean, norm_std, norm_clip, norm_source, dataset_name = _resolve_normalization(
+        Path(inflate_checkpoint), vae_config, channel_mean, channel_std, normalization_clip
+    )
+    logger.info(
+        f"Dataset {dataset_name}, channels {channel_names}, normalization from {norm_source}: "
+        f"mean={norm_mean}, std={norm_std}, clip={norm_clip}"
+    )
+
+    if scalar_names is None:
+        scalar_names = DATASETS[dataset_name].spread_scalar
     parsed_scalar_names = [s.strip() for s in scalar_names.split(",")]
 
     # Load dataset
-    dataset = ShockWaveDataset(data_root, num_sim_frames=num_sim_frames)
+    dataset = ShockWaveDataset(data_root, num_sim_frames=num_sim_frames, dataset=dataset_name)
     if num_sim_frames is not None:
         logger.info(f"Truncating every simulation to its first {num_sim_frames} frames")
     if max_samples > 0:
@@ -235,26 +264,11 @@ def main(
     # Load VAE. The CFD fields have 4 native channels, which the base 3-channel
     # LTX VAE cannot encode, so an inflate-mode finetuned checkpoint is required.
     # Latents MUST be produced by the same VAE that will later decode them.
-    if not inflate_checkpoint:
-        raise typer.BadParameter(
-            "--inflate-checkpoint is required: the base VAE reads only 3 channels and "
-            "cannot encode the 4-channel CFD fields. Pass the finetuned inflate VAE, e.g. "
-            "outputs/vae_meaninit_wsd15_h1x2_lr1x_2gpu/checkpoints/vae_shockwave_best.safetensors"
-        )
     logger.info(f"Loading inflated VAE ({model_source}) + checkpoint {inflate_checkpoint}...")
     vae = load_inflated_vae(model_source, inflate_checkpoint, dtype=torch.bfloat16, device=device)
     vae = vae.to(device).eval()
     vae.requires_grad_(False)
 
-    # The fields must be normalized exactly as during VAE finetuning before they
-    # are encoded, otherwise the latents are off-distribution and unusable.
-    channel_names, norm_mean, norm_std, norm_clip, norm_source = _resolve_normalization(
-        Path(inflate_checkpoint), vae_config, channel_mean, channel_std, normalization_clip
-    )
-    logger.info(
-        f"Channels {channel_names}, normalization from {norm_source}: "
-        f"mean={norm_mean}, std={norm_std}, clip={norm_clip}"
-    )
     # Record the stats so decoding (inference) can invert them with the same
     # numbers, plus a fingerprint of the latent space these latents live in.
     # Everything downstream (DiT training, inference) checks that fingerprint:
@@ -275,6 +289,7 @@ def main(
                 "latent_fingerprint": fingerprint,
                 "source": norm_source,
                 "num_sim_frames": num_sim_frames,
+                "dataset": dataset_name,
             },
             indent=2,
         )

@@ -4,8 +4,10 @@
 #
 #   VAE      finetune_vae.sbatch         <VAE_CONFIG>
 #   vaetest  eval_vae_test.sbatch        afterok VAE    (test.h5, 500 sims)
-#   encode   preprocess_dit_data.sbatch  afterok VAE    (EVAL_SIMS=500; frames and
-#                                                        channels follow the VAE run)
+#   encode   preprocess_dit_data.sbatch  afterok VAE    (EVAL_SIMS = the VAE config's
+#                                                        data.eval_sims, 500 for Euler_MQ;
+#                                                        frames, channels and dataset
+#                                                        follow the VAE run)
 #   DiT      train_dit.sbatch            afterok encode (<DIT_CONFIG>)
 #   diteval  eval_dit_vrmse.sbatch       afterok DiT    (test.h5, 500 sims)
 #
@@ -57,6 +59,8 @@ output_dir() { python -c "import sys,yaml; print(yaml.safe_load(open(sys.argv[1]
 VAE_RUN=$(basename "$(output_dir "$VAE_CONFIG")")
 VAE_DIR=${W}/finetune_vae_outputs/${VAE_RUN}
 VAE_CKPT=${VAE_DIR}/checkpoints/vae_shockwave_best.safetensors
+# DiT val = the VAE's held-out sims, so the split size follows the VAE config.
+EVAL_SIMS=$(python -c "import sys,yaml; print(yaml.safe_load(open(sys.argv[1]))['data']['eval_sims'])" "$VAE_CONFIG")
 PRE_ROOT=${W}/dit_preprocessed/${VAE_RUN}
 DIT_CKPT_DIR=$(output_dir "$DIT_CONFIG")/checkpoints
 echo "# ${VAE_RUN} -> $(basename "$(dirname "$DIT_CKPT_DIR")")"
@@ -104,7 +108,7 @@ if [[ "$SKIP_ENCODE" == "1" ]]; then
     fi
 else
     echo "encode (+${ENCODE_RESUMES} resumes):"
-    pre_id=$(EVAL_SIMS=500 VAE_CHECKPOINT="$VAE_CKPT" \
+    pre_id=$(EVAL_SIMS="$EVAL_SIMS" VAE_CHECKPOINT="$VAE_CKPT" \
         chain "$ENCODE_RESUMES" "${ENCODE_TIME:-}" jobs/jupiter/preprocess_dit_data.sbatch "$VAE_RUN")
     echo "encode: ${pre_id}"
     dep=(--dependency="afterok:${pre_id}")

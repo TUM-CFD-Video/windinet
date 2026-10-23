@@ -111,7 +111,11 @@ def patch_config_for_cluster(
     defaults = CLUSTER_DEFAULTS[cluster]
     scratch = os.environ.get("SCRATCH", "")
 
-    if data_root is None and "data_root_template" in defaults:
+    if data_root is None and cfg["data"].get("dataset", "euler_mq") != "euler_mq":
+        # The cluster defaults below all point at Euler_MQ; any other dataset
+        # (e.g. srba) is used from the absolute path its config names.
+        data_root = cfg["data"]["data_root"]
+    elif data_root is None and "data_root_template" in defaults:
         # The config's data_root names the resolution folder; this cluster
         # maps it onto its own storage.
         resolution = Path(cfg["data"]["data_root"]).parent.name

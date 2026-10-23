@@ -68,7 +68,7 @@ from windinet.loss_weighting.utils import (
     compute_grad_norms,
 )
 
-from windinet.training.shockwave_data import ShockWaveDataset, build_shockwave_video, parse_gamma
+from windinet.training.shockwave_data import DATASETS, ShockWaveDataset, build_shockwave_video
 from windinet.training.sds_loss import SdsDistillationLoss
 from windinet.training.vae_visualization import (
     denormalize_fields,
@@ -593,6 +593,7 @@ class VaeTrainer:
         full_dataset = ShockWaveDataset(
             data_root,
             num_sim_frames=cfg.data.num_sim_frames,
+            dataset=cfg.data.dataset,
         )
         n_eval = min(cfg.data.eval_sims, len(full_dataset))
         n_train = len(full_dataset) - n_eval
@@ -664,7 +665,7 @@ class VaeTrainer:
             num_workers=cfg.data.num_dataloader_workers,
         )
 
-        # Visualization samples: fixed sims spanning the gamma range (min,
+        # Visualization samples: fixed sims spanning the gamma (srba: Mach) range (min,
         # evenly-spaced middle point(s), max) rather than whichever sims
         # happen to land first in eval_shard -- PhD-advisor-requested
         # (2026-08-16), so figures always show the full physical regime, not
@@ -672,7 +673,8 @@ class VaeTrainer:
         # so the choice is independent of world_size -- every rank agrees,
         # even though only IS_MAIN_PROCESS renders them (see
         # _save_visualization's call site below).
-        vis_gammas = [parse_gamma(full_dataset.ids[i]) for i in eval_set.indices]
+        spec = DATASETS[cfg.data.dataset]
+        vis_gammas = [spec.parse_scalars(full_dataset.ids[i])[spec.spread_scalar] for i in eval_set.indices]
         gamma_order = sorted(range(len(vis_gammas)), key=lambda k: vis_gammas[k])
         n_vis = min(cfg.visualization.num_samples, len(gamma_order))
         if n_vis == 1:
@@ -913,7 +915,7 @@ class VaeTrainer:
                 optimizer.zero_grad(set_to_none=True)
 
                 for i, batch in enumerate(train_loader):
-                    orig_F = batch["density"].shape[1]
+                    orig_F = batch[cfg.data.channel_order[0]].shape[1]
                     x = build_shockwave_video(
                         batch,
                         device=device,
@@ -1248,7 +1250,7 @@ class VaeTrainer:
         count = 0
         weights = self.loss_weighter.get_weights()
         for batch in eval_loader:
-            orig_F = batch["density"].shape[1]
+            orig_F = batch[self._config.data.channel_order[0]].shape[1]
             x = build_shockwave_video(
                 batch,
                 device=device,
@@ -1337,7 +1339,7 @@ class VaeTrainer:
         saved_count = 0
         video_count = 0
         for sample_index, batch in enumerate(vis_loader):
-            orig_F = batch["density"].shape[1]
+            orig_F = batch[cfg.data.channel_order[0]].shape[1]
             x = build_shockwave_video(
                 batch,
                 device=device,

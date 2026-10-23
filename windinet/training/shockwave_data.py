@@ -3,15 +3,32 @@ ShockWave dataset for ShockWaveNet.
 
 Loads ShockWave CFD simulations from HDF5 file.
 
-Expected structure:
+Two datasets are supported, selected by name (config.VaeDataConfig.dataset;
+see DATASETS below):
+
+"euler_mq" -- Euler_MQ, conditioned on the adiabatic index gamma:
 
 train.h5
 
-    <sample_id>/
+    <sample_id>/              e.g. 0000_gamma1.22
         density       [T,1,H,W]
         momentum_x    [T,1,H,W]
         momentum_y    [T,1,H,W]
         pressure      [T,1,H,W]
+
+"srba" -- 2D-SRBA-OOOO (shock-induced R22 bubble collapse, open boundaries),
+conditioned on the shock Mach number only (bubble count/positions/radii are
+visible in the first frame):
+
+train.h5
+
+    <sample_id>/              e.g. 005_Mas1.30_sb1_Ax0.0129_Ay0.0081_Ar0.0035_BxNaN_...
+        density, pressure, velocityX, velocityY    [T,1,H,W]
+        density_1, density_2, diffuse_volume_fraction_1   (ignored)
+
+    Channels are pressure, velocityX, velocityY and log_density = log(density),
+    the latter computed here so everything downstream treats it as an ordinary
+    field (stats key "log_density", no log_transform_channels needed).
 
 Returns physical fields for LTX preprocessing.
 """
@@ -19,8 +36,11 @@ Returns physical fields for LTX preprocessing.
 import json
 import os
 import random
+import re
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import h5py
 import torch
@@ -33,18 +53,67 @@ def parse_gamma(sid: str) -> float:
     return float(sid.split("gamma")[1])
 
 
-def pick_gamma_spread_ids(ids: list[str], n: int) -> set[str]:
-    """N sample ids spanning the gamma range of `ids`: min/median/max for n=3,
-    evenly-spaced quantiles otherwise. Deterministic, so every eval script
-    that calls it on the same id list shows the same sims in its figures."""
+def parse_srba_scalars(sid: str) -> dict[str, float]:
+    """Scalars encoded in a 2D-SRBA sample id, e.g.
+    "005_Mas1.30_sb1_Ax0.0129_..." -> {"mach": 1.30, "num_bubbles": 1}."""
+    mach = re.search(r"_Mas([0-9.]+)", sid)
+    bubbles = re.search(r"_sb(\d+)", sid)
+    if mach is None or bubbles is None:
+        raise ValueError(f"not a 2D-SRBA sample id (no _Mas<..>/_sb<..>): {sid!r}")
+    return {"mach": float(mach.group(1)), "num_bubbles": float(bubbles.group(1))}
+
+
+@dataclass(frozen=True)
+class DatasetSpec:
+    """What a dataset's HDF5 holds and how its sample ids encode the scalars.
+
+    channels: channel name -> (HDF5 field, take log). The channel names are
+        what data.channel_order, the normalization stats and every
+        sample[name] lookup use.
+    parse_scalars: sample id -> scalar conditioning values (sample["meta"]).
+    spread_scalar: the scalar visualization picks spread over
+        (pick_spread_ids), and the default DiT conditioning scalar.
+    """
+
+    channels: dict[str, tuple[str, bool]]
+    parse_scalars: Callable[[str], dict[str, float]]
+    spread_scalar: str
+
+
+DATASETS: dict[str, DatasetSpec] = {
+    "euler_mq": DatasetSpec(
+        channels={name: (name, False) for name in ["density", "momentum_x", "momentum_y", "pressure"]},
+        parse_scalars=lambda sid: {"gamma": parse_gamma(sid)},
+        spread_scalar="gamma",
+    ),
+    "srba": DatasetSpec(
+        channels={
+            "pressure": ("pressure", False),
+            "velocityX": ("velocityX", False),
+            "velocityY": ("velocityY", False),
+            "log_density": ("density", True),
+        },
+        parse_scalars=parse_srba_scalars,
+        spread_scalar="mach",
+    ),
+}
+DEFAULT_DATASET = "euler_mq"
+
+
+def pick_spread_ids(ids: list[str], n: int, dataset: str = DEFAULT_DATASET) -> set[str]:
+    """N sample ids spanning the range of the dataset's spread scalar (gamma /
+    Mach) in `ids`: min/median/max for n=3, evenly-spaced quantiles otherwise.
+    Deterministic, so every eval script that calls it on the same id list
+    shows the same sims in its figures."""
     if n <= 0:
         return set()
-    gamma_order = sorted(range(len(ids)), key=lambda k: parse_gamma(ids[k]))
-    n = min(n, len(gamma_order))
+    spec = DATASETS[dataset]
+    order = sorted(range(len(ids)), key=lambda k: spec.parse_scalars(ids[k])[spec.spread_scalar])
+    n = min(n, len(order))
     if n == 1:
-        picks = [gamma_order[len(gamma_order) // 2]]
+        picks = [order[len(order) // 2]]
     else:
-        picks = [gamma_order[round(i * (len(gamma_order) - 1) / (n - 1))] for i in range(n)]
+        picks = [order[round(i * (len(order) - 1) / (n - 1))] for i in range(n)]
     return {ids[i] for i in picks}
 
 
@@ -54,21 +123,18 @@ class ShockWaveDataset(Dataset):
 
     Each sample corresponds to one simulation.
 
+    `dataset` names the DATASETS entry the file belongs to ("euler_mq" or
+    "srba"); it fixes which fields are read and how the scalars are parsed.
+
     Returns:
-        density:
-            [T,1,H,W]
+        <channel name>:
+            [T,H,W], one per DATASETS[dataset].channels entry
+            (euler_mq: density, momentum_x, momentum_y, pressure;
+            srba: pressure, velocityX, velocityY, log_density)
 
-        momentum_x:
-            [T,1,H,W]
-
-        momentum_y:
-            [T,1,H,W]
-
-        pressure:
-            [T,1,H,W]
-
-        gamma:
-            scalar condition
+        meta:
+            scalar conditions parsed from the id
+            (euler_mq: gamma; srba: mach, num_bubbles)
 
         id:
             sample name
@@ -78,9 +144,14 @@ class ShockWaveDataset(Dataset):
         self,
         h5_path: str | Path,
         num_sim_frames: int | None = None,
+        dataset: str = DEFAULT_DATASET,
     ):
         self.h5_path = Path(h5_path)
         self.file = None
+        if dataset not in DATASETS:
+            raise ValueError(f"unknown dataset {dataset!r}, expected one of {sorted(DATASETS)}")
+        self.dataset = dataset
+        self.spec = DATASETS[dataset]
 
         if not self.h5_path.is_file():
             raise FileNotFoundError(f"Shockwave HDF5 file not found: {self.h5_path}")
@@ -237,54 +308,21 @@ class ShockWaveDataset(Dataset):
         sample = self._get_group(sid)
 
 
-        density = torch.from_numpy(
-            sample["density"][:]
-        ).float().squeeze(1)
+        out = {}
+        for name, (field, take_log) in self.spec.channels.items():
+            data = sample[field]
+            if self.num_sim_frames is not None:
+                data = data[:self.num_sim_frames]
+            else:
+                data = data[:]
+            x = torch.from_numpy(data).float().squeeze(1)
+            out[name] = torch.log(x.clamp(min=LOG_TRANSFORM_EPS)) if take_log else x
+
+        out["meta"] = self.spec.parse_scalars(sid)
+        out["id"] = sid
+        return out
 
 
-        momentum_x = torch.from_numpy(
-            sample["momentum_x"][:]
-        ).float().squeeze(1)
-
-
-        momentum_y = torch.from_numpy(
-            sample["momentum_y"][:]
-        ).float().squeeze(1)
-
-
-        pressure = torch.from_numpy(
-            sample["pressure"][:]
-        ).float().squeeze(1)
-
-
-        if self.num_sim_frames is not None:
-
-            density = density[:self.num_sim_frames]
-
-            momentum_x = momentum_x[:self.num_sim_frames]
-
-            momentum_y = momentum_y[:self.num_sim_frames]
-
-            pressure = pressure[:self.num_sim_frames]
-
-
-        gamma = torch.tensor(
-            parse_gamma(sid),
-            dtype=torch.float32
-        )
-
-
-        return {
-            "density": density,
-            "momentum_x": momentum_x,
-            "momentum_y": momentum_y,
-            "pressure": pressure,
-            "meta": {
-                "gamma": gamma.item()
-            },
-            "id": sid,
-        }
-    
 LOG_TRANSFORM_EPS = 1e-6
 
 
@@ -365,6 +403,37 @@ def build_shockwave_video(
 CHANNEL_NAMES = ["density", "momentum_x", "momentum_y", "pressure"]
 
 
+def load_training_config(path: str | Path) -> dict:
+    """Read a dumped training_config.yaml (VAE or DiT run) as a plain dict.
+
+    It carries python-tagged values (e.g. the model-source enum). Ignore unknown
+    tags rather than reaching for unsafe_load, which would execute whatever the
+    file names.
+    """
+    import yaml
+
+    class _TolerantLoader(yaml.SafeLoader):
+        pass
+
+    _TolerantLoader.add_multi_constructor("", lambda loader, suffix, node: None)
+    return yaml.load(Path(path).read_text(), Loader=_TolerantLoader) or {}
+
+
+def run_scalar_conditioning(checkpoint: str | Path | None, fallback: dict) -> dict:
+    """The scalar_conditioning block of the DiT run a checkpoint belongs to
+    (<output_dir>/checkpoints/<ckpt> -> <output_dir>/training_config.yaml), so
+    inference conditions on the same scalars/ranges the DiT was trained with
+    (gamma for euler_mq, mach for srba). `fallback` (the inference config's own
+    block) is used when there is no checkpoint or no dumped config."""
+    if checkpoint is not None:
+        path = Path(checkpoint).parent.parent / "training_config.yaml"
+        if path.is_file():
+            block = load_training_config(path).get("scalar_conditioning")
+            if block:
+                return block
+    return fallback
+
+
 def load_channel_normalization(source: str | Path) -> dict:
     """Read the channel normalization stats that a VAE / latent set was built with.
 
@@ -374,10 +443,11 @@ def load_channel_normalization(source: str | Path) -> dict:
     ``(x - mean) / (std * clip)`` clamped to [-1, 1], so any mismatch silently
     produces off-distribution latents or wrongly scaled physical outputs.
 
-    Returns a dict with ``channel_names``, ``channel_mean``, ``channel_std`` and
-    ``normalization_clip``. ``channel_names`` (the stacked field order) is the
-    json's ``channel_names`` or the config's ``channel_order``, falling back to
-    the 4-channel CHANNEL_NAMES for sources that predate recording it.
+    Returns a dict with ``channel_names``, ``channel_mean``, ``channel_std``,
+    ``normalization_clip`` and ``dataset``. ``channel_names`` (the stacked field
+    order) is the json's ``channel_names`` or the config's ``channel_order``,
+    falling back to the 4-channel CHANNEL_NAMES for sources that predate
+    recording it; ``dataset`` falls back to "euler_mq" the same way.
     """
     path = Path(source)
     if not path.is_file():
@@ -386,16 +456,7 @@ def load_channel_normalization(source: str | Path) -> dict:
     if path.suffix == ".json":
         payload = json.loads(path.read_text())
     else:
-        import yaml
-
-        # A dumped training_config.yaml carries python-tagged values (e.g. the
-        # model-source enum). Ignore unknown tags rather than reaching for
-        # unsafe_load, which would execute whatever the file names.
-        class _TolerantLoader(yaml.SafeLoader):
-            pass
-
-        _TolerantLoader.add_multi_constructor("", lambda loader, suffix, node: None)
-        payload = (yaml.load(path.read_text(), Loader=_TolerantLoader) or {}).get("data", {})
+        payload = load_training_config(path).get("data", {})
 
     mean, std = payload.get("channel_mean"), payload.get("channel_std")
     if not mean or not std:
@@ -408,6 +469,7 @@ def load_channel_normalization(source: str | Path) -> dict:
         "channel_mean": list(mean),
         "channel_std": list(std),
         "normalization_clip": float(payload.get("normalization_clip", 5.0)),
+        "dataset": payload.get("dataset") or DEFAULT_DATASET,
     }
 
 

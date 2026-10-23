@@ -98,7 +98,8 @@ from windinet.training.shockwave_data import (
     build_shockwave_video,
     load_channel_normalization,
     normalize_fields,
-    pick_gamma_spread_ids,
+    pick_spread_ids,
+    run_scalar_conditioning,
 )
 from windinet.training.vae_visualization import (
     denormalize_fields,
@@ -324,10 +325,15 @@ def main():
 
     manifest_path = args.preprocessed_data_root / "split_manifest.json"
     manifest = json.loads(manifest_path.read_text())
+    norm_payload = json.loads((args.preprocessed_data_root / "normalization.json").read_text())
+    # Which dataset the latents were encoded from (preprocess_dataset.py records
+    # the VAE run's data.dataset; older latents predate it and are euler_mq).
+    dataset_name = norm_payload.get("dataset") or "euler_mq"
+    print(f"Dataset: {dataset_name}")
     if args.test_h5 is not None:
         # val_ids keeps its name below but holds the test ids from here on.
         h5_path = str(args.test_h5)
-        val_ids = list(ShockWaveDataset(h5_path).ids)
+        val_ids = list(ShockWaveDataset(h5_path, dataset=dataset_name).ids)
         print(f"Standalone test set: {len(val_ids)} sims from {h5_path} (manifest {manifest_path} not used for ids)")
     else:
         h5_path = manifest["data_root"]
@@ -344,10 +350,10 @@ def main():
         val_ids = val_ids[: args.num_samples]
     print(f"Evaluating {len(val_ids)} sim(s)")
 
-    vis_ids = pick_gamma_spread_ids(val_ids, args.save_vis_samples)
+    vis_ids = pick_spread_ids(val_ids, args.save_vis_samples, dataset_name)
     if vis_ids:
-        print(f"Visualizing {len(vis_ids)} sample(s) spanning the gamma range: {sorted(vis_ids)}")
-    npz_ids = set(val_ids) if args.sim_ids else pick_gamma_spread_ids(val_ids, args.save_npz_samples)
+        print(f"Visualizing {len(vis_ids)} sample(s) spanning the gamma/Mach range: {sorted(vis_ids)}")
+    npz_ids = set(val_ids) if args.sim_ids else pick_spread_ids(val_ids, args.save_npz_samples, dataset_name)
     npz_dir = args.npz_dir or args.out_dir / "samples"
     if npz_ids:
         print(f"Saving npz fields for {sorted(npz_ids)} (frames {args.npz_frames}) to {npz_dir}")
@@ -360,9 +366,7 @@ def main():
     # Latents encoded from truncated sims (preprocess_dataset.py --num-sim-frames)
     # record that length; the eval must use the same one, and the DiT then
     # generates the matching 8k+1 length instead of the config's 105.
-    num_sim_frames = json.loads(
-        (args.preprocessed_data_root / "normalization.json").read_text()
-    ).get("num_sim_frames")
+    num_sim_frames = norm_payload.get("num_sim_frames")
     if num_sim_frames is not None:
         num_frames = ((num_sim_frames - 1 + 7) // 8) * 8 + 1
         print(f"Latents built from {num_sim_frames}-frame sims -> generating {num_frames} frames")
@@ -387,7 +391,8 @@ def main():
     else:
         verify_latent_space(ensure_checkpoint(vae_ckpt), checkpoint, stats)
 
-    sc = cfg.get("scalar_conditioning", {})
+    sc = run_scalar_conditioning(checkpoint, cfg.get("scalar_conditioning", {}))
+    print(f"Scalar conditioning: {sc.get('scalar_names')} ranges {sc.get('scalar_ranges')}")
     scalar_cfg = ScalarConditioningConfig(
         enabled=True,
         scalar_names=sc.get("scalar_names", ["gamma"]),
@@ -396,7 +401,7 @@ def main():
         num_tokens_per_scalar=sc.get("num_tokens_per_scalar", 4),
     )
 
-    dataset = ShockWaveDataset(h5_path, num_sim_frames=num_sim_frames)
+    dataset = ShockWaveDataset(h5_path, num_sim_frames=num_sim_frames, dataset=dataset_name)
     missing = [s for s in val_ids if s not in dataset.ids]
     if missing:
         raise SystemExit(f"val_ids not found in {h5_path}: {missing[:5]}...")
@@ -424,8 +429,8 @@ def main():
     for i, sid in enumerate(val_ids):
         idx = dataset.ids.index(sid)
         sample = dataset[idx]
-        H, W = sample["density"].shape[-2:]
-        orig_F = sample["density"].shape[0]
+        H, W = sample[channel_names[0]].shape[-2:]
+        orig_F = sample[channel_names[0]].shape[0]
         score_F = min(orig_F, args.metric_frames or orig_F)
 
         # Ground truth, normalized, [1, C, orig_F, H, W] -- same call
@@ -530,7 +535,7 @@ def main():
                 bench_values[label][m].append(values[m])
 
         per_sample.append({
-            "id": sid, "gamma": float(sample["meta"]["gamma"]),
+            "id": sid, **{k: float(v) for k, v in sample["meta"].items()},
             "vae_only_vrmse": vo_overall, "vae_dit_vrmse": vd_overall,
             "vae_only_per_channel": dict(zip(channel_names, vo_channel)),
             "vae_dit_per_channel": dict(zip(channel_names, vd_channel)),
@@ -557,7 +562,7 @@ def main():
                 npz_dir / f"{sid}.npz",
                 frames=np.array(frames),
                 channel_order=np.array(channel_names),
-                gamma=float(sample["meta"]["gamma"]),
+                **{k: float(v) for k, v in sample["meta"].items()},
                 gt_raw=gt_raw[:, frames].numpy().astype(np.float16),
                 gt_norm=target_cmp[0][:, frames].cpu().numpy().astype(np.float16),
                 vae_only_norm=vae_recon[0][:, frames].cpu().numpy().astype(np.float16),

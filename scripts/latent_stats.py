@@ -227,7 +227,7 @@ def main(
         # test.h5 is never split -- every sim in it is already held out from
         # every train/eval decision made against train.h5, so there's no
         # permutation to reproduce here; just take the first num_samples ids.
-        full_dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames)
+        full_dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames, dataset=cfg.data.dataset)
         chosen = list(range(len(full_dataset)))[:num_samples]
         console.print(
             f"Encoding {len(chosen)} sims from the standalone test set "
@@ -238,7 +238,7 @@ def main(
         # Reproduce VaeTrainer.train()'s exact split (same seed, same perm) so
         # "eval" here is the same held-out set the finetuned checkpoint never
         # trained on -- results aren't inflated by memorization.
-        full_dataset = ShockWaveDataset(Path(cfg.data.data_root), num_sim_frames=cfg.data.num_sim_frames)
+        full_dataset = ShockWaveDataset(Path(cfg.data.data_root), num_sim_frames=cfg.data.num_sim_frames, dataset=cfg.data.dataset)
         split_generator = torch.Generator().manual_seed(cfg.seed)
         perm = torch.randperm(len(full_dataset), generator=split_generator).tolist()
         n_eval = min(cfg.data.eval_sims, len(full_dataset))

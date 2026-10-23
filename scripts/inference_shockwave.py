@@ -35,6 +35,7 @@ from windinet.training.shockwave_data import (
     ShockWaveDataset,
     load_channel_normalization,
     normalize_fields,
+    run_scalar_conditioning,
 )
 from windinet.utils import get_default_device
 from windinet.training.vae_visualization import denormalize_fields
@@ -233,7 +234,7 @@ def main():
 
     verify_latent_space(ensure_checkpoint(vae_ckpt), checkpoint, stats)
 
-    sc = cfg.get("scalar_conditioning", {})
+    sc = run_scalar_conditioning(checkpoint, cfg.get("scalar_conditioning", {}))
     scalar_cfg = ScalarConditioningConfig(
         enabled=True,
         scalar_names=sc.get("scalar_names", ["gamma"]),
@@ -257,7 +258,7 @@ def main():
             cfg["h5"],
         )
 
-    dataset = ShockWaveDataset(h5_path)
+    dataset = ShockWaveDataset(h5_path, dataset=stats["dataset"])
     if wanted:
         missing = [s for s in wanted if s not in dataset.ids]
         if missing:
@@ -282,7 +283,7 @@ def main():
             print(f"[{i+1}/{len(indices)}] {name} — exists, skipping")
             continue
 
-        H, W = sample["density"].shape[-2:]
+        H, W = sample[stats["channel_names"][0]].shape[-2:]
         cond_video = build_initial_condition(sample, stats, device)
 
         scalar_values = [sample["meta"][n] for n in scalar_cfg.scalar_names]
@@ -323,11 +324,11 @@ def main():
         np.savez_compressed(
             out_path,
             **{name_: pred[c].numpy().astype(np.float32) for c, name_ in enumerate(stats["channel_names"])},
-            gamma=np.float32(sample["meta"]["gamma"]),
+            **{k: np.float32(v) for k, v in sample["meta"].items()},
         )
 
         print(f"[{i+1}/{len(indices)}] {name} — saved ({pred.shape[1]} frames, "
-              f"gamma={sample['meta']['gamma']:.4f})")
+              f"{', '.join(f'{k}={v:.4f}' for k, v in sample['meta'].items())})")
 
         if device.type == "cuda":
             torch.cuda.empty_cache()

@@ -343,6 +343,18 @@ class VaeDataConfig(ConfigBaseModel):
     """Dataset configuration for VAE decoder finetuning."""
 
     data_root: str = Field(description="Path to the shockwave HDF5 file")
+    dataset: Literal["euler_mq", "srba"] = Field(
+        default="euler_mq",
+        description=(
+            "Which dataset data_root holds (windinet.training.shockwave_data.DATASETS): "
+            "'euler_mq' (density, momentum_x, momentum_y, pressure; conditioned on gamma) "
+            "or 'srba' (2D-SRBA-OOOO bubble collapse: pressure, velocityX, velocityY, "
+            "log_density; conditioned on the Mach number). Fixes the field names "
+            "channel_order may use and how sample ids are parsed into scalars; recorded "
+            "in training_config.yaml and from there in the DiT latents' normalization.json, "
+            "so encoding and evaluation follow the VAE run."
+        ),
+    )
     eval_sims: int = Field(default=10, description="Number of simulations held out for VRMSE evaluation")
     num_dataloader_workers: int = Field(default=4, ge=0)
     num_sim_frames: int | None = Field(default=None, ge=1, description="Optional frame limit for debugging")
@@ -450,16 +462,21 @@ class VaeDataConfig(ConfigBaseModel):
             raise ValueError("log_transform_channels must not contain duplicates")
         return values
 
-    @field_validator("channel_order")
-    @classmethod
-    def validate_channel_order(cls, values: list[str]) -> list[str]:
-        expected = {"density", "momentum_x", "momentum_y", "pressure"}
+    @model_validator(mode="after")
+    def validate_channel_order(self):
+        from windinet.training.shockwave_data import DATASETS
+
+        expected = set(DATASETS[self.dataset].channels)
+        values = self.channel_order
         if not values or len(set(values)) != len(values) or not set(values) <= expected:
             raise ValueError(
                 f"channel_order must be a non-empty, duplicate-free subset (in any order) of "
-                f"{sorted(expected)}, got {values}"
+                f"{sorted(expected)} (dataset={self.dataset!r}), got {values}"
             )
-        return values
+        missing = sorted(set(self.log_transform_channels) - set(values))
+        if missing:
+            raise ValueError(f"log_transform_channels {missing} are not in channel_order={values}")
+        return self
 
     @model_validator(mode="after")
     def validate_overfit(self):

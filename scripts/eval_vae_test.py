@@ -62,7 +62,7 @@ from torch.utils.data import DataLoader, Subset
 
 from windinet.config import VaeTrainerConfig
 from windinet.inference.model_loader import load_vae
-from windinet.training.shockwave_data import ShockWaveDataset, build_shockwave_video, pick_gamma_spread_ids
+from windinet.training.shockwave_data import ShockWaveDataset, build_shockwave_video, pick_spread_ids
 from windinet.training.vae_trainer import vrmse, vrmse_per_channel
 from windinet.utils import get_default_device
 from windinet.vae_adapter import inflate_vae_io_channels, load_adapted_vae, load_inflated_vae_checkpoint
@@ -157,12 +157,12 @@ def main(
     channel_order = list(cfg.data.channel_order)
     console.print(f"Device: {device}  config: {config_path}")
 
-    dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames)
+    dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames, dataset=cfg.data.dataset)
     indices = list(range(len(dataset)))
     if num_samples > 0:
         indices = indices[:num_samples]
     console.print(f"Test set: {test_h5} -- evaluating {len(indices)} of {len(dataset)} sims")
-    sample_ids = pick_gamma_spread_ids([dataset.ids[i] for i in indices], save_samples)
+    sample_ids = pick_spread_ids([dataset.ids[i] for i in indices], save_samples, cfg.data.dataset)
     if samples_dir is None:
         run_name = Path(output).resolve().parent.name + (f"_m{metric_frames}" if metric_frames else "")
         scratch = os.environ.get("SCRATCH")
@@ -187,7 +187,7 @@ def main(
     t0 = time.time()
     with torch.no_grad():
         for batch in loader:
-            orig_F = batch["density"].shape[1]
+            orig_F = batch[channel_order[0]].shape[1]
             x = build_shockwave_video(
                 batch,
                 device=device,
@@ -221,7 +221,7 @@ def main(
                         Path(samples_dir) / f"{ids[i]}.npz",
                         frames=np.array(frames),
                         channel_order=np.array(channel_order),
-                        gamma=float(batch["meta"]["gamma"][i]),
+                        **{k: float(v[i]) for k, v in batch["meta"].items()},
                         gt_raw=gt_raw[:, frames].numpy().astype(np.float16),
                         gt_norm=target[i][:, frames].cpu().numpy().astype(np.float16),
                         recon_norm=recon[i][:, frames].cpu().numpy().astype(np.float16),

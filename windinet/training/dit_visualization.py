@@ -256,7 +256,9 @@ class DitVisualizer:
         picked_ids, raw_h5 = pick_fixed_visualization_sample_ids(
             self._preprocessed_data_root, self._num_samples
         )
-        dataset = ShockWaveDataset(raw_h5, num_sim_frames=num_sim_frames)
+        dataset = ShockWaveDataset(
+            raw_h5, num_sim_frames=num_sim_frames, dataset=payload.get("dataset") or "euler_mq"
+        )
         id_to_idx = {sid: i for i, sid in enumerate(dataset.ids)}
         missing = [sid for sid in picked_ids if sid not in id_to_idx]
         if missing:
@@ -331,8 +333,8 @@ class DitVisualizer:
         sum_latent_vrmse, sum_pixel_vrmse = 0.0, 0.0
 
         for i, sample in enumerate(self._samples):
-            H, W = sample["density"].shape[-2:]
             channel_names = self._stats["channel_names"]
+            H, W = sample[channel_names[0]].shape[-2:]
             gt = torch.stack([sample[name] for name in channel_names]).unsqueeze(0)  # [1, C, F, H, W]
             num_frames_needed = gt.shape[2]
             num_frames_padded = ((num_frames_needed - 1 + 7) // 8) * 8 + 1  # LTX VAE needs 8k+1 (97 -> 97, 101 -> 105)
