@@ -126,6 +126,10 @@ class ShockWaveDataset(Dataset):
     `dataset` names the DATASETS entry the file belongs to ("euler_mq" or
     "srba"); it fixes which fields are read and how the scalars are parsed.
 
+    `frame_stride` keeps every n-th stored frame (0, n, 2n, ...);
+    `num_sim_frames` then counts frames of that subsampled sequence, so
+    frame_stride=2, num_sim_frames=49 covers stored frames 0..96.
+
     Returns:
         <channel name>:
             [T,H,W], one per DATASETS[dataset].channels entry
@@ -145,6 +149,7 @@ class ShockWaveDataset(Dataset):
         h5_path: str | Path,
         num_sim_frames: int | None = None,
         dataset: str = DEFAULT_DATASET,
+        frame_stride: int = 1,
     ):
         self.h5_path = Path(h5_path)
         self.file = None
@@ -162,6 +167,9 @@ class ShockWaveDataset(Dataset):
             self._prewarm_ids = self._pick_prewarm_ids(f, self.ids)
 
         self.num_sim_frames = num_sim_frames
+        if frame_stride < 1:
+            raise ValueError(f"frame_stride must be >= 1, got {frame_stride}")
+        self.frame_stride = frame_stride
 
     @staticmethod
     def _pick_prewarm_ids(f: h5py.File, ids: list[str]) -> list[str]:
@@ -310,11 +318,8 @@ class ShockWaveDataset(Dataset):
 
         out = {}
         for name, (field, take_log) in self.spec.channels.items():
-            data = sample[field]
-            if self.num_sim_frames is not None:
-                data = data[:self.num_sim_frames]
-            else:
-                data = data[:]
+            stop = None if self.num_sim_frames is None else self.num_sim_frames * self.frame_stride
+            data = sample[field][0:stop:self.frame_stride]
             x = torch.from_numpy(data).float().squeeze(1)
             out[name] = torch.log(x.clamp(min=LOG_TRANSFORM_EPS)) if take_log else x
 
@@ -444,10 +449,11 @@ def load_channel_normalization(source: str | Path) -> dict:
     produces off-distribution latents or wrongly scaled physical outputs.
 
     Returns a dict with ``channel_names``, ``channel_mean``, ``channel_std``,
-    ``normalization_clip`` and ``dataset``. ``channel_names`` (the stacked field
+    ``normalization_clip``, ``dataset`` and ``frame_stride``. ``channel_names`` (the stacked field
     order) is the json's ``channel_names`` or the config's ``channel_order``,
     falling back to the 4-channel CHANNEL_NAMES for sources that predate
-    recording it; ``dataset`` falls back to "euler_mq" the same way.
+    recording it; ``dataset`` falls back to "euler_mq" and ``frame_stride`` to 1
+    the same way.
     """
     path = Path(source)
     if not path.is_file():
@@ -470,6 +476,7 @@ def load_channel_normalization(source: str | Path) -> dict:
         "channel_std": list(std),
         "normalization_clip": float(payload.get("normalization_clip", 5.0)),
         "dataset": payload.get("dataset") or DEFAULT_DATASET,
+        "frame_stride": int(payload.get("frame_stride") or 1),
     }
 
 

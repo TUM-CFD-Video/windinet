@@ -258,7 +258,7 @@ def main():
             cfg["h5"],
         )
 
-    dataset = ShockWaveDataset(h5_path, dataset=stats["dataset"])
+    dataset = ShockWaveDataset(h5_path, dataset=stats["dataset"], frame_stride=stats["frame_stride"])
     if wanted:
         missing = [s for s in wanted if s not in dataset.ids]
         if missing:

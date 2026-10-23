@@ -581,6 +581,7 @@ class VaeTrainer:
             data_root,
             num_sim_frames=cfg.data.num_sim_frames,
             dataset=cfg.data.dataset,
+            frame_stride=cfg.data.frame_stride,
         )
         n_eval = min(cfg.data.eval_sims, len(full_dataset))
         n_train = len(full_dataset) - n_eval

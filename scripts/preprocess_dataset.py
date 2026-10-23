@@ -99,7 +99,7 @@ def _resolve_normalization(
     channel_mean: str | None,
     channel_std: str | None,
     normalization_clip: float | None,
-) -> tuple[list[str], list[float], list[float], float, str, str]:
+) -> tuple[list[str], list[float], list[float], float, str, str, int]:
     """Determine the channel layout and normalization the latents must be built with.
 
     The VAE was finetuned on fields normalized as ``(x - mean) / (std * clip)``
@@ -109,10 +109,11 @@ def _resolve_normalization(
     therefore taken from the VAE run's own ``training_config.yaml`` by default
     (found next to the checkpoint), and only overridden explicitly.
 
-    Returns (channel names, mean, std, clip, source description, dataset). The
-    channel names are the VAE run's data.channel_order (all four fields, or a
-    subset) and the dataset its data.dataset; explicit --channel-mean/--channel-std
-    imply the default four-channel euler_mq layout.
+    Returns (channel names, mean, std, clip, source description, dataset,
+    frame_stride). The channel names are the VAE run's data.channel_order (all
+    four fields, or a subset), the dataset its data.dataset and the stride its
+    data.frame_stride; explicit --channel-mean/--channel-std imply the default
+    four-channel euler_mq layout at stride 1.
     """
     explicit_mean = _parse_floats(channel_mean)
     explicit_std = _parse_floats(channel_std)
@@ -121,7 +122,7 @@ def _resolve_normalization(
     if explicit_mean is not None:
         if len(explicit_mean) != len(CHANNEL_NAMES):
             raise typer.BadParameter(f"--channel-mean/--channel-std need {len(CHANNEL_NAMES)} values ({CHANNEL_NAMES})")
-        return list(CHANNEL_NAMES), explicit_mean, explicit_std, normalization_clip or 5.0, "command line", DEFAULT_DATASET
+        return list(CHANNEL_NAMES), explicit_mean, explicit_std, normalization_clip or 5.0, "command line", DEFAULT_DATASET, 1
 
     # Auto-discover: outputs/<run>/checkpoints/vae_*.safetensors
     #             -> outputs/<run>/training_config.yaml
@@ -136,7 +137,7 @@ def _resolve_normalization(
     clip = normalization_clip if normalization_clip is not None else stats["normalization_clip"]
     return (
         stats["channel_names"], stats["channel_mean"], stats["channel_std"], float(clip), str(config_path),
-        stats["dataset"],
+        stats["dataset"], stats["frame_stride"],
     )
 
 
@@ -212,11 +213,11 @@ def main(
             "cannot encode the 4-channel CFD fields. Pass the finetuned inflate VAE, e.g. "
             "outputs/vae_meaninit_wsd15_h1x2_lr1x_2gpu/checkpoints/vae_shockwave_best.safetensors"
         )
-    channel_names, norm_mean, norm_std, norm_clip, norm_source, dataset_name = _resolve_normalization(
+    channel_names, norm_mean, norm_std, norm_clip, norm_source, dataset_name, frame_stride = _resolve_normalization(
         Path(inflate_checkpoint), vae_config, channel_mean, channel_std, normalization_clip
     )
     logger.info(
-        f"Dataset {dataset_name}, channels {channel_names}, normalization from {norm_source}: "
+        f"Dataset {dataset_name} (frame_stride {frame_stride}), channels {channel_names}, normalization from {norm_source}: "
         f"mean={norm_mean}, std={norm_std}, clip={norm_clip}"
     )
 
@@ -225,7 +226,7 @@ def main(
     parsed_scalar_names = [s.strip() for s in scalar_names.split(",")]
 
     # Load dataset
-    dataset = ShockWaveDataset(data_root, num_sim_frames=num_sim_frames, dataset=dataset_name)
+    dataset = ShockWaveDataset(data_root, num_sim_frames=num_sim_frames, dataset=dataset_name, frame_stride=frame_stride)
     if num_sim_frames is not None:
         logger.info(f"Truncating every simulation to its first {num_sim_frames} frames")
     if max_samples > 0:
@@ -290,6 +291,7 @@ def main(
                 "source": norm_source,
                 "num_sim_frames": num_sim_frames,
                 "dataset": dataset_name,
+                "frame_stride": frame_stride,
             },
             indent=2,
         )

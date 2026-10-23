@@ -257,7 +257,8 @@ class DitVisualizer:
             self._preprocessed_data_root, self._num_samples
         )
         dataset = ShockWaveDataset(
-            raw_h5, num_sim_frames=num_sim_frames, dataset=payload.get("dataset") or "euler_mq"
+            raw_h5, num_sim_frames=num_sim_frames, dataset=payload.get("dataset") or "euler_mq",
+            frame_stride=int(payload.get("frame_stride") or 1),
         )
         id_to_idx = {sid: i for i, sid in enumerate(dataset.ids)}
         missing = [sid for sid in picked_ids if sid not in id_to_idx]

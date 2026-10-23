@@ -157,7 +157,8 @@ def main(
     channel_order = list(cfg.data.channel_order)
     console.print(f"Device: {device}  config: {config_path}")
 
-    dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames, dataset=cfg.data.dataset)
+    dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames, dataset=cfg.data.dataset,
+        frame_stride=cfg.data.frame_stride)
     indices = list(range(len(dataset)))
     if num_samples > 0:
         indices = indices[:num_samples]

@@ -310,7 +310,8 @@ def main(
     device = get_default_device()
     console.print(f"Device: {device}")
 
-    full_dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames, dataset=cfg.data.dataset)
+    full_dataset = ShockWaveDataset(Path(test_h5), num_sim_frames=cfg.data.num_sim_frames, dataset=cfg.data.dataset,
+        frame_stride=cfg.data.frame_stride)
     chosen = list(range(len(full_dataset)))[:num_samples]
     console.print(f"Encoding {len(chosen)} sims from standalone test set '{test_h5}' (of {len(full_dataset)} total)")
 

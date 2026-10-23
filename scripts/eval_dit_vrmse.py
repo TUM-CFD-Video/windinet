@@ -302,8 +302,9 @@ def parse_args():
                           "come from any split; the split of each id is printed. The averages then cover "
                           "only these sims, not a held-out set.")
     ap.add_argument("--score_frames", type=int, nargs="+", default=None,
-                     help="0-indexed frames the benchmark metrics are computed on (default: every 10th "
-                          "frame from 40, as cfd_bench scores them: 40 50 ... 90 for 97 frames, ... 100 for 101)")
+                     help="0-indexed stored frames the benchmark metrics are computed on (default: every 10th "
+                          "frame from 40, as cfd_bench scores them: 40 50 ... 90 for 97 frames, ... 100 for 101; "
+                          "with frame_stride > 1 they must be multiples of it)")
     ap.add_argument("--clamp_prediction", action=argparse.BooleanOptionalAction, default=True,
                      help="Clamp prediction and target to [-1, 1] before the benchmark metrics (default on, "
                           "as in cfd_bench); --no-clamp_prediction turns it off")
@@ -333,11 +334,14 @@ def main():
     # Which dataset the latents were encoded from (preprocess_dataset.py records
     # the VAE run's data.dataset; older latents predate it and are euler_mq).
     dataset_name = norm_payload.get("dataset") or "euler_mq"
-    print(f"Dataset: {dataset_name}")
+    # Temporal subsampling the latents were built with (data.frame_stride);
+    # sequence index k is stored frame k * frame_stride.
+    frame_stride = int(norm_payload.get("frame_stride") or 1)
+    print(f"Dataset: {dataset_name}, frame_stride {frame_stride}")
     if args.test_h5 is not None:
         # val_ids keeps its name below but holds the test ids from here on.
         h5_path = str(args.test_h5)
-        val_ids = list(ShockWaveDataset(h5_path, dataset=dataset_name).ids)
+        val_ids = list(ShockWaveDataset(h5_path, dataset=dataset_name, frame_stride=frame_stride).ids)
         print(f"Standalone test set: {len(val_ids)} sims from {h5_path} (manifest {manifest_path} not used for ids)")
     else:
         h5_path = manifest["data_root"]
@@ -405,7 +409,7 @@ def main():
         num_tokens_per_scalar=sc.get("num_tokens_per_scalar", 4),
     )
 
-    dataset = ShockWaveDataset(h5_path, num_sim_frames=num_sim_frames, dataset=dataset_name)
+    dataset = ShockWaveDataset(h5_path, num_sim_frames=num_sim_frames, dataset=dataset_name, frame_stride=frame_stride)
     missing = [s for s in val_ids if s not in dataset.ids]
     if missing:
         raise SystemExit(f"val_ids not found in {h5_path}: {missing[:5]}...")
@@ -517,11 +521,18 @@ def main():
 
         # Benchmark block: all four metrics on the scored frames only (not
         # cropped by --metric_frames: the scored frames pick their own).
+        # Scored frames are stored-frame numbers (the physical times cfd_bench
+        # scores), mapped to sequence indices through frame_stride, so a
+        # subsampled model is scored at the same times as a stride-1 one.
         n_avail = min(dit_full.shape[2], vae_recon.shape[2], target.shape[2])
-        score_frames = args.score_frames if args.score_frames is not None else list(range(40, n_avail, 10))
-        if max(score_frames) >= n_avail:
-            raise SystemExit(f"--score_frames {score_frames} exceeds the {n_avail} frames available for {sid}")
-        frame_idx = torch.as_tensor(score_frames, device=target.device)
+        last_stored = (n_avail - 1) * frame_stride
+        score_frames = (args.score_frames if args.score_frames is not None
+                        else list(range(40, last_stored + 1, 10)))
+        if max(score_frames) > last_stored:
+            raise SystemExit(f"--score_frames {score_frames} exceeds the last available frame {last_stored} for {sid}")
+        if any(f % frame_stride for f in score_frames):
+            raise SystemExit(f"--score_frames {score_frames} are not all multiples of frame_stride {frame_stride}")
+        frame_idx = torch.as_tensor([f // frame_stride for f in score_frames], device=target.device)
         target_scored = target.index_select(2, frame_idx)
         vae_only_scored = vae_recon.index_select(2, frame_idx)
         vae_dit_scored = dit_full.index_select(2, frame_idx)
@@ -651,7 +662,8 @@ def main():
         "worst_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[:5]],
         "best_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[-5:]],
         "benchmark": {
-            "scored_frames": score_frames,  # same for every sim (one frame count per latent set)
+            "scored_frames": score_frames,  # stored-frame numbers, same for every sim
+            "frame_stride": frame_stride,
             "clamp_prediction": bool(args.clamp_prediction),
             "notes": "each metric once per sim over the scored frames and all channels, then the plain "
                      "mean over sims; vrmse is per field then mean; ssim is 1 - SSIM; prediction and "

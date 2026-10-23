@@ -359,6 +359,18 @@ class VaeDataConfig(ConfigBaseModel):
     eval_sims: int = Field(default=10, description="Number of simulations held out for VRMSE evaluation")
     num_dataloader_workers: int = Field(default=4, ge=0)
     num_sim_frames: int | None = Field(default=None, ge=1, description="Optional frame limit for debugging")
+    frame_stride: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "Keep every n-th stored frame (0, n, 2n, ...) instead of every frame. "
+            "num_sim_frames counts frames AFTER subsampling, e.g. frame_stride 2 + "
+            "num_sim_frames 49 covers stored frames 0..96, the same physical span as "
+            "frame_stride 1 + num_sim_frames 97. Recorded in training_config.yaml and "
+            "from there in the latents' normalization.json, so encoding and evaluation "
+            "follow the VAE run."
+        ),
+    )
     overfit_sims: int | None = Field(
         default=None,
         ge=1,
