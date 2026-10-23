@@ -1,7 +1,7 @@
 #!/bin/bash
 # Low sampler-step sweep (2026-10-17): existing 8k DiTs re-evaluated with 1, 2,
 # 5 and 10 flow-matching integration steps (configs/dit/inference_dit.yaml
-# default is 20). Inference only, no dependencies -- the checkpoints exist.
+# default was 20; 5 since 2026-10-22). Inference only, no dependencies -- the checkpoints exist.
 #   lr1e5  shockwave_dit_jupiter_baseline_s44        (same DiT as the 40/80-step
 #          evals 2189167/8; 20 steps = 2189145, ch-mean 0.489)
 #   lr1e4  shockwave_dit_jupiter_baseline_s44_lr1e4  (reference; 20 steps = 2189166, 0.4333)

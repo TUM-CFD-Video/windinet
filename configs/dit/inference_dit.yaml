@@ -36,7 +36,10 @@ h5: "euler_mq_dataset/128x128_ds/train.h5"
 normalization: "outputs/vae_meaninit_wsd15_h1x2_lr1x_2gpu/training_config.yaml"
 
 # --- Generation ---
-num_inference_steps: 20    # denoising steps
+# 5 since 2026-10-22 (jupiter baseline = DiT LR 1e-4 + 5 steps): on baseline s44 lr1e4 8k,
+# test ch-mean 5 steps 0.4285 vs 20 steps 0.4333 (2362471 vs 2189166). The thesis and every
+# eval before 2026-10-22 used 20; pass --num_inference_steps 20 / NUM_INFERENCE_STEPS=20 to reproduce.
+num_inference_steps: 5     # denoising steps
 guidance_scale: 1.0        # 1.0 = no classifier-free guidance
 num_frames: 105            # generated length, must be 8k+1 for the LTX VAE
 num_output_frames: 101     # trim back to the true simulation length

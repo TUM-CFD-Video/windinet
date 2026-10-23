@@ -68,7 +68,7 @@
 #   PNGs are gitignored (logs/**/*.png) -- pull them off the cluster
 #   directly (scp/rsync) rather than expecting them in the repo.
 # NUM_INFERENCE_STEPS: optional, default unset -- falls back to
-#   configs/dit/inference_dit.yaml's own num_inference_steps (20). Pass this
+#   configs/dit/inference_dit.yaml's own num_inference_steps (5; 20 before 2026-10-22). Pass this
 #   to test whether a finer ODE discretization at sampling time recovers
 #   rollout quality without retraining (exposure-bias / step-accumulation
 #   diagnostic) -- same checkpoint, only the sampler's step count changes.

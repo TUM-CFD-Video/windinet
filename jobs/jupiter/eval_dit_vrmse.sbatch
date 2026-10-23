@@ -17,9 +17,9 @@
 # on the first GPU, but the job takes the full node (1 node, 4 GPUs) like every
 # other stage of the jupiter pipeline.
 #
-# Defaults reproduce the thesis protocol (THESIS_RESULTS.md section 3, jobs
-# 546059-546065): the run's standalone test.h5 (256 or 512), all 500 sims, 20 sampler
-# steps (configs/dit/inference_dit.yaml), frame 0 encoded with the posterior
+# Defaults follow the thesis protocol (THESIS_RESULTS.md section 3, jobs
+# 546059-546065) except the sampler: the run's standalone test.h5 (256 or 512), all 500 sims,
+# 5 sampler steps (configs/dit/inference_dit.yaml; 20 in the thesis and before 2026-10-22), frame 0 encoded with the posterior
 # mean, 3 gamma-spread npz samples for figures.
 #
 # Arguments:
@@ -35,7 +35,7 @@
 #   NUM_SAMPLES        optional, default 500
 # Env: TEST_H5 (default: the test.h5 beside the latents' train.h5, so 256 or 512
 # follows the run; "none" = the manifest's val split instead), SAVE_VIS_SAMPLES (default 3), SAVE_NPZ_SAMPLES (default 3), SAVE_VIDEO (1 = MP4s too),
-# NUM_INFERENCE_STEPS (default: config's 20), SIM_IDS (space-separated: evaluate only these
+# NUM_INFERENCE_STEPS (default: config's 5; 20 = thesis protocol), SIM_IDS (space-separated: evaluate only these
 # sims, any split, with an npz for each; pair with TEST_H5=none for training sims).
 #
 # Results: logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json (tracked);
