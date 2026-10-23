@@ -15,9 +15,9 @@
 
 # Single-tile launcher for scripts/eval_dit_vrmse.py -- compares VAE-only
 # reconstruction vs full VAE+DiT rollout on the SAME held-out sims the VAE
-# was validated on, using the SAME val_vrmse formula (normalized-space
+# was validated on, using the SAME val_vrmse_chmean formula (normalized-space
 # variance-normalized RMSE), so the two are directly comparable to each
-# other and to the already-committed VAE val_vrmse numbers. Reports BOTH
+# other and to the VAE val_vrmse_chmean numbers. Reports BOTH
 # decoded pixel-space VRMSE and raw latent-space VRMSE/RMSE (2026-08-31:
 # merged in from the former standalone eval_dit_latent_vrmse.py -- one
 # sbatch, one DiT rollout per sample, instead of two -- see

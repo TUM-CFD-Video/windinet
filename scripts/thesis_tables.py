@@ -3,10 +3,10 @@
 
 Writes three tables into thesis/tables/:
   vae_test.tex  VAE reconstruction on the standalone 256x256 test.h5 (500 sims):
-                pooled VRMSE, channel-mean VRMSE +- SEM, delta vs. the baseline,
-                per-channel VRMSE. Source: <run>/test_eval_256.json.
-  vae_val.tex   the same arms on the 500-sim validation split, at the checkpoint
-                with the best val_vrmse (always epoch 20 here). Source:
+                channel-mean VRMSE +- SEM, delta vs. the baseline, per-channel
+                VRMSE. Source: <run>/test_eval_256.json.
+  vae_val.tex   the same arms on the 500-sim validation split, at the epoch with
+                the best channel-mean val VRMSE. Source:
                 <run>/metrics/metrics.csv. Shows that test and val agree.
   dit.tex       VAE-only vs VAE+DiT on test.h5 per DiT arm. Source:
                 logs/sng_pvc/eval_dit_vrmse/<job>/vrmse_summary.json; for each
@@ -15,7 +15,9 @@ Writes three tables into thesis/tables/:
                 printed; check them.
 
 SEMs are over the 500 per-sim values. Deltas are relative to the baseline's
-channel-mean VRMSE. Rerun after new results land:
+channel-mean VRMSE. VRMSE is always per channel (then the channel mean); the
+pooled VRMSE the thesis tables also showed was removed 2026-10-24.
+Rerun after new results land:
     python scripts/thesis_tables.py
 """
 
@@ -115,16 +117,16 @@ def vae_test() -> None:
         if key not in reports:
             continue
         m = reports[key]["metrics"]
-        cells = [label, f"{m['vrmse']:.4f}",
+        cells = [label,
                  f"{m['vrmse_chmean']:.4f} $\\pm$ {m['vrmse_chmean_sem']:.4f}",
                  _pct(m["vrmse_chmean"], base)] + [f"{m['vrmse_' + c]:.4f}" for c in CH]
         if key == BASELINE:
-            cells = [f"\\textbf{{{c}}}" if i in (0, 2) else c for i, c in enumerate(cells)]
+            cells = [f"\\textbf{{{c}}}" if i in (0, 1) else c for i, c in enumerate(cells)]
         rows.append((group, cells))
     _write(
-        "vae_test.tex", "lrrrrrrr",
-        "Arm & Pooled & Ch.\\ mean $\\pm$ SEM & $\\Delta$ & $\\rho$ & $m_x$ & $m_y$ & $p$",
-        _group_rows(rows, 8),
+        "vae_test.tex", "lrrrrrr",
+        "Arm & Ch.\\ mean $\\pm$ SEM & $\\Delta$ & $\\rho$ & $m_x$ & $m_y$ & $p$",
+        _group_rows(rows, 7),
         "VAE reconstruction VRMSE on the held-out test set (500 simulations, $256\\times256$). "
         "$\\Delta$ is the change of the channel-mean VRMSE relative to the baseline. "
         "Lower is better. The model trained at $128^2$ is applied directly to the "
@@ -144,23 +146,23 @@ def vae_val() -> None:
         p = _run_dir(key, cluster) / "metrics" / "metrics.csv"
         if not p.exists():
             continue  # the unfinetuned reference was never trained, so it has no val row
-        rows = [r for r in csv.DictReader(p.open()) if r.get("val_vrmse")]
-        best = min(rows, key=lambda r: float(r["val_vrmse"]))
+        rows = [r for r in csv.DictReader(p.open()) if r.get(f"val_vrmse_{CH[0]}")]
+        best = min(rows, key=lambda r: np.mean([float(r[f"val_vrmse_{c}"]) for c in CH]))
         chans = [float(best[f"val_vrmse_{c}"]) for c in CH]
-        vals[key] = (int(best["epoch"]), float(best["val_vrmse"]), float(np.mean(chans)), chans)
-    base_val, base_test = vals[BASELINE][2], test[BASELINE]
+        vals[key] = (int(best["epoch"]), float(np.mean(chans)), chans)
+    base_val, base_test = vals[BASELINE][1], test[BASELINE]
     rows = []
     for key, _, group, label in VAE_ARMS:
         if key not in vals:
             continue
-        ep, pooled, chmean, chans = vals[key]
-        cells = [label, str(ep), f"{pooled:.4f}", f"{chmean:.4f}", _pct(chmean, base_val),
+        ep, chmean, chans = vals[key]
+        cells = [label, str(ep), f"{chmean:.4f}", _pct(chmean, base_val),
                  _pct(test[key], base_test) if key in test else "n/a"] + [f"{v:.4f}" for v in chans]
         rows.append((group, cells))
     _write(
-        "vae_val.tex", "lrrrrrrrrr",
-        "Arm & Ep. & Pooled & Ch.\\ mean & $\\Delta_\\mathrm{val}$ & $\\Delta_\\mathrm{test}$ & $\\rho$ & $m_x$ & $m_y$ & $p$",
-        _group_rows(rows, 10),
+        "vae_val.tex", "lrrrrrrrr",
+        "Arm & Ep. & Ch.\\ mean & $\\Delta_\\mathrm{val}$ & $\\Delta_\\mathrm{test}$ & $\\rho$ & $m_x$ & $m_y$ & $p$",
+        _group_rows(rows, 9),
         "VAE reconstruction VRMSE on the validation split (500 simulations held out from the "
         "training file) at the checkpoint with the best validation VRMSE. "
         "$\\Delta_\\mathrm{val}$ and $\\Delta_\\mathrm{test}$ compare each arm with the baseline on the "
@@ -193,7 +195,7 @@ def dit() -> None:
         cells = [label, f"{s['vae_only_vrmse_chmean']:.4f}",
                  f"{s['vae_dit_vrmse_chmean']:.4f} $\\pm$ {_sem(per):.4f}",
                  _pct(s["vae_dit_vrmse_chmean"], base)] + \
-                [f"{s['vae_dit_vrmse_per_channel'][c]:.3f}" for c in CH] + [f"{s['latent_vrmse_mean']:.3f}"]
+                [f"{s['vae_dit_vrmse_per_channel'][c]:.3f}" for c in CH] + [f"{np.mean(s['latent_vrmse_per_channel']):.3f}"]
         if arm == "loss_rmse_h1":
             cells = [f"\\textbf{{{c}}}" if i in (0, 2) else c for i, c in enumerate(cells)]
         body.append(" & ".join(cells) + " \\\\")
@@ -204,8 +206,8 @@ def dit() -> None:
         "Channel-mean VRMSE of the VAE reconstruction alone and of the full pipeline "
         "(encode frame 0, DiT rollout, decode) on the test set (500 simulations), for a DiT "
         "trained for 8k steps on each VAE's latents. $\\Delta$ is relative to the baseline VAE; "
-        "the per-channel columns are the VAE + DiT errors; \\emph{Latent} is the VRMSE of the "
-        "rolled-out latent against the encoder's latent of the ground truth.",
+        "the per-channel columns are the VAE + DiT errors; \\emph{Latent} is the channel-mean VRMSE "
+        "of the rolled-out latent against the encoder's latent of the ground truth.",
         "tab:app_dit",
     )
 

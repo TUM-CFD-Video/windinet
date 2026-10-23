@@ -282,12 +282,13 @@ class CheckpointsConfig(ConfigBaseModel):
             "weights with last-epoch optimizer moments would silently corrupt a resume."
         ),
     )
-    best_metric: Literal["val_total_loss", "val_vrmse"] = Field(
+    best_metric: Literal["val_total_loss", "val_vrmse_chmean"] = Field(
         default="val_total_loss",
         description=(
             "Metric that decides 'best' (lower is better). val_total_loss depends on the "
             "configured loss weights and so is not comparable across runs that weight the "
-            "terms differently; val_vrmse is weight-independent."
+            "terms differently; val_vrmse_chmean (per-channel VRMSE, averaged over "
+            "channels) is weight-independent. The pooled 'val_vrmse' was removed 2026-10-24."
         ),
     )
     save_last_state: bool = Field(

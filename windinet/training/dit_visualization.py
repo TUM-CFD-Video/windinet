@@ -23,8 +23,8 @@ by scripts/inference_shockwave.py.
 
 2026-09-05: also writes <output_dir>/dit_vrmse_metrics.csv + dit_vrmse_curve.png
 every call -- latent-space and pixel-space VRMSE (same normalized-space
-variance-normalized-RMSE formula/space VaeTrainer's own val_vrmse and
-scripts/eval_dit_vrmse.py use) on the SAME fixed samples, averaged across
+variance-normalized-RMSE formula/space VaeTrainer's own val_vrmse_chmean and
+scripts/eval_dit_vrmse.py use: per channel, then the channel mean) on the SAME fixed samples, averaged across
 them, one row per training step this ran at. This was previously only
 obtainable by running scripts/eval_dit_vrmse.py as a separate, later job
 against a saved checkpoint; getting it here is close to free because the
@@ -54,7 +54,7 @@ from torch.amp import autocast
 
 from windinet.inference.model_loader import load_inflated_vae
 from windinet.inference.pipeline import LTXConditionPipeline
-from windinet.losses import vrms_loss
+from windinet.losses import vrms_chmean
 from windinet.training.shockwave_data import (
     CHANNEL_NAMES,
     ShockWaveDataset,
@@ -342,7 +342,7 @@ class DitVisualizer:
             # Full normalized ground truth -- used both as the VAE-encode input
             # (for the latent-space comparison below) and as the pixel-space
             # vrmse comparand (same normalized-space convention VaeTrainer's
-            # own val_vrmse and scripts/eval_dit_vrmse.py use -- NOT the
+            # own val_vrmse_chmean and scripts/eval_dit_vrmse.py use -- NOT the
             # denormalized-physical-units `gt` the panels below compare
             # against).
             gt_norm = normalize_fields(
@@ -393,14 +393,14 @@ class DitVisualizer:
             # uses via pad_frames_8n1 elsewhere in the codebase.
             gt_latent = _vae_encode(self._vae, pad_frames_8n1(gt_norm)).float()
             pred_lat_trim, gt_lat_trim = _trim_latent_frames(pred_latent, gt_latent)
-            sample_latent_vrmse = float(vrms_loss(pred_lat_trim, gt_lat_trim).item())
+            sample_latent_vrmse = float(vrms_chmean(pred_lat_trim, gt_lat_trim).item())
             sum_latent_vrmse += sample_latent_vrmse
 
             pred_norm = _vae_decode(self._vae, pred_lat_trim.to(self._dtype), self._default_temb).float()
             gt_norm_f32 = gt_norm.float()
             n_px = min(pred_norm.shape[2], gt_norm_f32.shape[2])
             sample_pixel_vrmse = float(
-                vrms_loss(pred_norm[:, :, :n_px], gt_norm_f32[:, :, :n_px]).item()
+                vrms_chmean(pred_norm[:, :, :n_px], gt_norm_f32[:, :, :n_px]).item()
             )
             sum_pixel_vrmse += sample_pixel_vrmse
 

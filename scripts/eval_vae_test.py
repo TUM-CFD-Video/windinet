@@ -4,16 +4,16 @@
 Chapter 6 compares every VAE fine-tuning arm on one common held-out set:
 the Euler_MQ ``256x256_ds/test.h5`` file. That file is a sibling of train.h5
 and was never part of any train/val split or tuning decision. The per-run
-``val_vrmse`` in metrics.csv is not usable for this comparison: it was
+``val_vrmse_chmean`` in metrics.csv is not usable for this comparison: it was
 measured on each run's own validation slice of train.h5, at each run's own
 training resolution (the 128res arm validates on 128x128 data), and it also
 picked the checkpoint.
 
 Metrics are the same ones VaeTrainer._evaluate logs, computed with the same
-functions (vrmse / vrmse_per_channel from windinet.training.vae_trainer):
+function (vrmse_per_channel from windinet.training.vae_trainer):
 
-  * ``vrmse``         -- pooled over all channels (the historical val_vrmse)
-  * ``vrmse_chmean``  -- mean of the four per-channel VRMSEs (headline metric)
+  * ``vrmse_chmean``  -- mean of the per-channel VRMSEs (headline metric; the
+                         pooled VRMSE was removed 2026-10-24)
   * ``vrmse_<field>`` -- per-channel breakdown
 
 They are accumulated per sim and then averaged, so the result does not depend
@@ -63,7 +63,7 @@ from torch.utils.data import DataLoader, Subset
 from windinet.config import VaeTrainerConfig
 from windinet.inference.model_loader import load_vae
 from windinet.training.shockwave_data import ShockWaveDataset, build_shockwave_video, pick_spread_ids
-from windinet.training.vae_trainer import vrmse, vrmse_per_channel
+from windinet.training.vae_trainer import vrmse_per_channel
 from windinet.utils import get_default_device
 from windinet.vae_adapter import inflate_vae_io_channels, load_adapted_vae, load_inflated_vae_checkpoint
 
@@ -208,7 +208,6 @@ def main(
                 per_channel = vrmse_per_channel(pred_i, target_i)
                 row = {
                     "id": ids[i],
-                    "vrmse": vrmse(pred_i, target_i),
                     "vrmse_chmean": float(per_channel.mean().item()),
                 }
                 row.update({f"vrmse_{name}": float(v) for name, v in zip(channel_order, per_channel.tolist())})
@@ -232,7 +231,7 @@ def main(
                     )
             console.print(f"  {len(per_sim)}/{len(indices)} sims  ({time.time() - t0:.0f}s)")
 
-    keys = ["vrmse", "vrmse_chmean"] + [f"vrmse_{name}" for name in channel_order]
+    keys = ["vrmse_chmean"] + [f"vrmse_{name}" for name in channel_order]
     summary = {}
     for key in keys:
         values = torch.tensor([row[key] for row in per_sim], dtype=torch.float64)

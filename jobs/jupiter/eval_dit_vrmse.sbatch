@@ -101,9 +101,11 @@ EXTRA_ARGS=()
 [[ "${TEST_H5}" != none ]] && EXTRA_ARGS+=(--test_h5 "${TEST_H5}")
 [[ -n "${NUM_INFERENCE_STEPS}" ]] && EXTRA_ARGS+=(--num_inference_steps "${NUM_INFERENCE_STEPS}")
 [[ -n "${SIM_IDS:-}" ]] && EXTRA_ARGS+=(--sim_ids ${SIM_IDS})
-# cfd_bench comparison (Harish, 2026-10-19): SCORE_FRAMES="40 50 60 70 80 90 100" CLAMP_PREDICTION=1
+# Benchmark block (Harish's cfd_bench scoring, the default since 2026-10-24): every
+# 10th frame from 40, prediction and target clamped to [-1, 1]. SCORE_FRAMES="..."
+# overrides the frames, CLAMP_PREDICTION=0 turns the clamp off.
 [[ -n "${SCORE_FRAMES:-}" ]] && EXTRA_ARGS+=(--score_frames ${SCORE_FRAMES})
-[[ "${CLAMP_PREDICTION:-0}" == 1 ]] && EXTRA_ARGS+=(--clamp_prediction)
+[[ "${CLAMP_PREDICTION:-1}" == 0 ]] && EXTRA_ARGS+=(--no-clamp_prediction)
 # SAVE_VIDEO=1: an MP4 over all frames for each visualized sample (next to its PNG panels).
 [[ "${SAVE_VIDEO:-0}" == 1 ]] && EXTRA_ARGS+=(--save_video)
 [[ "${SAVE_NPZ_SAMPLES}" != 0 ]] && EXTRA_ARGS+=(--save_npz_samples "${SAVE_NPZ_SAMPLES}" --npz_dir "${NPZ_DIR}")

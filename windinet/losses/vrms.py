@@ -1,11 +1,15 @@
 """
 Variance-normalized RMSE (VRMS) loss.
 
-Same metric already used for evaluation (windinet.training.vae_trainer.vrmse,
-"val_vrmse" in metrics.csv), exposed here as a differentiable loss so it can
-optionally be optimized directly instead of only monitored. Normalizing by
-the target's own variance means a channel with small dynamic range isn't
-automatically "cheap" to get right the way plain RMSE would let it be.
+Per channel, then averaged over channels (The Well's convention; the
+"val_vrmse_chmean" eval metric, exposed here as a differentiable loss so it can
+optionally be optimized directly). Normalizing by each field's own variance
+means a channel with small dynamic range isn't automatically "cheap" to get
+right the way plain RMSE would let it be.
+
+The pooled variant (one variance over all channels together) was removed on
+2026-10-24 and is not used anywhere any more: it also counts the spread between
+the channels' means, so it reads lower than every single channel.
 
 Expected input:
     pred, target: [B, C, T, H, W]
@@ -14,51 +18,15 @@ Expected input:
 import torch
 
 
-def vrms_loss(
-    pred: torch.Tensor,
-    target: torch.Tensor,
-    eps: float = 1e-8,
-) -> torch.Tensor:
-    """
-    Compute variance-normalized RMSE, per sample, averaged over the batch.
-
-    VRMSE = sqrt(mean((pred - target)^2) / var(target))
-
-    Args:
-        pred:
-            Predicted fields.
-            Shape [B, C, T, H, W]
-
-        target:
-            Ground truth fields.
-            Shape [B, C, T, H, W]
-
-        eps:
-            Numerical stability term.
-
-    Returns:
-        Scalar VRMS loss.
-    """
-
-    dims = tuple(range(1, pred.dim()))
-    diff = pred - target
-    mse = diff.square().mean(dim=dims)
-    variance = target.var(dim=dims, unbiased=False)
-
-    return torch.sqrt(mse / (variance + eps)).mean()
-
-
 def vrms_per_channel(
     pred: torch.Tensor,
     target: torch.Tensor,
     eps: float = 1e-8,
 ) -> torch.Tensor:
-    """Same formula as vrms_loss, broken down per channel instead of collapsed.
+    """Variance-normalized RMSE per channel: sqrt(mean((pred - target)^2) / var(target)).
 
-    Reduces over every dim except batch and channel (instead of every dim
-    but batch), so each physical field gets its own variance-normalized RMSE
-    -- lets e.g. "is pressure specifically worse than momentum_x" be read
-    off directly instead of only ever seeing the all-channels-mixed scalar.
+    Reduces over every dim except batch and channel, so each physical field
+    gets its own variance-normalized RMSE.
 
     Args:
         pred, target: [B, C, T, H, W]
@@ -73,3 +41,13 @@ def vrms_per_channel(
     variance = target.var(dim=dims, unbiased=False)
 
     return torch.sqrt(mse / (variance + eps)).mean(dim=0)
+
+
+def vrms_chmean(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """Mean over channels of vrms_per_channel -- the scalar VRMSE everywhere in
+    this repo. pred, target: [B, C, T, H, W]."""
+    return vrms_per_channel(pred, target, eps=eps).mean()

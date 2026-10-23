@@ -21,7 +21,7 @@ from .h1_semi_norm import h1_seminorm_loss
 from .h2_semi_norm import h2_seminorm_loss
 from .mlw import mlw_loss
 from .pcc import pcc_loss
-from .vrms import vrms_loss
+from .vrms import vrms_chmean
 from .kl_divergence import kl_divergence_loss
 
 
@@ -64,7 +64,7 @@ def reconstruction_losses(
             Structural correlation, magnitude-invariant -- opt-in
 
         VRMS:
-            Variance-normalized RMSE (same metric as val_vrmse) -- opt-in
+            Variance-normalized RMSE, channel mean (same metric as val_vrmse_chmean) -- opt-in
 
         KL:
             Encoder posterior vs. standard-normal-prior divergence --
@@ -186,7 +186,7 @@ def reconstruction_losses(
     # Variance-normalized error
     # ------------------------------------
 
-    losses["vrms"] = vrms_loss(
+    losses["vrms"] = vrms_chmean(
         pred,
         target,
     )

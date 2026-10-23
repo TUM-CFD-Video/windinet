@@ -8,9 +8,11 @@ reconstruction floor" -- using the SAME held-out sims the VAE was validated
 on (read from <preprocessed_data_root>/split_manifest.json, written by
 preprocess_dataset.py -- see that script's own comment: recorded so the val
 set can be "reproduced ... without re-deriving the permutation") and the
-SAME variance-normalized-RMSE formula/space VaeTrainer's own val_vrmse uses
-(windinet.losses.vrms, computed on NORMALIZED fields, matching
-vae_trainer.py's _validate -- NOT denormalized physical units).
+SAME variance-normalized-RMSE formula/space VaeTrainer's own val_vrmse_chmean
+uses (windinet.losses.vrms: per channel, then the mean over channels, computed
+on NORMALIZED fields, matching vae_trainer.py's _validate -- NOT denormalized
+physical units). The pooled VRMSE (one variance over all channels together)
+was removed 2026-10-24 and is not reported any more.
 
 Two passes per sample, same ground truth, same metric:
   - vae_only:  encode the full ground-truth sequence with the VAE, decode,
@@ -20,7 +22,7 @@ Two passes per sample, same ground truth, same metric:
                full inference-time pipeline inference_shockwave.py runs.
 
 Both passes are reported in decoded pixel space (comparable to the VAE's
-own val_vrmse) AND in raw latent space (the vae_dit pass's rollout compared
+own val_vrmse_chmean) AND in raw latent space (the vae_dit pass's rollout compared
 directly against the vae_only pass's own ground-truth latent, no decode in
 between -- 2026-08-31: merged in from the former standalone
 eval_dit_latent_vrmse.py, which existed only to avoid a second, separate
@@ -64,16 +66,17 @@ passes -- vae_only and vae_dit -- under
 so the before/after gap from adding the DiT can be read off visually, same
 layout the training-time panels use.
 
-Benchmark against cfd_bench (cfd_bench/windinet_benchmark_inference.py,
-ported from Harish's dev-hr branch, 2026-10-19): --score_frames restricts the
-"benchmark" block (RMSE, VRMSE per field then mean, 1-SSIM, MLW, each once per
-sim over the scored frames, then averaged over sims) to the frames the
-cfd_bench model predicts -- copy "scored_frames" from its
-benchmark_metrics.json. E.g. sequence_info [4, 1, 10] predicts frames 40, 50,
-..., 100 (needs a 101-frame model; a 97-frame one ends at frame 96).
---clamp_prediction clamps the predictions to [-1, 1] like the target for that
-block only. Use --test_h5 for cfd_bench's test.h5. The existing vrmse keys
-keep their all-frames definition.
+Benchmark block = the headline numbers (cfd_bench/windinet_benchmark_inference.py,
+ported from Harish's dev-hr branch, 2026-10-19; made the default 2026-10-24 on
+his instruction): RMSE, VRMSE (per field, then mean), 1-SSIM and MLW, each once
+per sim over the scored frames, then averaged over sims, with prediction AND
+target clamped to [-1, 1]. The scored frames default to every 10th frame from
+40 on (40, 50, ..., 90 for a 97-frame model; 40, ..., 100 for a 101-frame
+one) -- his autoregressive baseline takes 4 frames at stride 10 and predicts
+every 10th frame from 40, so both models are scored on the same frames.
+--score_frames overrides the frames, --no-clamp_prediction the clamp. The
+*_vrmse_chmean / *_vrmse_per_channel keys keep their all-frames, unclamped
+definition for comparison with older evals.
 """
 
 import argparse
@@ -91,7 +94,7 @@ from windinet.checkpoints import ensure_checkpoint
 from windinet.config import ScalarConditioningConfig
 from windinet.inference.model_loader import load_ltxv_components, select_vae_env
 from windinet.inference.pipeline import LTXConditionPipeline
-from windinet.losses import SSIMLoss, mlw_loss, rmse_loss, vrms_loss, vrms_per_channel
+from windinet.losses import SSIMLoss, mlw_loss, rmse_loss, vrms_per_channel
 from windinet.scalar_embeddings import ScalarEmbedding
 from windinet.training.shockwave_data import (
     ShockWaveDataset,
@@ -187,7 +190,7 @@ def build_initial_condition(sample, stats, device):
 # VAE-only encode/decode, copied from VaeTrainer._encode/_decode
 # (windinet/training/vae_trainer.py) so the "VAE-only" pass matches the
 # exact rescaling (latents_mean/std, scaling_factor, default_temb) that
-# produced the already-committed val_vrmse numbers -- reimplementing this
+# produced the already-committed VAE val numbers -- reimplementing this
 # math independently would risk a silent mismatch against those numbers.
 # ----------------------------------------------------------------------
 
@@ -230,7 +233,8 @@ BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw")
 
 def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
     """RMSE, VRMSE (per field, then mean), 1-SSIM, MLW for one sim, [1, C, T, H, W] restricted to the scored frames.
-    Same definitions as cfd_bench/windinet_benchmark_inference.py."""
+    Same definitions as cfd_bench/windinet_benchmark_inference.py; pred and target arrive clamped to [-1, 1]
+    unless --no-clamp_prediction."""
     return {
         "rmse": float(rmse_loss(pred, target).item()),
         "vrmse": float(vrms_per_channel(pred, target).mean().item()),  # per field, then mean (Li eq. 5.11, The Well)
@@ -298,11 +302,11 @@ def parse_args():
                           "come from any split; the split of each id is printed. The averages then cover "
                           "only these sims, not a held-out set.")
     ap.add_argument("--score_frames", type=int, nargs="+", default=None,
-                     help="0-indexed frames the benchmark metrics are computed on (default: all). "
-                          "Use cfd_bench's scored_frames, e.g. 40 50 60 70 80 90 100")
-    ap.add_argument("--clamp_prediction", action="store_true",
-                     help="Clamp the predictions to [-1, 1] (like the target) for the benchmark block only; "
-                          "must match cfd_bench's infer_loss_windinet.yaml clamp_prediction")
+                     help="0-indexed frames the benchmark metrics are computed on (default: every 10th "
+                          "frame from 40, as cfd_bench scores them: 40 50 ... 90 for 97 frames, ... 100 for 101)")
+    ap.add_argument("--clamp_prediction", action=argparse.BooleanOptionalAction, default=True,
+                     help="Clamp prediction and target to [-1, 1] before the benchmark metrics (default on, "
+                          "as in cfd_bench); --no-clamp_prediction turns it off")
     return ap.parse_args()
 
 
@@ -420,9 +424,8 @@ def main():
     per_sample = []
     ssim_fn = SSIMLoss(channels=n_ch).to(device)
     bench_values = {"vae_only": {m: [] for m in BENCHMARK_METRICS}, "vae_dit": {m: [] for m in BENCHMARK_METRICS}}
-    sum_overall = {"vae_only": 0.0, "vae_dit": 0.0}
     sum_channel = {"vae_only": [0.0] * n_ch, "vae_dit": [0.0] * n_ch}
-    sum_lat_vrmse, sum_lat_rmse, sum_lat_mse = 0.0, 0.0, 0.0
+    sum_lat_rmse, sum_lat_mse = 0.0, 0.0
     sum_lat_channel = None  # lazily sized to the latent's own channel count on first sample
     sum_lat_channel_mse = None
 
@@ -450,7 +453,6 @@ def main():
         vae_recon = vae_decode(pipe.vae, gt_latent, args.default_temb).float()
         vae_recon = pad_to(vae_recon, orig_F)
 
-        vo_overall = float(vrms_loss(vae_recon[:, :, :score_F], target[:, :, :score_F]).item())
         vo_channel = vrms_per_channel(vae_recon[:, :, :score_F], target[:, :, :score_F]).tolist()
 
         # --- VAE+DiT pass: condition on frame 0 only, roll the rest out ---
@@ -488,11 +490,11 @@ def main():
         dit_pred_latent = out.frames.float()
         pred_lat, cmp_gt_lat = trim_latent_frames(dit_pred_latent, gt_latent.float())
 
-        lat_vrmse = float(vrms_loss(pred_lat, cmp_gt_lat).item())
         lat_rmse = float(rmse_loss(pred_lat, cmp_gt_lat).item())
         lat_sq_err = (pred_lat - cmp_gt_lat) ** 2
         lat_mse = float(lat_sq_err.mean().item())
         lat_channel = vrms_per_channel(pred_lat, cmp_gt_lat)
+        lat_vrmse = float(lat_channel.mean().item())
         lat_channel_mse = lat_sq_err.mean(dim=(0, 2, 3, 4))
         if sum_lat_channel is None:
             sum_lat_channel = torch.zeros(lat_channel.shape[0])
@@ -502,21 +504,21 @@ def main():
 
         # Decoded pixel space -- same predicted latent, one extra decode
         # (zero extra transformer forward passes), directly comparable to
-        # vo_overall/target above. out.frames: [B, F, C, H, W] in the SAME
+        # vae_recon/target above. out.frames: [B, F, C, H, W] in the SAME
         # normalized [-1,1] space as `target` (do_normalize=False on the
-        # video processor) -- do not denormalize here, val_vrmse is a
+        # video processor) -- do not denormalize here, VRMSE is a
         # normalized-space metric.
         dit_full = pad_to(vae_decode(pipe.vae, pred_lat.to(DTYPE), args.default_temb).float(), orig_F)
         n_px = min(dit_full.shape[2], target.shape[2], score_F)
         dit_pred, target_cmp = dit_full[:, :, :n_px], target[:, :, :n_px]
 
-        vd_overall = float(vrms_loss(dit_pred, target_cmp).item())
         vd_channel = vrms_per_channel(dit_pred, target_cmp).tolist()
+        vo_chmean, vd_chmean = sum(vo_channel) / n_ch, sum(vd_channel) / n_ch
 
         # Benchmark block: all four metrics on the scored frames only (not
         # cropped by --metric_frames: the scored frames pick their own).
-        score_frames = args.score_frames if args.score_frames is not None else list(range(score_F))
         n_avail = min(dit_full.shape[2], vae_recon.shape[2], target.shape[2])
+        score_frames = args.score_frames if args.score_frames is not None else list(range(40, n_avail, 10))
         if max(score_frames) >= n_avail:
             raise SystemExit(f"--score_frames {score_frames} exceeds the {n_avail} frames available for {sid}")
         frame_idx = torch.as_tensor(score_frames, device=target.device)
@@ -524,6 +526,9 @@ def main():
         vae_only_scored = vae_recon.index_select(2, frame_idx)
         vae_dit_scored = dit_full.index_select(2, frame_idx)
         if args.clamp_prediction:
+            # The target is already in [-1, 1] (build_shockwave_video clamps);
+            # clamped again so the block does not depend on that.
+            target_scored = target_scored.clamp(-1.0, 1.0)
             vae_only_scored = vae_only_scored.clamp(-1.0, 1.0)
             vae_dit_scored = vae_dit_scored.clamp(-1.0, 1.0)
         bench = {
@@ -536,23 +541,20 @@ def main():
 
         per_sample.append({
             "id": sid, **{k: float(v) for k, v in sample["meta"].items()},
-            "vae_only_vrmse": vo_overall, "vae_dit_vrmse": vd_overall,
+            "vae_only_vrmse_chmean": vo_chmean, "vae_dit_vrmse_chmean": vd_chmean,
             "vae_only_per_channel": dict(zip(channel_names, vo_channel)),
             "vae_dit_per_channel": dict(zip(channel_names, vd_channel)),
-            "latent_vrmse": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
+            "latent_vrmse_chmean": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
             "benchmark": bench,
         })
-        sum_overall["vae_only"] += vo_overall
-        sum_overall["vae_dit"] += vd_overall
         for c in range(n_ch):
             sum_channel["vae_only"][c] += vo_channel[c]
             sum_channel["vae_dit"][c] += vd_channel[c]
-        sum_lat_vrmse += lat_vrmse
         sum_lat_rmse += lat_rmse
         sum_lat_mse += lat_mse
 
-        print(f"[{i+1}/{len(val_ids)}] {sid}: vae_only={vo_overall:.5f}  vae+dit={vd_overall:.5f}  "
-              f"latent_vrmse={lat_vrmse:.5f}")
+        print(f"[{i+1}/{len(val_ids)}] {sid}: benchmark vrmse vae_only={bench['vae_only']['vrmse']:.5f}  "
+              f"vae+dit={bench['vae_dit']['vrmse']:.5f}  (all frames chmean {vo_chmean:.5f} / {vd_chmean:.5f})")
 
         if sid in npz_ids:
             frames = [f for f in args.npz_frames if f < n_px]
@@ -570,8 +572,8 @@ def main():
                 channel_mean=np.array(stats["channel_mean"]),
                 channel_std=np.array(stats["channel_std"]),
                 normalization_clip=float(stats["normalization_clip"]),
-                vae_only_vrmse_chmean=sum(vo_channel) / n_ch,
-                vae_dit_vrmse_chmean=sum(vd_channel) / n_ch,
+                vae_only_vrmse_chmean=vo_chmean,
+                vae_dit_vrmse_chmean=vd_chmean,
             )
 
         if sid in vis_ids:
@@ -629,16 +631,16 @@ def main():
         "num_frames_generated": num_frames,
         "metric_frames": args.metric_frames,
         "num_inference_steps": num_inference_steps,
-        "vae_only_vrmse_mean": sum_overall["vae_only"] / n,
-        "vae_dit_vrmse_mean": sum_overall["vae_dit"] / n,
         "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(channel_names)},
         "vae_dit_vrmse_per_channel": {name: sum_channel["vae_dit"][c] / n for c, name in enumerate(channel_names)},
-        # Mean of the per-channel VRMSEs (The Well's convention), same as the
-        # VAE trainer's val_vrmse_chmean. The *_vrmse_mean above uses one pooled
-        # variance over all channels and is kept for comparability.
+        # All frames, unclamped: mean of the per-channel VRMSEs (The Well's
+        # convention), same as the VAE trainer's val_vrmse_chmean. Kept for
+        # comparison with evals from before 2026-10-24; the headline numbers
+        # are the benchmark block's.
         "vae_only_vrmse_chmean": sum(sum_channel["vae_only"]) / (n_ch * n),
         "vae_dit_vrmse_chmean": sum(sum_channel["vae_dit"]) / (n_ch * n),
-        "latent_vrmse_mean": sum_lat_vrmse / n,
+        # Mean over the latent channels of the per-channel latent VRMSE.
+        "latent_vrmse_chmean": sum(mean_lat_channel) / len(mean_lat_channel),
         "latent_rmse_mean": sum_lat_rmse / n,
         # Raw (unnormalized) latent MSE, per sim then averaged: the quantity the
         # DiT's flow-matching objective is closest to. Like latent_vrmse it is
@@ -649,11 +651,11 @@ def main():
         "worst_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[:5]],
         "best_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[-5:]],
         "benchmark": {
-            "scored_frames": args.score_frames if args.score_frames is not None else "all",
+            "scored_frames": score_frames,  # same for every sim (one frame count per latent set)
             "clamp_prediction": bool(args.clamp_prediction),
             "notes": "each metric once per sim over the scored frames and all channels, then the plain "
-                     "mean over sims; vrmse is per field then mean; ssim is 1 - SSIM; target clamped to "
-                     "[-1, 1], prediction clamped only if clamp_prediction",
+                     "mean over sims; vrmse is per field then mean; ssim is 1 - SSIM; prediction and "
+                     "target clamped to [-1, 1] if clamp_prediction",
             **{
                 label: {
                     m: {"mean": float(torch.tensor(v, dtype=torch.float64).mean()),
@@ -669,26 +671,23 @@ def main():
 
     print("\n" + "=" * 60)
     print(f"n={n} sims")
-    print(f"VAE-only  val_vrmse (pixel)  : {summary['vae_only_vrmse_mean']:.5f}")
-    print(f"VAE+DiT   val_vrmse (pixel)  : {summary['vae_dit_vrmse_mean']:.5f}")
-    delta = summary["vae_dit_vrmse_mean"] - summary["vae_only_vrmse_mean"]
-    pct = delta / summary["vae_only_vrmse_mean"] * 100
-    print(f"Delta (DiT forecasting cost on top of VAE recon): {delta:+.5f} ({pct:+.1f}%)")
-    print(f"VAE-only  val_vrmse_chmean   : {summary['vae_only_vrmse_chmean']:.5f}")
-    print(f"VAE+DiT   val_vrmse_chmean   : {summary['vae_dit_vrmse_chmean']:.5f}")
-    for name in channel_names:
-        vo = summary["vae_only_vrmse_per_channel"][name]
-        vd = summary["vae_dit_vrmse_per_channel"][name]
-        print(f"  {name:12s} vae_only={vo:.5f}  vae+dit={vd:.5f}  delta={vd - vo:+.5f}")
-    print(f"\nDiT rollout vs VAE-encoder ground truth, LATENT space (isolated from VAE decode):")
-    print(f"  latent_vrmse : {summary['latent_vrmse_mean']:.5f}")
-    print(f"  latent_rmse  : {summary['latent_rmse_mean']:.5f}")
-    print(f"  latent_mse   : {summary['latent_mse_mean']:.5f}")
-    print(f"  worst 5 latent channels: {summary['worst_5_latent_channels']}")
-    print(f"\nBenchmark metrics (comparable to cfd_bench), frames {summary['benchmark']['scored_frames']}:")
+    print(f"Benchmark metrics (cfd_bench definitions), frames {summary['benchmark']['scored_frames']}, "
+          f"clamp={summary['benchmark']['clamp_prediction']}:")
     for label in ("vae_only", "vae_dit"):
         print(f"  {label:9s} " + "  ".join(
             f"{m}={summary['benchmark'][label][m]['mean']:.5f}" for m in BENCHMARK_METRICS))
+    print(f"\nAll frames, unclamped:")
+    print(f"  VAE-only  vrmse_chmean : {summary['vae_only_vrmse_chmean']:.5f}")
+    print(f"  VAE+DiT   vrmse_chmean : {summary['vae_dit_vrmse_chmean']:.5f}")
+    for name in channel_names:
+        vo = summary["vae_only_vrmse_per_channel"][name]
+        vd = summary["vae_dit_vrmse_per_channel"][name]
+        print(f"    {name:12s} vae_only={vo:.5f}  vae+dit={vd:.5f}  delta={vd - vo:+.5f}")
+    print(f"\nDiT rollout vs VAE-encoder ground truth, LATENT space (isolated from VAE decode):")
+    print(f"  latent_vrmse_chmean : {summary['latent_vrmse_chmean']:.5f}")
+    print(f"  latent_rmse         : {summary['latent_rmse_mean']:.5f}")
+    print(f"  latent_mse          : {summary['latent_mse_mean']:.5f}")
+    print(f"  worst 5 latent channels: {summary['worst_5_latent_channels']}")
     print(f"\nSaved: {args.out_dir / 'vrmse_summary.json'}")
     if vis_ids:
         print(f"Saved GT/Prediction/Residual panels for {len(vis_ids)} sample(s) spanning the gamma "

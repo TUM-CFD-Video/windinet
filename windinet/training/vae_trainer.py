@@ -55,7 +55,6 @@ from windinet.losses import (
     reconstruction_losses,
     SlicedWassersteinPrior,
     SSIMLoss,
-    vrms_loss,
     vrms_per_channel,
 )
 
@@ -82,24 +81,12 @@ IS_MAIN_PROCESS = os.environ.get("LOCAL_RANK", "0") == "0"
 
 
 @torch.no_grad()
-def vrmse(pred: torch.Tensor, target: torch.Tensor, eps: float = 1e-8) -> float:
-    """Variance-normalized RMSE, averaged over the batch.
-
-    Thin float-returning wrapper around windinet.losses.vrms_loss (the
-    differentiable version used as an optional training loss) -- kept
-    separate because this one is @torch.no_grad() and always reports a
-    plain float, for the "val_vrmse" eval metric specifically.
-    """
-    return float(vrms_loss(pred.float(), target.float(), eps=eps).item())
-
-
-@torch.no_grad()
 def vrmse_per_channel(pred: torch.Tensor, target: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
-    """Per-channel breakdown of vrmse(): variance-normalized RMSE per physical field.
+    """Variance-normalized RMSE per physical field, for the val metrics.
 
-    Thin float32-tensor-returning wrapper around windinet.losses.vrms_per_channel,
-    same reasoning as vrmse() above -- kept separate from the differentiable
-    vrms_loss/vrms_per_channel so callers never need to worry about grad state.
+    Thin float32-tensor-returning @torch.no_grad() wrapper around
+    windinet.losses.vrms_per_channel, so callers never need to worry about grad
+    state. Its mean over channels is val_vrmse_chmean.
     Caller is responsible for mapping the returned [C] tensor's indices back to
     physical field names via cfg.data.channel_order (the order build_shockwave_video
     actually stacked channels in for this run).
@@ -630,7 +617,7 @@ class VaeTrainer:
             n_train = n_eval = k
             logger.warning(
                 f"OVERFIT DIAGNOSTIC: training and evaluating on the same {k} sims "
-                f"(repeated {repeat}x per epoch). val_vrmse measures memorization, "
+                f"(repeated {repeat}x per epoch). val_vrmse_chmean measures memorization, "
                 "not generalization."
             )
         else:
@@ -1106,8 +1093,8 @@ class VaeTrainer:
                 # LR in sync without an extra broadcast. Must also run unconditionally
                 # (not gated on IS_MAIN_PROCESS) for the same reason as _evaluate.
                 monitored = (
-                    val_metrics["vrmse"]
-                    if cfg.checkpoints.best_metric == "val_vrmse"
+                    val_metrics["vrmse_chmean"]
+                    if cfg.checkpoints.best_metric == "val_vrmse_chmean"
                     else val_metrics["total_loss"]
                 )
                 if sched_type == "warmup_plateau" and global_opt_step >= warmup_steps:
@@ -1119,7 +1106,6 @@ class VaeTrainer:
                     logger.info(
                         f"Epoch {epoch}: train_loss={avg_loss:.6f}  "
                         f"val_loss={val_metrics['total_loss']:.6f}  "
-                        f"val_VRMSE={val_metrics['vrmse']:.6f}  "
                         f"val_VRMSE_chmean={val_metrics['vrmse_chmean']:.6f}  lr={lr:.2e}"
                     )
 
@@ -1128,22 +1114,20 @@ class VaeTrainer:
                         "learning_rate": lr,
                         "train_total_loss": avg_loss,
                         "val_total_loss": val_metrics["total_loss"],
-                        "val_vrmse": val_metrics["vrmse"],
                         # Pre-clip total gradient norm over this epoch's optimizer
                         # steps, and how many of them were clipped.
                         "grad_norm_mean": sum(clip_norms) / len(clip_norms) if clip_norms else float("nan"),
                         "grad_norm_max": max(clip_norms) if clip_norms else float("nan"),
                         "grad_norm_clipped": sum(n > cfg.optimization.max_grad_norm for n in clip_norms),
                         **{f"train_{name}": value for name, value in epoch_losses.items()},
-                        # Every val_metrics key except the two already
-                        # special-cased above -- dynamically covers h2/pcc/
-                        # vrms (always present) and kl (present iff this
-                        # run passed latent_mean/latent_logvar), not just
-                        # the original four.
+                        # Every val_metrics key except total_loss (special-cased
+                        # above) -- vrmse_chmean / vrmse_<field>, h2/pcc/vrms
+                        # (always present) and kl (present iff this run passed
+                        # latent_mean/latent_logvar), not just the original four.
                         **{
                             f"val_{name}": value
                             for name, value in val_metrics.items()
-                            if name not in ("total_loss", "vrmse")
+                            if name != "total_loss"
                         },
                     }
                     metrics_history.append(metrics_row)
@@ -1157,7 +1141,6 @@ class VaeTrainer:
                         "epoch": epoch,
                         "epoch/train_loss": avg_loss,
                         "epoch/val_loss": val_metrics["total_loss"],
-                        "epoch/eval_vrmse": val_metrics["vrmse"],
                         "epoch/eval_vrmse_chmean": val_metrics["vrmse_chmean"],
                         "epoch/learning_rate": lr,
                     })
@@ -1289,19 +1272,15 @@ class VaeTrainer:
             # total_loss -- an opt-in loss absent from this config's weights
             # contributes 0 rather than KeyError.
             sums["total_loss"] += float(sum(weights.get(name, 0.0) * value for name, value in losses.items()).item())
-            sums["vrmse"] += vrmse(recon, target)
-            # Per-channel breakdown of the same metric, keyed by physical field
-            # name (not raw index) so it stays interpretable across channel-order
-            # sweep configs that permute which field occupies which channel slot.
+            # Per-channel VRMSE, keyed by physical field name (not raw index) so
+            # it stays interpretable across channel-order sweep configs that
+            # permute which field occupies which channel slot.
             per_channel_vrmse = vrmse_per_channel(recon, target)
             for name, value in zip(self._config.data.channel_order, per_channel_vrmse.tolist()):
                 sums[f"vrmse_{name}"] += value
-            # Mean of the per-channel VRMSEs (The Well's convention). The
-            # pooled "vrmse" above normalizes by one variance over all
-            # channels, which also counts the between-channel spread of the
-            # means and so reads lower than every single channel. Kept
-            # alongside rather than replacing it so historical val_vrmse and
-            # best-checkpoint selection stay comparable.
+            # Mean of the per-channel VRMSEs (The Well's convention) -- the
+            # VRMSE of this repo. The pooled variant (one variance over all
+            # channels) was removed 2026-10-24.
             sums["vrmse_chmean"] += float(per_channel_vrmse.mean().item())
             for name, value in losses.items():
                 sums[name] += float(value.item())

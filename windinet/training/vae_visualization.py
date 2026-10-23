@@ -230,8 +230,8 @@ def save_metrics_history(rows: list[dict[str, float]], output_dir: str | Path) -
         axis.grid(alpha=0.3)
         axis.legend()
 
-    flat_axes[5].plot(epochs, [row["val_vrmse"] for row in rows], marker="o", color="tab:red")
-    flat_axes[5].set(title="Validation VRMSE", xlabel="Epoch", ylabel="VRMSE")
+    flat_axes[5].plot(epochs, [row["val_vrmse_chmean"] for row in rows], marker="o", color="tab:red")
+    flat_axes[5].set(title="Validation VRMSE (channel mean)", xlabel="Epoch", ylabel="VRMSE")
     flat_axes[5].grid(alpha=0.3)
 
     curve_path = metrics_dir / "loss_curves.png"
