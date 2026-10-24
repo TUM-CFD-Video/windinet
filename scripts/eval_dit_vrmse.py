@@ -286,7 +286,7 @@ def parse_args():
                           "(Chapter 6: the same 256x256_ds/test.h5 scripts/eval_vae_test.py uses). The "
                           "manifest is still read, for provenance only.")
     ap.add_argument("--save_npz_samples", type=int, default=0,
-                     help="Save float16 fields (gt_raw, gt_norm, vae_only_norm, vae_dit_norm) of N "
+                     help="Save fields (gt_raw float32; gt_norm, vae_only_norm, vae_dit_norm float16) of N "
                           "gamma-spread sims at --npz_frames for thesis figures; same picks as "
                           "eval_vae_test.py on the same id list")
     ap.add_argument("--npz_frames", type=int, nargs="+", default=[0, 25, 50, 75, 96],
@@ -576,7 +576,7 @@ def main():
                 frames=np.array(frames),
                 channel_order=np.array(channel_names),
                 **{k: float(v) for k, v in sample["meta"].items()},
-                gt_raw=gt_raw[:, frames].numpy().astype(np.float16),
+                gt_raw=gt_raw[:, frames].numpy().astype(np.float32),  # physical units overflow float16 (SRBA pressure ~1e5-1e6)
                 gt_norm=target_cmp[0][:, frames].cpu().numpy().astype(np.float16),
                 vae_only_norm=vae_recon[0][:, frames].cpu().numpy().astype(np.float16),
                 vae_dit_norm=dit_pred[0][:, frames].cpu().numpy().astype(np.float16),

@@ -39,7 +39,7 @@ Usage:
 Figure data: for --save-samples sims spanning the test set's gamma range
 (min/median/max for 3, the same picks for every arm and for
 scripts/eval_dit_vrmse.py --test_h5), the fields at --sample-frames are saved
-as one float16 .npz per sim: gt_raw (physical units), gt_norm and recon_norm
+as one .npz per sim: gt_raw (physical units, float32), gt_norm and recon_norm (float16)
 (the normalized/clipped space the metrics use), plus the normalization stats.
 They go to $SCRATCH/windinet/figure_data/vae_test/<run>/ by default, not
 into the git-tracked run mirror (~5 MB per sim).
@@ -222,7 +222,7 @@ def main(
                         frames=np.array(frames),
                         channel_order=np.array(channel_order),
                         **{k: float(v[i]) for k, v in batch["meta"].items()},
-                        gt_raw=gt_raw[:, frames].numpy().astype(np.float16),
+                        gt_raw=gt_raw[:, frames].numpy().astype(np.float32),  # physical units overflow float16 (SRBA pressure ~1e5-1e6)
                         gt_norm=target[i][:, frames].cpu().numpy().astype(np.float16),
                         recon_norm=recon[i][:, frames].cpu().numpy().astype(np.float16),
                         channel_mean=np.array(cfg.data.channel_mean),
