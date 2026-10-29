@@ -130,3 +130,7 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Is)" "${SLURM_JOB_ID}" "${SLURM_JOB_NAME}
     --save_vis_samples "${SAVE_VIS_SAMPLES}" \
     --out_dir "${OUT_DIR}" \
     ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
+
+# Benchmark block as markdown tables (mean +- std over sims, then per frame), row name
+# TABLE_NAME (default: the DiT run): <OUT_DIR>/benchmark_table.md and this log.
+"${PYTHON}" scripts/benchmark_table.py "${TABLE_NAME:-${RUN}}=${OUT_DIR}/vrmse_summary.json" | tee "${OUT_DIR}/benchmark_table.md"

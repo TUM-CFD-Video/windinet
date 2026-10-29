@@ -8,7 +8,7 @@
 #              (2413328). 101-frame sims, so the full 10..100.
 # Result: the "benchmark" block of logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json --
 # mean over the scored frames (rmse/vrmse/ssim/mlw) and benchmark.per_frame (rmse/vrmse/ssim
-# per frame); scripts/benchmark_table.py prints both as tables.
+# per frame), and both as markdown tables in <same dir>/benchmark_table.md (also at the end of the job log).
 # 2 jobs. ONLY=<names> (space-separated) submits a subset.
 #
 # Run from the repo root on a jupiter login node, windinet env active:
@@ -23,14 +23,14 @@ export CLAMP_PREDICTION=1
 
 if want baseline; then
     VAE_RUN=finetune_vae_jupiter_baseline_s44_256res
-    echo "baseline: $(SCORE_FRAMES="10 20 30 40 50 60 70 80 90" sbatch --parsable jobs/jupiter/eval_dit_vrmse.sbatch \
+    echo "baseline: $(TABLE_NAME="256: baseline s44 + DiT 8k (frames 10-90)" SCORE_FRAMES="10 20 30 40 50 60 70 80 90" sbatch --parsable jobs/jupiter/eval_dit_vrmse.sbatch \
         ${W}/dit_preprocessed/${VAE_RUN} \
         ${W}/dit_outputs/shockwave_dit_jupiter_baseline_s44_lr1e4/checkpoints/model_weights_step_08000.safetensors \
         ${W}/finetune_vae_outputs/${VAE_RUN}/checkpoints/vae_shockwave_best.safetensors)"
 fi
 if want thesis30k; then
     VAE_RUN=finetune_vae_ch6_loss_rmse_h1_256res
-    echo "thesis30k: $(SCORE_FRAMES="10 20 30 40 50 60 70 80 90 100" NUM_INFERENCE_STEPS=20 sbatch --parsable \
+    echo "thesis30k: $(TABLE_NAME="256: thesis DiT 30k (frames 10-100)" SCORE_FRAMES="10 20 30 40 50 60 70 80 90 100" NUM_INFERENCE_STEPS=20 sbatch --parsable \
         jobs/jupiter/eval_dit_vrmse.sbatch \
         ${W}/dit_preprocessed/${VAE_RUN} \
         ${W}/dit_outputs/shockwave_dit_jupiter_ch6_loss_rmse_h1_30k/checkpoints/model_weights_step_30000.safetensors \
