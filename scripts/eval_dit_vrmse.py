@@ -737,6 +737,9 @@ def main():
             "num_inference_steps": num_inference_steps,
             "total_seconds": sum(gen_seconds),
             "seconds_per_trajectory": sum(gen_seconds) / n,
+            "median_seconds_per_trajectory": float(np.median(gen_seconds)),
+            "min_seconds": min(gen_seconds),
+            "max_seconds": max(gen_seconds),
             "seconds_per_trajectory_without_first": (sum(gen_seconds[1:]) / (n - 1)) if n > 1 else None,
             "first_seconds": gen_seconds[0],
         },
@@ -755,7 +758,8 @@ def main():
         f"f{f}: vrmse={v:.4f}" for f, v in zip(score_frames, summary["benchmark"]["per_frame"]["vae_dit"]["vrmse"]["mean"])))
     gt = summary["generation_time"]
     print(f"Generation time ({gt['device']}, {gt['num_inference_steps']} steps): {gt['total_seconds']:.1f} s for "
-          f"{n} trajectories = {gt['seconds_per_trajectory']:.2f} s/trajectory (first sim {gt['first_seconds']:.2f} s)")
+          f"{n} trajectories = mean {gt['seconds_per_trajectory']:.2f} s/trajectory, median "
+          f"{gt['median_seconds_per_trajectory']:.2f} s (range {gt['min_seconds']:.2f}-{gt['max_seconds']:.2f})")
     print(f"\nAll frames, unclamped:")
     print(f"  VAE-only  vrmse_chmean : {summary['vae_only_vrmse_chmean']:.5f}")
     print(f"  VAE+DiT   vrmse_chmean : {summary['vae_dit_vrmse_chmean']:.5f}")

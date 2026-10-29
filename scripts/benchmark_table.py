@@ -5,6 +5,7 @@ trajectory, then the per-frame metrics.
     python scripts/benchmark_table.py baseline=logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json [name=path ...]
 """
 import json
+import statistics
 import sys
 
 FMT = {"rmse": "{:.3f} ± {:.3f}", "vrmse": "{:.3f} ± {:.3f}", "ssim": "{:.3f} ± {:.3f}", "mlw": "{:.1f} ± {:.1f}"}
@@ -13,6 +14,8 @@ runs = [arg.split("=", 1) for arg in sys.argv[1:]]
 full = {name: json.load(open(path)) for name, path in runs}
 summaries = {name: s["benchmark"] for name, s in full.items()}
 gen_time = {name: s.get("generation_time") for name, s in full.items()}
+# Frames the DiT generates: all but the given frame 0.
+n_generated = {name: s["num_sim_frames"] - 1 for name, s in full.items()}
 
 print("| Model | RMSE | VRMSE | 1 – SSIM | MLW |")
 print("|---|---|---|---|---|")
@@ -23,8 +26,12 @@ for name, b in summaries.items():
     print(f"\n{name}: frames {b['scored_frames']}, clamp={b['clamp_prediction']}")
     gt = gen_time.get(name)
     if gt:
-        print(f"{name}: generation {gt['seconds_per_trajectory']:.2f} s/trajectory ({gt['total_seconds']:.0f} s total / "
-              f"{full[name]['n_samples']} sims, {gt['device']}, {gt['num_inference_steps']} steps, batch 1)")
+        t = sorted(r["generation_seconds"] for r in full[name]["per_sample"])
+        median = statistics.median(t)
+        print(f"{name}: generation per trajectory median {median:.2f} s (range {t[0]:.2f}-{t[-1]:.2f}), "
+              f"mean {statistics.mean(t):.2f} s over {len(t)} sims ({sum(t):.0f} s total); per generated frame "
+              f"{median / n_generated[name]:.3f} s (median / {n_generated[name]} frames); {gt['device']}, "
+              f"{gt['num_inference_steps']} steps, batch 1")
 
 for name, b in summaries.items():
     if "per_frame" not in b:
