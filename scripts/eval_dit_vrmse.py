@@ -229,6 +229,8 @@ def trim_latent_frames(a: torch.Tensor, b: torch.Tensor) -> tuple[torch.Tensor, 
 
 
 BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw")
+# Per-frame curve: MLW has a temporal wavelet term, so it is undefined on one frame.
+PER_FRAME_METRICS = ("rmse", "vrmse", "ssim")
 
 
 def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
@@ -241,6 +243,18 @@ def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLos
         "ssim": float(ssim_fn(pred, target).item()),
         "mlw": float(mlw_loss(pred, target).item()),
     }
+
+
+def per_frame_benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
+    """PER_FRAME_METRICS for each scored frame on its own, {metric: [one value per scored frame]}; the VRMSE
+    variance is that frame's spatial variance (The Well's per-step convention)."""
+    out = {m: [] for m in PER_FRAME_METRICS}
+    for t in range(pred.shape[2]):
+        p, g = pred[:, :, t:t + 1], target[:, :, t:t + 1]
+        out["rmse"].append(float(rmse_loss(p, g).item()))
+        out["vrmse"].append(float(vrms_per_channel(p, g).mean().item()))
+        out["ssim"].append(float(ssim_fn(p, g).item()))
+    return out
 
 
 def parse_args():
@@ -428,6 +442,8 @@ def main():
     per_sample = []
     ssim_fn = SSIMLoss(channels=n_ch).to(device)
     bench_values = {"vae_only": {m: [] for m in BENCHMARK_METRICS}, "vae_dit": {m: [] for m in BENCHMARK_METRICS}}
+    # [sim][scored frame] per label and metric
+    per_frame_values = {"vae_only": {m: [] for m in PER_FRAME_METRICS}, "vae_dit": {m: [] for m in PER_FRAME_METRICS}}
     sum_channel = {"vae_only": [0.0] * n_ch, "vae_dit": [0.0] * n_ch}
     sum_lat_rmse, sum_lat_mse = 0.0, 0.0
     sum_lat_channel = None  # lazily sized to the latent's own channel count on first sample
@@ -549,6 +565,13 @@ def main():
         for label, values in bench.items():
             for m in BENCHMARK_METRICS:
                 bench_values[label][m].append(values[m])
+        per_frame = {
+            "vae_only": per_frame_benchmark_metrics(vae_only_scored, target_scored, ssim_fn),
+            "vae_dit": per_frame_benchmark_metrics(vae_dit_scored, target_scored, ssim_fn),
+        }
+        for label, values in per_frame.items():
+            for m in PER_FRAME_METRICS:
+                per_frame_values[label][m].append(values[m])
 
         per_sample.append({
             "id": sid, **{k: float(v) for k, v in sample["meta"].items()},
@@ -557,6 +580,7 @@ def main():
             "vae_dit_per_channel": dict(zip(channel_names, vd_channel)),
             "latent_vrmse_chmean": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
             "benchmark": bench,
+            "benchmark_per_frame": per_frame,
         })
         for c in range(n_ch):
             sum_channel["vae_only"][c] += vo_channel[c]
@@ -676,6 +700,16 @@ def main():
                 }
                 for label, values in bench_values.items()
             },
+            # Same scored frames, each scored on its own (list index = scored_frames index), mean and
+            # std over sims. No mlw: it needs more than one frame.
+            "per_frame": {
+                label: {
+                    m: {"mean": torch.tensor(v, dtype=torch.float64).mean(0).tolist(),
+                        "std_over_sims": torch.tensor(v, dtype=torch.float64).std(0, unbiased=False).tolist()}
+                    for m, v in values.items()
+                }
+                for label, values in per_frame_values.items()
+            },
         },
         "per_sample": per_sample,
     }
@@ -688,6 +722,8 @@ def main():
     for label in ("vae_only", "vae_dit"):
         print(f"  {label:9s} " + "  ".join(
             f"{m}={summary['benchmark'][label][m]['mean']:.5f}" for m in BENCHMARK_METRICS))
+    print("  per frame (vae_dit): " + "  ".join(
+        f"f{f}: vrmse={v:.4f}" for f, v in zip(score_frames, summary["benchmark"]["per_frame"]["vae_dit"]["vrmse"]["mean"])))
     print(f"\nAll frames, unclamped:")
     print(f"  VAE-only  vrmse_chmean : {summary['vae_only_vrmse_chmean']:.5f}")
     print(f"  VAE+DiT   vrmse_chmean : {summary['vae_dit_vrmse_chmean']:.5f}")
