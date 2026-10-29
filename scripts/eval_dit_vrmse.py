@@ -81,6 +81,7 @@ definition for comparison with older evals.
 
 import argparse
 import json
+import time
 from copy import deepcopy
 from pathlib import Path
 
@@ -243,6 +244,14 @@ def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLos
         "ssim": float(ssim_fn(pred, target).item()),
         "mlw": float(mlw_loss(pred, target).item()),
     }
+
+
+def sync(device: torch.device) -> None:
+    """Wait for queued GPU work, so wall-clock timings cover it."""
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+    elif device.type == "xpu":
+        torch.xpu.synchronize(device)
 
 
 def per_frame_benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
@@ -448,6 +457,7 @@ def main():
     sum_lat_rmse, sum_lat_mse = 0.0, 0.0
     sum_lat_channel = None  # lazily sized to the latent's own channel count on first sample
     sum_lat_channel_mse = None
+    gen_seconds = []  # per sim: frame-0 condition -> DiT sampling -> decoded trajectory, metrics excluded
 
     for i, sid in enumerate(val_ids):
         idx = dataset.ids.index(sid)
@@ -476,6 +486,8 @@ def main():
         vo_channel = vrms_per_channel(vae_recon[:, :, :score_F], target[:, :, :score_F]).tolist()
 
         # --- VAE+DiT pass: condition on frame 0 only, roll the rest out ---
+        sync(device)
+        t_gen = time.perf_counter()
         cond_video = build_initial_condition(sample, stats, device)
         scalar_values = [sample["meta"][n] for n in scalar_cfg.scalar_names]
         scalars = torch.tensor([scalar_values], device=device, dtype=DTYPE)
@@ -508,6 +520,8 @@ def main():
         # conversion, and decodable with the same vae_decode() helper used
         # for the vae_only pass above.
         dit_pred_latent = out.frames.float()
+        sync(device)
+        gen_s = time.perf_counter() - t_gen  # decode below is added to it
         pred_lat, cmp_gt_lat = trim_latent_frames(dit_pred_latent, gt_latent.float())
 
         lat_rmse = float(rmse_loss(pred_lat, cmp_gt_lat).item())
@@ -528,7 +542,11 @@ def main():
         # normalized [-1,1] space as `target` (do_normalize=False on the
         # video processor) -- do not denormalize here, VRMSE is a
         # normalized-space metric.
+        sync(device)
+        t_dec = time.perf_counter()
         dit_full = pad_to(vae_decode(pipe.vae, pred_lat.to(DTYPE), args.default_temb).float(), orig_F)
+        sync(device)
+        gen_seconds.append(gen_s + time.perf_counter() - t_dec)
         n_px = min(dit_full.shape[2], target.shape[2], score_F)
         dit_pred, target_cmp = dit_full[:, :, :n_px], target[:, :, :n_px]
 
@@ -581,6 +599,7 @@ def main():
             "latent_vrmse_chmean": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
             "benchmark": bench,
             "benchmark_per_frame": per_frame,
+            "generation_seconds": gen_seconds[-1],
         })
         for c in range(n_ch):
             sum_channel["vae_only"][c] += vo_channel[c]
@@ -711,6 +730,16 @@ def main():
                 for label, values in per_frame_values.items()
             },
         },
+        # Wall clock for one trajectory: frame-0 conditioning, DiT sampling and VAE decode, one GPU,
+        # batch 1, metrics and the VAE-only pass excluded. The first sim includes warm-up.
+        "generation_time": {
+            "device": (torch.cuda.get_device_name(device) if device.type == "cuda" else device.type),
+            "num_inference_steps": num_inference_steps,
+            "total_seconds": sum(gen_seconds),
+            "seconds_per_trajectory": sum(gen_seconds) / n,
+            "seconds_per_trajectory_without_first": (sum(gen_seconds[1:]) / (n - 1)) if n > 1 else None,
+            "first_seconds": gen_seconds[0],
+        },
         "per_sample": per_sample,
     }
     (args.out_dir / "vrmse_summary.json").write_text(json.dumps(summary, indent=2))
@@ -724,6 +753,9 @@ def main():
             f"{m}={summary['benchmark'][label][m]['mean']:.5f}" for m in BENCHMARK_METRICS))
     print("  per frame (vae_dit): " + "  ".join(
         f"f{f}: vrmse={v:.4f}" for f, v in zip(score_frames, summary["benchmark"]["per_frame"]["vae_dit"]["vrmse"]["mean"])))
+    gt = summary["generation_time"]
+    print(f"Generation time ({gt['device']}, {gt['num_inference_steps']} steps): {gt['total_seconds']:.1f} s for "
+          f"{n} trajectories = {gt['seconds_per_trajectory']:.2f} s/trajectory (first sim {gt['first_seconds']:.2f} s)")
     print(f"\nAll frames, unclamped:")
     print(f"  VAE-only  vrmse_chmean : {summary['vae_only_vrmse_chmean']:.5f}")
     print(f"  VAE+DiT   vrmse_chmean : {summary['vae_dit_vrmse_chmean']:.5f}")
