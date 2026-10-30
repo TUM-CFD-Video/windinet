@@ -18,10 +18,15 @@ The H2 seminorm is:
 Here we minimize:
 
     ||del^2 u_pred - del^2 u_target||^2
+
+h2_seminorm_per_channel is the benchmark metric beside it: the relative error
+of the full Hessian (mixed derivative included) per channel.
 """
 
 import torch
 import torch.nn.functional as F
+
+from .h1_semi_norm import _relative_seminorm
 
 
 def spatial_second_derivatives(
@@ -96,3 +101,18 @@ def h2_seminorm_loss(
     )
 
     return loss_dxx + loss_dyy
+
+
+def _hessian(x: torch.Tensor) -> tuple[torch.Tensor, ...]:
+    """Second differences between real cells only (H, W >= 3): d_hh, d_ww and the mixed d_hw twice, so the sum of
+    squares is the Hessian's Frobenius norm (unchanged under the grid's rotations and reflections)."""
+    d_hh = x[..., 2:, :] - 2 * x[..., 1:-1, :] + x[..., :-2, :]
+    d_ww = x[..., :, 2:] - 2 * x[..., :, 1:-1] + x[..., :, :-2]
+    d_hw = x[..., 1:, 1:] - x[..., 1:, :-1] - x[..., :-1, 1:] + x[..., :-1, :-1]
+    return d_hh, d_ww, d_hw, d_hw
+
+
+def h2_seminorm_per_channel(pred: torch.Tensor, target: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+    """Relative H2 seminorm error per channel, |pred - target|_H2 / |target|_H2 with the full Hessian: the benchmark
+    metric beside the training loss above. pred, target: [B, C, T, H, W]; returns [C], averaged over the batch."""
+    return _relative_seminorm(_hessian, pred, target, eps)
