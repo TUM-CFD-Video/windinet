@@ -1,0 +1,130 @@
+# Weihao Li, master thesis: best run (VAE full FT + SDS 1e-2, then DiT full FT)
+# Rollout VRMSE 0.4583 ± 0.0054 on the 500 test simulations (Full FT reference: 0.4984).
+#
+# RECONSTRUCTED FROM THE THESIS. This is not his actual config file.
+# His real configs are in his windinet repo on Jupiter (configs/finetune_vae/ for the VAE).
+# Key names are mine, except output_dir, optimization.batch_size and
+# optimization.gradient_accumulation_steps, which his sbatch script uses.
+# null = the thesis does not state the value.
+
+data:                                   # Sec. 3.3
+  dataset: the_well/euler_multi_quadrants
+  channels: [density, momentum_x, momentum_y, pressure]   # energy dropped
+  resolution: [256, 256]
+  frames: 101                           # t = 0..100, one whole trajectory = one sample
+  pad_to: 105                           # repeat last state 4x (LTX needs 1 + 8k frames); padding excluded from VAE loss
+  normalization: "clip((x - mean) / (5 * std), -1, 1)"   # per channel
+  split: {train: 4000, val: 500, test: 500}               # by trajectory
+
+compute:
+  devices: 8                            # 1 node, 4x Intel Max 1550 = 8 XPU tiles
+  precision: bf16
+  gradient_checkpointing: true
+
+# ---------------------------------------------------------------- stage 1: VAE
+vae:                                    # Sec. 4.2, 5.2.1, Table A.1
+  base_model: LTX-Video 2B v0.9.6 dev
+  channel_expansion:
+    method: widen conv_in and conv_out from 3 to 4 channels, keep the RGB weights
+    fourth_channel_init: zero
+  trainable: [encoder, decoder]         # full-structure fine-tuning
+
+  loss:                                 # L = RMSE + 50*H1 + 0.01*SDS
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0
+    kl: 0.0
+    sds: 0.01                           # Sec. 5.4.5; 1e-4 = no effect, 1 = too strong
+
+  sds:                                  # Sec. 4.7.2
+    teacher: stock LTX-Video 2B DiT, frozen
+    student_latent: encoder posterior mean
+    noisy_input: "(1 - sigma) * stopgrad(z) + sigma * eps"
+    target_velocity: "eps - z"          # LTX convention; gradient reaches the encoder only through z here
+    teacher_prediction: detached        # no gradient through the teacher or the decoder
+    exclude_first_latent_frame: true
+    teacher_gamma_embedding: random init, frozen
+    sigma_sampling: null                # not in thesis
+
+  optimization:
+    optimizer: adamw
+    lr: 5.0e-5
+    weight_decay: 0.0
+    betas: null                         # not in thesis
+    warmup_steps: 200
+    warmup_start_factor: 0.01           # linear warmup from 0.01x peak lr
+    scheduler: cosine
+    min_lr: 1.0e-6
+    epochs: 20
+    effective_batch_size: 32            # over 8 processes
+    batch_size: null                    # per process; not in thesis
+    gradient_accumulation_steps: null   # not in thesis (batch_size * accum = 4)
+    grad_clip_norm: 5.0
+
+  checkpoint_selection: val_vrmse       # pooled validation VRMSE, lowest wins
+  seed: 42
+
+# ---------------------------------------------------------------- stage 2: DiT
+dit:                                    # Sec. 4.4, 4.5, 5.2.2, Table A.3
+  base_model: LTX-Video 2B transformer
+  latents: precomputed with the stage-1 VAE (encoder fixed)
+  trainable: [transformer, gamma_embedding]   # full fine-tuning
+  text_encoder: removed                 # T5 replaced by gamma tokens
+
+  gamma_embedding:
+    fourier_features: 64
+    mlp_hidden: 256
+    num_tokens: 4
+    token_dim: 4096
+    dropout: 0.1                        # Table A.3 "embedding dropout"; the text says no conditioning dropout
+
+  objective:
+    type: flow_matching                 # z_sigma = (1 - sigma) * z + sigma * eps, target = eps - z
+    loss: masked MSE on the non-conditioning tokens
+    timestep_sampling: shifted logit-normal   # parameters not in thesis
+    first_frame_conditioning_prob: 1.0  # latent frame 0 clean, timestep 0, no loss
+    cfg_dropout: 0.0
+
+  optimization:
+    optimizer: adamw
+    lr: 1.0e-5
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+    weight_decay: 0.01
+    warmup_steps: 0
+    scheduler: cosine
+    t_max: 8000
+    min_lr: 1.0e-8
+    max_steps: 8000                     # ~64 passes over the 4000 training trajectories
+    effective_batch_size: 32
+    batch_size: 1                       # per process
+    gradient_accumulation_steps: 4      # 8 processes x 1 x 4 = 32
+    grad_clip_norm: 1.0
+
+  seed: 42
+
+# ---------------------------------------------------------------- inference / eval
+inference:                              # Sec. 5.2.2, 5.3, Table A.3
+  steps: 20
+  guidance_scale: 1.0                   # no CFG
+  latent_frames: 14                     # frame 0 conditioned, 13 generated jointly (not autoregressive)
+  encode: posterior mean of the initial state
+  seed: "42 + simulation index"
+  metric: VRMSE per channel in normalized space, then channel mean
+
+figures:                                # read off Figure 6.2 (Sec. 6.5.4); no plot config is stated in the thesis
+  error_heatmap:
+    simulation: 2507                    # gamma = 1.40, one example; the thesis does not say which VAE run it uses
+    frame: 100                          # one still frame, not a video
+    rows: [density, momentum_x, momentum_y, pressure]
+    columns: [GT, VAE only, VAE + DiT, "residual (VAE only - GT)", "residual (VAE + DiT - GT)"]
+    field_colormap: viridis             # shared color range per row
+    residual: signed                    # prediction - GT, not absolute error
+    residual_colormap: diverging blue-white-red, symmetric around 0, shared range per row
+    units: physical (unnormalized)      # from the colorbar ranges, e.g. density 0.6-2.0
+
+result:                                 # Sec. 6.4, 6.5
+  vae_only_vrmse_chmean: 0.0806
+  rollout_vrmse_chmean: 0.4583          # ± 0.0054
+  rollout_vrmse_per_channel: {density: 0.483, momentum_x: 0.465, momentum_y: 0.474, pressure: 0.411}
+  better_than_reference_on: 443 of 500 test simulations
