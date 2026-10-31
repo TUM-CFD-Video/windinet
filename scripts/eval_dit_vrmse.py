@@ -68,7 +68,8 @@ layout the training-time panels use.
 
 Benchmark block = the headline numbers (cfd_bench/windinet_benchmark_inference.py,
 ported from Harish's dev-hr branch, 2026-10-19; made the default 2026-10-24 on
-his instruction): RMSE, VRMSE (per field, then mean), 1-SSIM and MLW, each once
+his instruction): RMSE, VRMSE (per field, then mean), 1-SSIM, MLW and (2026-10-31) the H1/H2
+seminorms of the error, each once
 per sim over the scored frames, then averaged over sims, with prediction AND
 target clamped to [-1, 1]. The scored frames default to every 10th frame from
 40 on (40, 50, ..., 90 for a 97-frame model; 40, ..., 100 for a 101-frame
@@ -95,7 +96,7 @@ from windinet.checkpoints import ensure_checkpoint
 from windinet.config import ScalarConditioningConfig
 from windinet.inference.model_loader import load_ltxv_components, select_vae_env
 from windinet.inference.pipeline import LTXConditionPipeline
-from windinet.losses import SSIMLoss, mlw_loss, rmse_loss, vrms_per_channel
+from windinet.losses import SSIMLoss, h1_seminorm_loss, h2_seminorm_loss, mlw_loss, rmse_loss, vrms_per_channel
 from windinet.scalar_embeddings import ScalarEmbedding
 from windinet.training.shockwave_data import (
     ShockWaveDataset,
@@ -229,20 +230,23 @@ def trim_latent_frames(a: torch.Tensor, b: torch.Tensor) -> tuple[torch.Tensor, 
     return a[:, :, :n], b[:, :, :n]
 
 
-BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw")
+BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw", "h1", "h2")
 # Per-frame curve: MLW has a temporal wavelet term, so it is undefined on one frame.
-PER_FRAME_METRICS = ("rmse", "vrmse", "ssim")
+PER_FRAME_METRICS = ("rmse", "vrmse", "ssim", "h1", "h2")
 
 
 def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
     """RMSE, VRMSE (per field, then mean), 1-SSIM, MLW for one sim, [1, C, T, H, W] restricted to the scored frames.
     Same definitions as cfd_bench/windinet_benchmark_inference.py; pred and target arrive clamped to [-1, 1]
-    unless --no-clamp_prediction."""
+    unless --no-clamp_prediction. h1/h2 (Harish, 2026-10-31): the training losses' H1/H2 seminorms of the
+    error, mean squared first / second spatial differences (x plus y), grid spacing 1."""
     return {
         "rmse": float(rmse_loss(pred, target).item()),
         "vrmse": float(vrms_per_channel(pred, target).mean().item()),  # per field, then mean (Li eq. 5.11, The Well)
         "ssim": float(ssim_fn(pred, target).item()),
         "mlw": float(mlw_loss(pred, target).item()),
+        "h1": float(h1_seminorm_loss(pred, target).item()),
+        "h2": float(h2_seminorm_loss(pred, target).item()),
     }
 
 
@@ -263,6 +267,8 @@ def per_frame_benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_f
         out["rmse"].append(float(rmse_loss(p, g).item()))
         out["vrmse"].append(float(vrms_per_channel(p, g).mean().item()))
         out["ssim"].append(float(ssim_fn(p, g).item()))
+        out["h1"].append(float(h1_seminorm_loss(p, g).item()))
+        out["h2"].append(float(h2_seminorm_loss(p, g).item()))
     return out
 
 
@@ -553,7 +559,7 @@ def main():
         vd_channel = vrms_per_channel(dit_pred, target_cmp).tolist()
         vo_chmean, vd_chmean = sum(vo_channel) / n_ch, sum(vd_channel) / n_ch
 
-        # Benchmark block: all four metrics on the scored frames only (not
+        # Benchmark block: all metrics on the scored frames only (not
         # cropped by --metric_frames: the scored frames pick their own).
         # Scored frames are stored-frame numbers (the physical times cfd_bench
         # scores), mapped to sequence indices through frame_stride, so a

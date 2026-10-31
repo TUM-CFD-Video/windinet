@@ -7,7 +7,7 @@
 #   thesis30k  thesis-VAE ch6_loss_rmse_h1 + DiT 30k, 20 steps as in its cfd_bench eval
 #              (2413328). 101-frame sims, so the full 10..100.
 # Result: the "benchmark" block of logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json --
-# mean over the scored frames (rmse/vrmse/ssim/mlw) and benchmark.per_frame (rmse/vrmse/ssim
+# mean over the scored frames (rmse/vrmse/ssim/mlw/h1/h2) and benchmark.per_frame (rmse/vrmse/ssim/h1/h2
 # per frame), and both as markdown tables in <same dir>/benchmark_table.md (also at the end of the job log).
 # 2 jobs. ONLY=<names> (space-separated) submits a subset.
 #
