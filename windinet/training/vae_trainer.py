@@ -523,7 +523,7 @@ class VaeTrainer:
         return (z - norm_mean) * sf / norm_std
 
     def _forward_pass(
-        self, x: torch.Tensor, sample_posterior: bool = False
+        self, x: torch.Tensor, sample_posterior: bool = False, latent_noise_std: float = 0.0
     ) -> tuple[torch.Tensor, int, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Encode → decode through the VAE.
 
@@ -532,6 +532,8 @@ class VaeTrainer:
         see _sample_posterior. The returned latents stay the rescaled posterior
         mean either way (the SDS term regularizes the encoder's mean),
         and validation, visualization and DiT preprocessing always use the mean.
+        latent_noise_std > 0 (training only, see VaeTrainerConfig.latent_noise_std)
+        decodes the normalised latents plus latent_noise_std * N(0, I) noise.
 
         Returns (reconstruction, original_frames, posterior_mean,
         posterior_logvar, latents) -- posterior_mean/posterior_logvar are
@@ -545,9 +547,12 @@ class VaeTrainer:
         if sample_posterior:
             eps = torch.randn_like(posterior_mean)
             z = posterior_mean + torch.exp(0.5 * posterior_logvar) * eps
-            recon = self._decode(self._rescale_latents(z))
+            decoder_in = self._rescale_latents(z)
         else:
-            recon = self._decode(latents)
+            decoder_in = latents
+        if latent_noise_std > 0:
+            decoder_in = decoder_in + latent_noise_std * torch.randn_like(decoder_in)
+        recon = self._decode(decoder_in)
         return recon[:, :, :orig_F], orig_F, posterior_mean, posterior_logvar, latents
 
     def _sync_grads(self) -> None:
@@ -873,6 +878,8 @@ class VaeTrainer:
             logger.info(
                 "Training decodes "
                 + ("reparameterized posterior samples (KL active)" if sample_posterior else "the posterior mean")
+                + (f" plus N(0, {cfg.latent_noise_std}^2) noise on the normalised latents"
+                   if cfg.latent_noise_std > 0 else "")
             )
 
         with live:
@@ -915,7 +922,7 @@ class VaeTrainer:
                     )
                     with self._accelerator.autocast():
                         recon, _, posterior_mean, posterior_logvar, latents = self._forward_pass(
-                            x, sample_posterior=sample_posterior
+                            x, sample_posterior=sample_posterior, latent_noise_std=cfg.latent_noise_std
                         )
                     # Match Accelerate's convert_outputs_to_fp32: losses (e.g. the
                     # SSIM conv) run in fp32, so cast the autocast output back.

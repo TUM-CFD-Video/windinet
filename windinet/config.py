@@ -974,6 +974,14 @@ class VaeTrainerConfig(ConfigBaseModel):
     checkpoints: CheckpointsConfig = Field(default_factory=CheckpointsConfig)
     wandb: WandbConfig = Field(default_factory=WandbConfig)
 
+    latent_noise_std: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Training only: the decoder sees the normalised latents (the DiT's latent space) "
+        "plus latent_noise_std * N(0, I), so it learns to decode imperfect latents like a DiT "
+        "rollout's (Harish, 2026-11-01). Validation, test eval and DiT preprocessing decode clean latents.",
+    )
+
     seed: int = Field(default=42)
     output_dir: str = Field(default="finetune_vae_outputs/vae_finetune")
     clean_output_dir: bool = Field(
