@@ -51,6 +51,7 @@ from windinet.inference.model_loader import load_ltxv_components
 from windinet.scalar_embeddings import ScalarEmbedding
 from windinet.training.timestep_samplers import SAMPLERS
 from windinet.training.dit_visualization import DitVisualizer
+from windinet.training.shockwave_data import conditioning_pixel_frames
 from windinet.latent_utils import get_rope_scale_factors
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -187,6 +188,7 @@ class LtxvTrainer:
             model_source=self._config.model.model_source,
             scalar_names=self._config.scalar_conditioning.scalar_names,
             num_samples=vis_cfg.num_samples,
+            num_cond_frames=conditioning_pixel_frames(self._config.conditioning.num_conditioning_latent_frames),
             frame_numbers=vis_cfg.frame_numbers,
             num_inference_steps=vis_cfg.num_inference_steps,
             dpi=vis_cfg.dpi,
@@ -287,7 +289,7 @@ class LtxvTrainer:
         if self._config.scalar_conditioning.enabled and "scalars" in batch:
             scalars = batch["scalars"]["scalars"]
 
-        # Create conditioning mask (first frame conditioning)
+        # Create conditioning mask (the leading num_conditioning_latent_frames latent frames)
         conditioning_mask = self._create_first_frame_conditioning_mask(
             batch_size=batch_size,
             sequence_length=target_latents.shape[1],
@@ -376,9 +378,9 @@ class LtxvTrainer:
             self._config.conditioning.first_frame_conditioning_p > 0
             and random.random() < self._config.conditioning.first_frame_conditioning_p
         ):
-            first_frame_end_idx = height * width
-            if first_frame_end_idx < sequence_length:
-                conditioning_mask[:, :first_frame_end_idx] = True
+            cond_end_idx = self._config.conditioning.num_conditioning_latent_frames * height * width
+            if cond_end_idx < sequence_length:
+                conditioning_mask[:, :cond_end_idx] = True
         return conditioning_mask
 
     # ------------------------------------------------------------------

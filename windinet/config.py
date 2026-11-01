@@ -54,6 +54,15 @@ class ConditioningConfig(ConfigBaseModel):
     """Configuration for conditioning during training."""
 
     first_frame_conditioning_p: float = Field(default=0.1, ge=0.0, le=1.0)
+    num_conditioning_latent_frames: int = Field(
+        default=1,
+        ge=1,
+        description="Leading latent frames given clean (timestep 0, no loss) when conditioning applies. "
+        "1 = frame 0 only (the initial condition); 2 = frames 0-8 (the VAE packs frame 0 alone, then "
+        "8 frames per latent), i.e. 1 + 8 * (n - 1) pixel frames. Inference (eval_dit_vrmse.py, the "
+        "training visualization) reads it from the run's training_config.yaml and conditions on that "
+        "many ground-truth frames.",
+    )
 
 
 class LoraConfig(ConfigBaseModel):

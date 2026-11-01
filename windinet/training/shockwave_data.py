@@ -439,6 +439,26 @@ def run_scalar_conditioning(checkpoint: str | Path | None, fallback: dict) -> di
     return fallback
 
 
+def conditioning_pixel_frames(num_latent_frames: int) -> int:
+    """Pixel frames behind the leading `num_latent_frames` latent frames: the
+    LTX VAE packs frame 0 alone into latent 0, then 8 frames per latent."""
+    return 1 + 8 * (num_latent_frames - 1)
+
+
+def run_num_conditioning_frames(checkpoint: str | Path | None) -> int:
+    """Ground-truth pixel frames the DiT run of a checkpoint was trained to
+    condition on (conditioning.num_conditioning_latent_frames in its
+    training_config.yaml; 1 = frame 0 only, also for runs from before the
+    option existed, or with no checkpoint/config)."""
+    n_latent = 1
+    if checkpoint is not None:
+        path = Path(checkpoint).parent.parent / "training_config.yaml"
+        if path.is_file():
+            block = load_training_config(path).get("conditioning") or {}
+            n_latent = block.get("num_conditioning_latent_frames", 1)
+    return conditioning_pixel_frames(n_latent)
+
+
 def load_channel_normalization(source: str | Path) -> dict:
     """Read the channel normalization stats that a VAE / latent set was built with.
 

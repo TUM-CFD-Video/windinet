@@ -104,6 +104,7 @@ from windinet.training.shockwave_data import (
     load_channel_normalization,
     normalize_fields,
     pick_spread_ids,
+    run_num_conditioning_frames,
     run_scalar_conditioning,
 )
 from windinet.training.vae_visualization import (
@@ -182,10 +183,11 @@ def load_scalar_embedding(checkpoint, scalar_cfg, device):
     return emb.to(device=device, dtype=DTYPE).eval()
 
 
-def build_initial_condition(sample, stats, device):
-    fields = torch.stack([sample[name][0] for name in stats["channel_names"]]).unsqueeze(0)  # [1, C, H, W]
+def build_initial_condition(sample, stats, device, num_frames=1):
+    """The first num_frames ground-truth frames, normalized, [1, num_frames, C, H, W]."""
+    fields = torch.stack([sample[name][:num_frames] for name in stats["channel_names"]]).unsqueeze(0)  # [1, C, n, H, W]
     fields = normalize_fields(fields, stats["channel_mean"], stats["channel_std"], stats["normalization_clip"])
-    return fields.unsqueeze(1).to(device=device, dtype=DTYPE)  # [B, F, C, H, W]
+    return fields.transpose(1, 2).to(device=device, dtype=DTYPE)  # [B, F, C, H, W]
 
 
 # ----------------------------------------------------------------------
@@ -428,6 +430,9 @@ def main():
     else:
         verify_latent_space(ensure_checkpoint(vae_ckpt), checkpoint, stats)
 
+    num_cond_frames = run_num_conditioning_frames(checkpoint)
+    print(f"Conditioning on the first {num_cond_frames} ground-truth frame(s)")
+
     sc = run_scalar_conditioning(checkpoint, cfg.get("scalar_conditioning", {}))
     print(f"Scalar conditioning: {sc.get('scalar_names')} ranges {sc.get('scalar_ranges')}")
     scalar_cfg = ScalarConditioningConfig(
@@ -491,10 +496,10 @@ def main():
 
         vo_channel = vrms_per_channel(vae_recon[:, :, :score_F], target[:, :, :score_F]).tolist()
 
-        # --- VAE+DiT pass: condition on frame 0 only, roll the rest out ---
+        # --- VAE+DiT pass: condition on the first num_cond_frames frames, roll the rest out ---
         sync(device)
         t_gen = time.perf_counter()
-        cond_video = build_initial_condition(sample, stats, device)
+        cond_video = build_initial_condition(sample, stats, device, num_cond_frames)
         scalar_values = [sample["meta"][n] for n in scalar_cfg.scalar_names]
         scalars = torch.tensor([scalar_values], device=device, dtype=DTYPE)
         prompt_embeds = scalar_emb(scalars)
@@ -691,6 +696,7 @@ def main():
         "num_frames_generated": num_frames,
         "metric_frames": args.metric_frames,
         "num_inference_steps": num_inference_steps,
+        "num_cond_frames": num_cond_frames,
         "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(channel_names)},
         "vae_dit_vrmse_per_channel": {name: sum_channel["vae_dit"][c] / n for c, name in enumerate(channel_names)},
         # All frames, unclamped: mean of the per-channel VRMSEs (The Well's

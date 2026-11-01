@@ -184,6 +184,7 @@ class DitVisualizer:
         model_source,
         scalar_names: list[str],
         num_samples: int,
+        num_cond_frames: int = 1,
         frame_numbers: list[int],
         num_inference_steps: int,
         dpi: int,
@@ -199,6 +200,7 @@ class DitVisualizer:
         self._model_source = model_source
         self._scalar_names = scalar_names
         self._num_samples = num_samples
+        self._num_cond_frames = num_cond_frames
         self._frame_numbers = frame_numbers
         self._num_inference_steps = num_inference_steps
         self._dpi = dpi
@@ -349,10 +351,11 @@ class DitVisualizer:
             gt_norm = normalize_fields(
                 gt, self._stats["channel_mean"], self._stats["channel_std"], self._stats["normalization_clip"],
             ).to(device=self._device, dtype=self._dtype)  # [1, C, F, H, W]
-            # frame 0 as the initial condition -- [1, C, H, W] -> [1, 1, C, H, W]
+            # the first num_cond_frames frames (1 = the initial condition only)
+            # as the condition -- [1, C, n, H, W] -> [1, n, C, H, W]
             # (frame-major, matching the pipe's expected `video` layout; NOT
             # the same axis order as gt_norm itself, which stays [B,C,F,H,W]).
-            cond = gt_norm[:, :, 0].unsqueeze(1)
+            cond = gt_norm[:, :, : self._num_cond_frames].transpose(1, 2)
 
             scalar_values = [sample["meta"][name] for name in self._scalar_names]
             scalars = torch.tensor([scalar_values], device=self._device, dtype=self._dtype)
