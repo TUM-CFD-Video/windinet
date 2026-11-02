@@ -108,6 +108,9 @@ EXTRA_ARGS=()
 [[ "${CLAMP_PREDICTION:-1}" == 0 ]] && EXTRA_ARGS+=(--no-clamp_prediction)
 # SAVE_VIDEO=1: an MP4 over all frames for each visualized sample (next to its PNG panels).
 [[ "${SAVE_VIDEO:-0}" == 1 ]] && EXTRA_ARGS+=(--save_video)
+# SHOCK_ANALYSIS=1: error by region (shock / band / contact / smooth) and per latent token
+# (windinet.shock_regions); per-sim token arrays go to ${NPZ_DIR}/shock_tokens_<job>.npz.
+[[ "${SHOCK_ANALYSIS:-0}" == 1 ]] && EXTRA_ARGS+=(--shock_analysis --npz_dir "${NPZ_DIR}")
 [[ "${SAVE_NPZ_SAMPLES}" != 0 ]] && EXTRA_ARGS+=(--save_npz_samples "${SAVE_NPZ_SAMPLES}" --npz_dir "${NPZ_DIR}")
 
 echo "PREPROCESSED_ROOT=${PREPROCESSED_ROOT}"

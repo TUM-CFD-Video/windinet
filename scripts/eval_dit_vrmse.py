@@ -68,16 +68,30 @@ layout the training-time panels use.
 
 Benchmark block = the headline numbers (cfd_bench/windinet_benchmark_inference.py,
 ported from Harish's dev-hr branch, 2026-10-19; made the default 2026-10-24 on
-his instruction): RMSE, VRMSE (per field, then mean), 1-SSIM, MLW and (2026-10-31) the H1/H2
-seminorms of the error, each once
+his instruction): RMSE, VRMSE (per field, then mean), 1-SSIM, MLW and the
+relative H1/H2 seminorm errors (Lars's h1/h2_seminorm_per_channel, per field,
+then mean; adopted 2026-11-02 on Harish's request, replacing the 2026-10-31
+squared unnormalized ones), each once
 per sim over the scored frames, then averaged over sims, with prediction AND
 target clamped to [-1, 1]. The scored frames default to every 10th frame from
 40 on (40, 50, ..., 90 for a 97-frame model; 40, ..., 100 for a 101-frame
 one) -- his autoregressive baseline takes 4 frames at stride 10 and predicts
 every 10th frame from 40, so both models are scored on the same frames.
 --score_frames overrides the frames, --no-clamp_prediction the clamp. The
+"benchmark_10" block (2026-11-02, Harish) is the same on every 10th frame
+from 10 (10, ..., 90 / 100); --score_frames_10 overrides those frames. The
 *_vrmse_chmean / *_vrmse_per_channel keys keep their all-frames, unclamped
 definition for comparison with older evals.
+
+--shock_analysis (2026-11-01) splits the error by region -- shock, a band
+around it, contact discontinuities, smooth flow (windinet.shock_regions,
+from the ground truth's |grad log p| and |grad log rho|) -- on the scored
+frames, per channel, for both passes; and per latent token (t, i, j): the
+token's shock fraction, its latent MSE (DiT only) and the pixel MSE over
+its nominal footprint. Writes the "shock_analysis" summary block (with
+the sim-mean token maps), <out_dir>/shock_analysis/token_heatmaps.png and
+the per-sim token arrays to <npz_dir>/shock_tokens_<out_dir name>.npz (~15 MB for 500
+sims, so beside the figure npz files, not in the tracked log dir).
 """
 
 import argparse
@@ -96,8 +110,23 @@ from windinet.checkpoints import ensure_checkpoint
 from windinet.config import ScalarConditioningConfig
 from windinet.inference.model_loader import load_ltxv_components, select_vae_env
 from windinet.inference.pipeline import LTXConditionPipeline
-from windinet.losses import SSIMLoss, h1_seminorm_loss, h2_seminorm_loss, mlw_loss, rmse_loss, vrms_per_channel
+from windinet.losses import (
+    SSIMLoss,
+    h1_seminorm_per_channel,
+    h2_seminorm_per_channel,
+    mlw_loss,
+    rmse_loss,
+    vrms_per_channel,
+)
 from windinet.scalar_embeddings import ScalarEmbedding
+from windinet.shock_regions import (
+    REGIONS,
+    RegionErrorStats,
+    region_masks,
+    save_token_heatmaps,
+    token_mean,
+    token_summary,
+)
 from windinet.training.shockwave_data import (
     ShockWaveDataset,
     build_shockwave_video,
@@ -233,6 +262,9 @@ def trim_latent_frames(a: torch.Tensor, b: torch.Tensor) -> tuple[torch.Tensor, 
 
 
 BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw", "h1", "h2")
+# Benchmark blocks of vrmse_summary.json: "benchmark" scores every 10th frame
+# from 40 (cfd_bench), "benchmark_10" every 10th frame from 10 (Harish, 2026-11-02).
+BENCHMARK_BLOCKS = {"benchmark": 40, "benchmark_10": 10}
 # Per-frame curve: MLW has a temporal wavelet term, so it is undefined on one frame.
 PER_FRAME_METRICS = ("rmse", "vrmse", "ssim", "h1", "h2")
 
@@ -240,15 +272,15 @@ PER_FRAME_METRICS = ("rmse", "vrmse", "ssim", "h1", "h2")
 def benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_fn: SSIMLoss) -> dict:
     """RMSE, VRMSE (per field, then mean), 1-SSIM, MLW for one sim, [1, C, T, H, W] restricted to the scored frames.
     Same definitions as cfd_bench/windinet_benchmark_inference.py; pred and target arrive clamped to [-1, 1]
-    unless --no-clamp_prediction. h1/h2 (Harish, 2026-10-31): the training losses' H1/H2 seminorms of the
-    error, mean squared first / second spatial differences (x plus y), grid spacing 1."""
+    unless --no-clamp_prediction. h1/h2: relative H1/H2 seminorm errors |pred - target|_H / |target|_H per field,
+    then mean (Lars, dev-lars/bench-seminorm; full Hessian for H2; 1 = as bad as a flat prediction)."""
     return {
         "rmse": float(rmse_loss(pred, target).item()),
         "vrmse": float(vrms_per_channel(pred, target).mean().item()),  # per field, then mean (Li eq. 5.11, The Well)
         "ssim": float(ssim_fn(pred, target).item()),
         "mlw": float(mlw_loss(pred, target).item()),
-        "h1": float(h1_seminorm_loss(pred, target).item()),
-        "h2": float(h2_seminorm_loss(pred, target).item()),
+        "h1": float(h1_seminorm_per_channel(pred, target).mean().item()),
+        "h2": float(h2_seminorm_per_channel(pred, target).mean().item()),
     }
 
 
@@ -269,8 +301,8 @@ def per_frame_benchmark_metrics(pred: torch.Tensor, target: torch.Tensor, ssim_f
         out["rmse"].append(float(rmse_loss(p, g).item()))
         out["vrmse"].append(float(vrms_per_channel(p, g).mean().item()))
         out["ssim"].append(float(ssim_fn(p, g).item()))
-        out["h1"].append(float(h1_seminorm_loss(p, g).item()))
-        out["h2"].append(float(h2_seminorm_loss(p, g).item()))
+        out["h1"].append(float(h1_seminorm_per_channel(p, g).mean().item()))
+        out["h2"].append(float(h2_seminorm_per_channel(p, g).mean().item()))
     return out
 
 
@@ -336,9 +368,19 @@ def parse_args():
                      help="0-indexed stored frames the benchmark metrics are computed on (default: every 10th "
                           "frame from 40, as cfd_bench scores them: 40 50 ... 90 for 97 frames, ... 100 for 101; "
                           "with frame_stride > 1 they must be multiples of it)")
+    ap.add_argument("--score_frames_10", type=int, nargs="*", default=None,
+                     help="Stored frames of the benchmark_10 block (default: every 10th frame from 10, "
+                          "10 20 ... 90 for 97 frames); given with no frames, the block is left out")
     ap.add_argument("--clamp_prediction", action=argparse.BooleanOptionalAction, default=True,
                      help="Clamp prediction and target to [-1, 1] before the benchmark metrics (default on, "
                           "as in cfd_bench); --no-clamp_prediction turns it off")
+    ap.add_argument("--shock_analysis", action="store_true",
+                     help="Error by region (shock / shock band / contact / smooth) and per latent token; "
+                          "see windinet.shock_regions")
+    ap.add_argument("--shock_top_frac", type=float, default=0.05,
+                     help="Fraction of each frame labelled shock (top |grad log p|) and contact (top |grad log rho|)")
+    ap.add_argument("--shock_dilate_px", type=int, default=3,
+                     help="Pixels the shock band and the contact region extend around the detected pixels")
     return ap.parse_args()
 
 
@@ -461,13 +503,25 @@ def main():
 
     per_sample = []
     ssim_fn = SSIMLoss(channels=n_ch).to(device)
-    bench_values = {"vae_only": {m: [] for m in BENCHMARK_METRICS}, "vae_dit": {m: [] for m in BENCHMARK_METRICS}}
-    # [sim][scored frame] per label and metric
-    per_frame_values = {"vae_only": {m: [] for m in PER_FRAME_METRICS}, "vae_dit": {m: [] for m in PER_FRAME_METRICS}}
+    # per benchmark block: [sim] per label and metric
+    bench_values = {
+        blk: {"vae_only": {m: [] for m in BENCHMARK_METRICS}, "vae_dit": {m: [] for m in BENCHMARK_METRICS}}
+        for blk in BENCHMARK_BLOCKS
+    }
+    # per benchmark block: [sim][scored frame] per label and metric
+    per_frame_values = {
+        blk: {"vae_only": {m: [] for m in PER_FRAME_METRICS}, "vae_dit": {m: [] for m in PER_FRAME_METRICS}}
+        for blk in BENCHMARK_BLOCKS
+    }
+    block_frames = {}  # benchmark block -> its scored stored frames, same for every sim
     sum_channel = {"vae_only": [0.0] * n_ch, "vae_dit": [0.0] * n_ch}
     sum_lat_rmse, sum_lat_mse = 0.0, 0.0
     sum_lat_channel = None  # lazily sized to the latent's own channel count on first sample
     sum_lat_channel_mse = None
+    region_stats = RegionErrorStats(channel_names, ("vae_only", "vae_dit")) if args.shock_analysis else None
+    token_rows = {k: [] for k in ("shock_frac", "contact_frac", "latent_mse", "pixel_mse_vae_dit",
+                                  "pixel_mse_vae_only")}
+    token_ids = []
     gen_seconds = []  # per sim: frame-0 condition -> DiT sampling -> decoded trajectory, metrics excluded
 
     for i, sid in enumerate(val_ids):
@@ -571,36 +625,58 @@ def main():
         # subsampled model is scored at the same times as a stride-1 one.
         n_avail = min(dit_full.shape[2], vae_recon.shape[2], target.shape[2])
         last_stored = (n_avail - 1) * frame_stride
-        score_frames = (args.score_frames if args.score_frames is not None
-                        else list(range(40, last_stored + 1, 10)))
-        if max(score_frames) > last_stored:
-            raise SystemExit(f"--score_frames {score_frames} exceeds the last available frame {last_stored} for {sid}")
-        if any(f % frame_stride for f in score_frames):
-            raise SystemExit(f"--score_frames {score_frames} are not all multiples of frame_stride {frame_stride}")
-        frame_idx = torch.as_tensor([f // frame_stride for f in score_frames], device=target.device)
-        target_scored = target.index_select(2, frame_idx)
-        vae_only_scored = vae_recon.index_select(2, frame_idx)
-        vae_dit_scored = dit_full.index_select(2, frame_idx)
-        if args.clamp_prediction:
-            # The target is already in [-1, 1] (build_shockwave_video clamps);
-            # clamped again so the block does not depend on that.
-            target_scored = target_scored.clamp(-1.0, 1.0)
-            vae_only_scored = vae_only_scored.clamp(-1.0, 1.0)
-            vae_dit_scored = vae_dit_scored.clamp(-1.0, 1.0)
-        bench = {
-            "vae_only": benchmark_metrics(vae_only_scored, target_scored, ssim_fn),
-            "vae_dit": benchmark_metrics(vae_dit_scored, target_scored, ssim_fn),
-        }
-        for label, values in bench.items():
-            for m in BENCHMARK_METRICS:
-                bench_values[label][m].append(values[m])
-        per_frame = {
-            "vae_only": per_frame_benchmark_metrics(vae_only_scored, target_scored, ssim_fn),
-            "vae_dit": per_frame_benchmark_metrics(vae_dit_scored, target_scored, ssim_fn),
-        }
-        for label, values in per_frame.items():
-            for m in PER_FRAME_METRICS:
-                per_frame_values[label][m].append(values[m])
+        frames_arg = {"benchmark": args.score_frames, "benchmark_10": args.score_frames_10}
+        bench, per_frame, scored = {}, {}, {}
+        for blk, first in BENCHMARK_BLOCKS.items():
+            frames = frames_arg[blk] if frames_arg[blk] is not None else list(range(first, last_stored + 1, 10))
+            if not frames:
+                continue
+            if max(frames) > last_stored:
+                raise SystemExit(f"{blk} frames {frames} exceed the last available frame {last_stored} for {sid}")
+            if any(f % frame_stride for f in frames):
+                raise SystemExit(f"{blk} frames {frames} are not all multiples of frame_stride {frame_stride}")
+            block_frames[blk] = frames
+            idx = torch.as_tensor([f // frame_stride for f in frames], device=target.device)
+            t_s, vo_s, vd_s = target.index_select(2, idx), vae_recon.index_select(2, idx), dit_full.index_select(2, idx)
+            if args.clamp_prediction:
+                # The target is already in [-1, 1] (build_shockwave_video clamps);
+                # clamped again so the block does not depend on that.
+                t_s, vo_s, vd_s = t_s.clamp(-1.0, 1.0), vo_s.clamp(-1.0, 1.0), vd_s.clamp(-1.0, 1.0)
+            scored[blk] = (idx, t_s, vo_s, vd_s)
+            bench[blk] = {
+                "vae_only": benchmark_metrics(vo_s, t_s, ssim_fn),
+                "vae_dit": benchmark_metrics(vd_s, t_s, ssim_fn),
+            }
+            per_frame[blk] = {
+                "vae_only": per_frame_benchmark_metrics(vo_s, t_s, ssim_fn),
+                "vae_dit": per_frame_benchmark_metrics(vd_s, t_s, ssim_fn),
+            }
+            for label in ("vae_only", "vae_dit"):
+                for m in BENCHMARK_METRICS:
+                    bench_values[blk][label][m].append(bench[blk][label][m])
+                for m in PER_FRAME_METRICS:
+                    per_frame_values[blk][label][m].append(per_frame[blk][label][m])
+        frame_idx, target_scored, vae_only_scored, vae_dit_scored = scored["benchmark"]
+
+        if args.shock_analysis:
+            fields = {name: sample[name][:n_avail].to(device) for name in channel_names}
+            masks = region_masks(fields, top_frac=args.shock_top_frac, dilate_px=args.shock_dilate_px)
+            region_stats.add(
+                {r: m.index_select(0, frame_idx) for r, m in masks.items()},
+                {"vae_only": vae_only_scored[0], "vae_dit": vae_dit_scored[0]}, target_scored[0],
+            )
+            n_lat, h_lat, w_lat = lat_sq_err.shape[2:]
+            all_target, all_vo, all_vd = target[0, :, :n_avail], vae_recon[0, :, :n_avail], dit_full[0, :, :n_avail]
+            if args.clamp_prediction:
+                all_target, all_vo, all_vd = all_target.clamp(-1, 1), all_vo.clamp(-1, 1), all_vd.clamp(-1, 1)
+            token_rows["shock_frac"].append(token_mean(masks["shock"].float(), n_lat, h_lat, w_lat).cpu())
+            token_rows["contact_frac"].append(token_mean(masks["contact"].float(), n_lat, h_lat, w_lat).cpu())
+            token_rows["latent_mse"].append(lat_sq_err[0].mean(dim=0).cpu())
+            token_rows["pixel_mse_vae_dit"].append(token_mean((all_vd - all_target) ** 2, n_lat, h_lat, w_lat).cpu())
+            token_rows["pixel_mse_vae_only"].append(token_mean((all_vo - all_target) ** 2, n_lat, h_lat, w_lat).cpu())
+            token_ids.append(sid)
+            frac = {r: float(masks[r].index_select(0, frame_idx).float().mean()) for r in REGIONS}
+            print(f"    regions (scored frames): " + "  ".join(f"{r}={v:.3f}" for r, v in frac.items()))
 
         per_sample.append({
             "id": sid, **{k: float(v) for k, v in sample["meta"].items()},
@@ -608,8 +684,8 @@ def main():
             "vae_only_per_channel": dict(zip(channel_names, vo_channel)),
             "vae_dit_per_channel": dict(zip(channel_names, vd_channel)),
             "latent_vrmse_chmean": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
-            "benchmark": bench,
-            "benchmark_per_frame": per_frame,
+            **{blk: bench[blk] for blk in bench},
+            **{f"{blk}_per_frame": per_frame[blk] for blk in per_frame},
             "generation_seconds": gen_seconds[-1],
         })
         for c in range(n_ch):
@@ -618,8 +694,8 @@ def main():
         sum_lat_rmse += lat_rmse
         sum_lat_mse += lat_mse
 
-        print(f"[{i+1}/{len(val_ids)}] {sid}: benchmark vrmse vae_only={bench['vae_only']['vrmse']:.5f}  "
-              f"vae+dit={bench['vae_dit']['vrmse']:.5f}  (all frames chmean {vo_chmean:.5f} / {vd_chmean:.5f})")
+        print(f"[{i+1}/{len(val_ids)}] {sid}: benchmark vrmse vae_only={bench['benchmark']['vae_only']['vrmse']:.5f}  "
+              f"vae+dit={bench['benchmark']['vae_dit']['vrmse']:.5f}  (all frames chmean {vo_chmean:.5f} / {vd_chmean:.5f})")
 
         if sid in npz_ids:
             frames = [f for f in args.npz_frames if f < n_px]
@@ -684,6 +760,37 @@ def main():
 
     n = len(val_ids)
     mean_lat_channel = (sum_lat_channel / n).tolist()
+
+    def benchmark_summary(blk: str) -> dict:
+        return {
+            "scored_frames": block_frames[blk],  # stored-frame numbers, same for every sim
+            "frame_stride": frame_stride,
+            "clamp_prediction": bool(args.clamp_prediction),
+            "h_seminorm": "relative",  # h1/h2 = |pred - target|_H / |target|_H (evals before 2026-11-02: squared, unnormalized)
+            "notes": "each metric once per sim over the scored frames and all channels, then the plain "
+                     "mean over sims; vrmse, h1 and h2 are per field then mean; h1/h2 are relative seminorm "
+                     "errors (1 = flat prediction); ssim is 1 - SSIM; prediction and target clamped to "
+                     "[-1, 1] if clamp_prediction",
+            **{
+                label: {
+                    m: {"mean": float(torch.tensor(v, dtype=torch.float64).mean()),
+                        "std_over_sims": float(torch.tensor(v, dtype=torch.float64).std(unbiased=False))}
+                    for m, v in values.items()
+                }
+                for label, values in bench_values[blk].items()
+            },
+            # Same scored frames, each scored on its own (list index = scored_frames index), mean and
+            # std over sims. No mlw: it needs more than one frame.
+            "per_frame": {
+                label: {
+                    m: {"mean": torch.tensor(v, dtype=torch.float64).mean(0).tolist(),
+                        "std_over_sims": torch.tensor(v, dtype=torch.float64).std(0, unbiased=False).tolist()}
+                    for m, v in values.items()
+                }
+                for label, values in per_frame_values[blk].items()
+            },
+        }
+
     ranked = sorted(range(len(mean_lat_channel)), key=lambda c: mean_lat_channel[c], reverse=True)
     summary = {
         "n_samples": n,
@@ -716,32 +823,7 @@ def main():
         "latent_mse_per_channel": (sum_lat_channel_mse / n).tolist(),
         "worst_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[:5]],
         "best_5_latent_channels": [{"channel": c, "vrmse": mean_lat_channel[c]} for c in ranked[-5:]],
-        "benchmark": {
-            "scored_frames": score_frames,  # stored-frame numbers, same for every sim
-            "frame_stride": frame_stride,
-            "clamp_prediction": bool(args.clamp_prediction),
-            "notes": "each metric once per sim over the scored frames and all channels, then the plain "
-                     "mean over sims; vrmse is per field then mean; ssim is 1 - SSIM; prediction and "
-                     "target clamped to [-1, 1] if clamp_prediction",
-            **{
-                label: {
-                    m: {"mean": float(torch.tensor(v, dtype=torch.float64).mean()),
-                        "std_over_sims": float(torch.tensor(v, dtype=torch.float64).std(unbiased=False))}
-                    for m, v in values.items()
-                }
-                for label, values in bench_values.items()
-            },
-            # Same scored frames, each scored on its own (list index = scored_frames index), mean and
-            # std over sims. No mlw: it needs more than one frame.
-            "per_frame": {
-                label: {
-                    m: {"mean": torch.tensor(v, dtype=torch.float64).mean(0).tolist(),
-                        "std_over_sims": torch.tensor(v, dtype=torch.float64).std(0, unbiased=False).tolist()}
-                    for m, v in values.items()
-                }
-                for label, values in per_frame_values.items()
-            },
-        },
+        **{blk: benchmark_summary(blk) for blk in block_frames},
         # Wall clock for one trajectory: frame-0 conditioning, DiT sampling and VAE decode, one GPU,
         # batch 1, metrics and the VAE-only pass excluded. The first sim includes warm-up.
         "generation_time": {
@@ -757,17 +839,51 @@ def main():
         },
         "per_sample": per_sample,
     }
+    if args.shock_analysis:
+        # Same latent frame count for every sim of a run.
+        tokens = {k: torch.stack(v) for k, v in token_rows.items()}
+        tokens["n_frames"] = n_avail
+        first_free_latent = (num_cond_frames - 1) // 8 + 1
+        npz_dir.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            npz_dir / f"shock_tokens_{args.out_dir.name}.npz",
+            ids=np.array(token_ids), channel_order=np.array(channel_names), n_frames=n_avail,
+            first_free_latent=first_free_latent,
+            **{k: v.numpy().astype(np.float32) for k, v in tokens.items() if k != "n_frames"},
+        )
+        save_token_heatmaps(tokens, args.out_dir / "shock_analysis" / "token_heatmaps.png", dpi=args.dpi)
+        summary["shock_analysis"] = {
+            "top_frac": args.shock_top_frac,
+            "dilate_px": args.shock_dilate_px,
+            "notes": "regions from the ground truth: shock = top top_frac of |grad log p|, shock_band = shock "
+                     "dilated by dilate_px minus shock, contact = top top_frac of |grad log rho| dilated, outside "
+                     "the dilated shock, smooth = rest. Regions on the scored frames, same clamp as the benchmark "
+                     "block; rmse in normalized space; se_share = region's share of the channel's squared error; "
+                     "concentration = se_share_chmean / area_frac. Tokens: latent frames before "
+                     "first_free_latent (the condition) left out.",
+            "regions": region_stats.summary(),
+            "tokens": token_summary(tokens, first_free_latent),
+            # [latent frame][row][col], mean over sims
+            "token_maps_sim_mean": {
+                "shock_frac": tokens["shock_frac"].double().nanmean(dim=0).tolist(),
+                "contact_frac": tokens["contact_frac"].double().nanmean(dim=0).tolist(),
+                "latent_mse": tokens["latent_mse"].double().nanmean(dim=0).tolist(),
+                "pixel_mse_vae_dit_chmean": tokens["pixel_mse_vae_dit"].double().mean(dim=1).nanmean(dim=0).tolist(),
+                "pixel_mse_vae_only_chmean": tokens["pixel_mse_vae_only"].double().mean(dim=1).nanmean(dim=0).tolist(),
+            },
+        }
     (args.out_dir / "vrmse_summary.json").write_text(json.dumps(summary, indent=2))
 
     print("\n" + "=" * 60)
     print(f"n={n} sims")
-    print(f"Benchmark metrics (cfd_bench definitions), frames {summary['benchmark']['scored_frames']}, "
-          f"clamp={summary['benchmark']['clamp_prediction']}:")
-    for label in ("vae_only", "vae_dit"):
-        print(f"  {label:9s} " + "  ".join(
-            f"{m}={summary['benchmark'][label][m]['mean']:.5f}" for m in BENCHMARK_METRICS))
-    print("  per frame (vae_dit): " + "  ".join(
-        f"f{f}: vrmse={v:.4f}" for f, v in zip(score_frames, summary["benchmark"]["per_frame"]["vae_dit"]["vrmse"]["mean"])))
+    for blk in block_frames:
+        b = summary[blk]
+        print(f"Benchmark metrics [{blk}] (cfd_bench definitions), frames {b['scored_frames']}, "
+              f"clamp={b['clamp_prediction']}:")
+        for label in ("vae_only", "vae_dit"):
+            print(f"  {label:9s} " + "  ".join(f"{m}={b[label][m]['mean']:.5f}" for m in BENCHMARK_METRICS))
+        print("  per frame (vae_dit): " + "  ".join(
+            f"f{f}: vrmse={v:.4f}" for f, v in zip(b["scored_frames"], b["per_frame"]["vae_dit"]["vrmse"]["mean"])))
     gt = summary["generation_time"]
     print(f"Generation time ({gt['device']}, {gt['num_inference_steps']} steps): {gt['total_seconds']:.1f} s for "
           f"{n} trajectories = mean {gt['seconds_per_trajectory']:.2f} s/trajectory, median "
@@ -784,7 +900,28 @@ def main():
     print(f"  latent_rmse         : {summary['latent_rmse_mean']:.5f}")
     print(f"  latent_mse          : {summary['latent_mse_mean']:.5f}")
     print(f"  worst 5 latent channels: {summary['worst_5_latent_channels']}")
-    print(f"\nSaved: {args.out_dir / 'vrmse_summary.json'}")
+    if args.shock_analysis:
+        sa = summary["shock_analysis"]
+        print(f"\nError by region (scored frames, top_frac={sa['top_frac']}, dilate={sa['dilate_px']} px):")
+        print(f"  {'region':<11} {'area':>6} | {'vae_only rmse':>13} {'share':>6} | {'vae_dit rmse':>12} {'share':>6} {'conc':>5}")
+        for r in REGIONS:
+            vo, vd = sa["regions"]["vae_only"][r], sa["regions"]["vae_dit"][r]
+            print(f"  {r:<11} {sa['regions']['area_frac'][r]:>6.3f} | {vo['rmse_chmean']:>13.4f} "
+                  f"{vo['se_share_chmean']:>6.3f} | {vd['rmse_chmean']:>12.4f} {vd['se_share_chmean']:>6.3f} "
+                  f"{vd['concentration_chmean']:>5.2f}")
+        for r in REGIONS:
+            vd = sa["regions"]["vae_dit"][r]["rmse"]
+            print(f"  vae_dit rmse {r:<11}: " + "  ".join(f"{c}={v:.4f}" for c, v in vd.items()))
+        tok = sa["tokens"]
+        print(f"Tokens ({tok['n_tokens']}): spearman latent_mse vs shock_frac "
+              f"{tok['latent_mse_vs_shock_frac']['spearman']:.3f}, pixel_mse vs shock_frac "
+              f"{tok['pixel_mse_vae_dit_vs_shock_frac']['spearman']:.3f}")
+        for b in tok["by_shock_frac"]:
+            if b["n_tokens"]:
+                print(f"  shock_frac {b['shock_frac']:<12} n={b['n_tokens']:<7} latent_mse={b['latent_mse']:.4f}  "
+                      f"pixel_mse vae_dit={b['pixel_mse_vae_dit_chmean']:.5f} vae_only={b['pixel_mse_vae_only_chmean']:.5f}")
+        print(f"Saved: {args.out_dir / 'shock_analysis' / 'token_heatmaps.png'}, {npz_dir / f'shock_tokens_{args.out_dir.name}.npz'}")
+    print(f"\nSaved:{args.out_dir / 'vrmse_summary.json'}")
     if vis_ids:
         print(f"Saved GT/Prediction/Residual panels for {len(vis_ids)} sample(s) spanning the gamma "
               f"range, frames {args.frame_numbers}, under:")
