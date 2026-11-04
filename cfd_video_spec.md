@@ -14,12 +14,16 @@
   of the colormap and the panel was black, so models looked better than they are. The sign shows whether a prediction
   is too high or too low, and whether a front is ahead or behind.
 - ★ **Signed channels (momentum) diverging around physical 0** with symmetric bounds, as a fixed channel policy (the
-  spec already allowed it).
+  spec already allowed it), set by `"signed": true` in the shared statistics so every collaborator draws it the same.
 - ★ **One row per channel in one video** (all fields side by side, e.g. density and pressure fronts together);
   one video per channel stays an option. The frame is 960 px wide and its height follows the rows (4 channels:
   960 × 1090 px) instead of a fixed 960 × 1120 px with empty space.
 - ★ **Frame text: title and time on top, one centred scale line under the panels.** The colorbars show physical
-  values; the formulas and the numeric statistics go into the video's metadata (mp4 comment tag) instead of on every frame.
+  values; the formulas and the numeric statistics go into the video's metadata (mp4 comment tag) instead of on every
+  frame. A `.json` with the per-frame numbers only on request (`--json`).
+- ★ **Playback follows physical time** (`--slowdown`, video seconds per physical second, instead of a fixed frame
+  rate): rollouts with different time steps (stride 1 or 2) last equally long and show the same physical time at the
+  same moment. Every frame shows its physical time in seconds.
 
 Everything else is unchanged: shared training statistics, the same fixed scales for every model and frame, physical
 units, out-of-range values flagged in colour and counted, 100 DPI and 960 px width.
@@ -33,7 +37,7 @@ For every dataset, test trajectory and output time, ★ one row per physical cha
 | Ground truth | Model prediction | ★ Signed pointwise error |
 
 All three panels must display the **same physical time and spatial region**. Use the same panel dimensions, spatial
-orientation, aspect ratio, frame rate, and channel units across collaborators.
+orientation, aspect ratio, ★ slowdown, and channel units across collaborators.
 
 **Video canvas:** ★ a Matplotlib figure 9.6 inches wide at 100 DPI (960 px), 2.5 inches per channel row plus title
 and text (4 channels: 960 × 1090 px); the same for every collaborator with the same channels. Do not resize, crop or
@@ -49,6 +53,7 @@ From **training-set ground truth in physical units**, pooled over training traje
 - $\mu_c$: mean, $\sigma_c$: standard deviation.
 - $a_c$, $b_c$: minimum and maximum. ★ No longer the display bounds; the lower display bound is kept $\ge a_c$.
 - $L_c=Q_{0.005}$, $U_c=Q_{0.995}$: 0.5th and 99.5th percentiles, ★ recorded in the video's metadata.
+- ★ unit, and `signed: true` for channels drawn diverging around 0 (momentum).
 
 Require $\sigma_c > 0$ and $b_c > a_c$; constant channels need an explicit special case. Never recompute these
 statistics from test trajectories or model predictions.
@@ -72,7 +77,7 @@ so $\Phi_c(\mathrm{lo}_c)=0$ and $\Phi_c(\mathrm{hi}_c)=1$. In Matplotlib:
 `AsinhNorm(linear_width=0.1*sigma, vmin=lo-mu, vmax=hi-mu)` on `value - mu`. Values outside the range are **not
 clipped in the data**; they are drawn cyan (below) or magenta (above) and counted.
 
-Colormap `viridis`. ★ Signed channels (momentum, `"signed": true` in the shared statistics): `RdBu_r` centred at physical 0, bounds
+Colormap `viridis`. ★ Signed channels (`"signed": true`): `RdBu_r` centred at physical 0, bounds
 $\pm(|\mu_c|+2\sigma_c)$.
 
 ## 4. Column 3: signed pointwise error
@@ -83,14 +88,14 @@ counted, never removed. The error is always normalized by the training $\sigma_c
 
 ## 5. Frame annotations
 
-★ On every frame: model, trajectory and physical time on top; one centred line under the panels with the display
-ranges and asinh widths. The numeric $\mu_c, \sigma_c, a_c, b_c, L_c, U_c$ are in the video's metadata. Colorbars show physical values
-for columns 1–2 and multiples of $\sigma_c$ for column 3. The complete mapping is written to the metadata of every
+★ On every frame: model, trajectory and physical time (s) on top; one centred line under the panels with the display
+ranges and asinh widths. The numeric $\mu_c, \sigma_c, a_c, b_c, L_c, U_c$ are in the video's metadata. Colorbars show
+physical values for columns 1–2 and multiples of $\sigma_c$ for column 3. The complete mapping is written to the metadata of every
 video. RMSE and fractions are computed on the physical fields, never on plotted intensities.
 
 ## 6. What every collaborator must deliver
 
-1. ★ One video per agreed trajectory with a row per channel (`rollout.mp4`; `--per-channel` gives `<channel>.mp4`).
+1. ★ One video per agreed trajectory with a row per channel (`<out>.mp4`; `--per-channel` gives `<out>_<channel>.mp4`).
 2. Identical crop, aspect ratio and orientation for all baselines; no dynamic zoom or rescaling. ★ Playback follows
    physical time (`--slowdown`, default 8 video seconds per physical second, the frame rate follows from the time
    step), so rollouts with different time steps play in step side by side.
@@ -123,5 +128,6 @@ python cfd_video.py rollout.npz stats.json out/model_0456 --json          # plus
 ```
 
 `rollout.npz`: `gt`, `pred` [T, C, H, W] in physical units, `times` [T], `channels` [C]. `stats.json`:
-`{channel: {mean, std, min, max, p0_5, p99_5, unit, signed}}`, `signed: true` for momentum. Needs numpy, matplotlib and imageio-ffmpeg. From Python:
-`write_video(...)` for a video, `write_frame(...)` for one png.
+`{channel: {mean, std, min, max, p0_5, p99_5, unit, signed}}` (`signed: true` for momentum). `out` is the path
+without extension. Needs numpy, matplotlib and imageio-ffmpeg. From Python: `write_video(...)` for a video (returns
+the per-frame numbers), `write_frame(...)` for one png.
