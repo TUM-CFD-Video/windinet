@@ -8,8 +8,10 @@ Benchmark (first table in results.md): Harish's cfd_bench metrics -- RMSE, VRMSE
 
 For 3 test cases chosen by gamma (lowest, closest to the mean, highest):
     visualizations/panels/<case>/   GT | prediction | residual at selected frames (physical units)
-    videos/<case>.mp4               frame 0 (given) + frames 1..F: GT | prediction | difference (pred - GT, white = 0)
-    videos/<case>_vae.mp4           the same for the VAE round trip (encode -> decode the true frames)
+    videos/<case>_<channel>.mp4     frame 0 (given) + frames 1..F, one video per channel in the standardized
+                                    format shared with LTX / Wan (rollout_video.py): GT | prediction | |error| / sigma
+                                    with the training-set colour limits of --video-stats; <video>.json per-frame numbers
+    videos/<case>_vae_<channel>.mp4 the same for the VAE round trip (encode -> decode the true frames)
     error_over_time.png             error per generated frame
 For --metric-sims test simulations (default: all 500), VRMSE mean ± std over frames 1..F of
     VAE round trip vs dataset      (encode -> decode the ground truth: the VAE's own error)
@@ -45,7 +47,8 @@ import yaml
 
 from magi_finetuning.data import Normalization, build_latent_sequence, encode_image, stratified_subset
 from magi_finetuning.eval.report import (BENCHMARK_METRICS, benchmark_metrics, inference_summary, save_case_panels,
-                                         save_case_video, save_error_over_time, vrmse, vrmse_per_frame, write_tables)
+                                         save_error_over_time, vrmse, vrmse_per_frame, write_tables)
+from magi_finetuning.eval.rollout_video import STATS_FILE, load_stats, save_rollout_videos
 from magi_finetuning.settings import CHUNK_WIDTH, DEFAULT_FRAMES, FINAL_MODELS, OUTPUTS, SAMPLER_WINDOW, TEST_DATA
 from magi_finetuning.utils.runtime import summarize
 from windinet.losses import SSIMLoss
@@ -71,6 +74,8 @@ def parse_args():
     p.add_argument("--window", type=int, default=SAMPLER_WINDOW,
                    help="chunks denoised at once (MAGI-1's pipeline: 4; 1 = one chunk at a time, as before 2026-10-28)")
     p.add_argument("--video-fps", type=int, default=8)
+    p.add_argument("--video-stats", default=str(STATS_FILE),
+                   help="training-set channel statistics fixing the video colour limits (utils/rollout_video_stats.py)")
     p.add_argument("--score-frames", type=int, nargs="+", default=list(range(10, 91, 10)),
                    help="trajectory frames of the benchmark table (Harish's cfd_bench, dev-hr); default 10, 20, ..., 90")
     p.add_argument("--out", default=None, help="default: <DiT run dir>/eval_<checkpoint name>")
@@ -93,6 +98,8 @@ def run(args):
     output_dir = Path(args.out)
     (output_dir / "scores").mkdir(parents=True, exist_ok=True)
     (output_dir / "videos").mkdir(parents=True, exist_ok=True)
+    if not args.report_only:
+        load_stats(args.video_stats)  # fail now, not after the first rollout, if the video statistics are missing
     if args.save_rollouts:
         (output_dir / "rollouts").mkdir(parents=True, exist_ok=True)
 
@@ -165,12 +172,12 @@ def score_shard(args, test_set, cases, metric_ids, output_dir: Path) -> None:
             name = case_names[sim_id]
             scores["case"] = name
             scores["vae_error_per_frame"] = vrmse_per_frame(vae_round_trip, truth[:, :, 1:]).tolist()  # frames 1..F
-            label = f"{name} (gamma {parse_gamma(sim_id):.3f}, {sim_id})"
-            make_case_figures(to_physical(vae_round_trip), truth_physical, f"{name}_vae", f"VAE round trip: {label}",
-                              output_dir, args)
+            make_case_figures(to_physical(vae_round_trip), truth_physical, f"{name}_vae", "VAE round trip",
+                              sim_id, output_dir, args)
             if generated is not None:
                 scores["error_per_frame"] = vrmse_per_frame(generated, truth[:, :, 1:]).tolist()
-                make_case_figures(to_physical(generated), truth_physical, name, label, output_dir, args)
+                make_case_figures(to_physical(generated), truth_physical, name, model_name(args, output_dir),
+                                  sim_id, output_dir, args)
         scores["seconds"] = round(time.time() - started, 1)  # rollout + scoring (+ figures for the cases)
         if inference_seconds is not None:  # frame 0 -> frames 1..F only (see predict); for the timing table
             scores["inference_seconds"] = round(inference_seconds, 3)
@@ -248,15 +255,22 @@ def benchmark(truth, vae_round_trip, rollout_fields, score_frames, ssim_fn) -> d
     return result
 
 
-def make_case_figures(rollout_physical, truth_physical, case_name, label, output_dir, args) -> None:
+def make_case_figures(rollout_physical, truth_physical, case_name, model, sim_id, output_dir, args) -> None:
     """rollout (or VAE round trip): frames 1..F; truth: frames 0..F (physical units).
-    Panels at frames 1, 25, 50, 75 and F; video of frame 0 (given, same in both) followed by frames 1..F."""
+    Panels at frames 1, 25, 50, 75 and F; per channel a standardized video of frame 0 (given, same in both)
+    followed by frames 1..F."""
     num_frames = rollout_physical.shape[2]
     panel_frames = sorted({1, *range(25, num_frames, 25), num_frames})
     save_case_panels(rollout_physical, truth_physical[:, :, 1:], case_name, panel_frames, output_dir)
     prediction_with_given = torch.cat([truth_physical[:, :, :1], rollout_physical], dim=2)
-    save_case_video(prediction_with_given, truth_physical, label, output_dir / "videos" / case_name,
-                    fps=args.video_fps, first_frame_given=True)
+    save_rollout_videos(prediction_with_given, truth_physical, CHANNEL_NAMES, load_stats(args.video_stats),
+                        output_dir / "videos", trajectory=sim_id, model=model, name=case_name, fps=args.video_fps,
+                        dataset=args.test_data)
+
+
+def model_name(args, output_dir: Path) -> str:
+    """Model id in the videos: the archive name (e.g. dit_full_8000steps_on_F3) or the evaluation folder's."""
+    return "MAGI-1 " + (args.archive_name or archive_name_from(output_dir))
 
 
 # ---------------------------------------------------------------- report (after all shards)

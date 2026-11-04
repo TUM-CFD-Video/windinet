@@ -25,8 +25,10 @@ def parse_args():
     p.add_argument("--save-every", type=int, default=250)
     p.add_argument("--log-every", type=int, default=10)
     p.add_argument("--vae-ckpt", default=None, help="adapted VAE from magi_finetuning/train/train_vae.py (default: released VAE)")
+    p.add_argument("--lr", type=float, default=None,
+                   help="peak learning rate (cosine to settings.FULL_FT eta_min for full FT). Default: 1e-4 for LoRA, "
+                        "settings.FULL_FT['lr'] (1e-5) for full FT")
     # LoRA only (full FT uses settings.FULL_FT instead)
-    p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--warmup", type=int, default=50)
     p.add_argument("--grad-accum", type=int, default=None, help="default: 32 / number of GPUs (effective batch 32)")
     p.add_argument("--lora-rank", type=int, default=32)
@@ -40,9 +42,16 @@ def parse_args():
     p.add_argument("--max-minutes", type=float, default=None, help="stop cleanly after this wall time")
     p.add_argument("--resume", action="store_true",
                    help="full FT: continue from <ckpt-dir>/resume.pt if it exists (otherwise start fresh)")
+    p.add_argument("--init-from", default=None,
+                   help="full FT: a new run (step 0, fresh optimizer and lr schedule) from another run's weights: "
+                        "its resume.pt (fp32) or a full_stepNNNNNN.safetensors (bf16). Ignored once this run's "
+                        "own resume.pt exists (later jobs of the chain continue it)")
     p.add_argument("--inference-kv-range", choices=["block_causal", "noise2clean"], default="block_causal",
                    help="recorded for sampling: cross-chunk attention at inference (training is block-causal)")
     args = p.parse_args()
+    if args.lr is None:
+        from magi_finetuning.settings import FULL_FT
+        args.lr = FULL_FT["lr"] if args.full_finetune else 1e-4
     if args.frames % 4 or not 4 <= args.frames <= 100:
         raise ValueError("--frames must be a multiple of 4 (the VAE's time patch) between 4 and 100")
     return args

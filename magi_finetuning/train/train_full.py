@@ -55,7 +55,7 @@ def run(args):
     loader, sampler = make_loader(args, seed=FULL_FT["seed"])
 
     # 4. Optimizer and learning-rate schedule (cosine to eta_min, no warmup)
-    optimizer = make_adamw8bit(trainable_params)
+    optimizer = make_adamw8bit(trainable_params, args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.steps, eta_min=FULL_FT["eta_min"])
     # Continue a run that stopped at --max-minutes (8000 steps don't fit one 12 h job), if there is one.
     progress = {"step": 0, "micro_batches_done": 0, "world_size": None}
@@ -65,6 +65,9 @@ def run(args):
             accelerator.print(f"run already finished at step {progress['step']}; exiting")
             shutdown(accelerator)
             return
+    elif args.init_from:
+        load_initial_weights(model, args.init_from)
+        accelerator.print(f"new run from the weights of {args.init_from} (fresh optimizer, lr schedule from step 0)")
     step = progress["step"]
     # prepare() wraps the model for multi-GPU and splits the data across GPUs. The scheduler is
     # deliberately NOT passed in: Accelerate would step it once per GPU, i.e. too fast.
@@ -149,7 +152,7 @@ def prepare_output_dir(args, accelerator, grad_accum: int, num_gpus: int) -> Pat
     output_dir = Path(args.out)
     if accelerator.is_main_process:
         output_dir.mkdir(parents=True, exist_ok=True)
-        settings = {**FULL_FT, "betas": list(FULL_FT["betas"])}  # yaml can't write tuples
+        settings = {**FULL_FT, "lr": args.lr, "betas": list(FULL_FT["betas"])}  # yaml can't write tuples
         record = yaml.safe_dump({**vars(args), "full_ft_settings": settings, "grad_accum": grad_accum, "num_gpus": num_gpus})
         (output_dir / "args.yaml").write_text(record)
         if args.ckpt_dir and not args.no_save:  # evaluation reads it next to the checkpoints
@@ -185,12 +188,12 @@ def prepare_checkpoint_dir(args, accelerator, num_params: int):
     return check_ckpt_dir(args, num_params, len(save_steps))
 
 
-def make_adamw8bit(trainable_params):
-    """bitsandbytes 8-bit AdamW with Weihao's lr / betas / weight decay."""
+def make_adamw8bit(trainable_params, lr: float):
+    """bitsandbytes 8-bit AdamW with Weihao's betas / weight decay; lr = --lr (default Weihao's FULL_FT lr)."""
     import bitsandbytes as bnb
 
     return bnb.optim.AdamW8bit(
-        trainable_params, lr=FULL_FT["lr"], betas=FULL_FT["betas"], weight_decay=FULL_FT["weight_decay"]
+        trainable_params, lr=lr, betas=FULL_FT["betas"], weight_decay=FULL_FT["weight_decay"]
     )
 
 
@@ -292,6 +295,20 @@ def save_resume_state(accelerator, model, optimizer, scheduler, step: int, micro
         accelerator.print(f"resume state for step {step} written to {checkpoint_dir / 'resume.pt'}")
     save_rng_states(checkpoint_dir, accelerator.process_index)
     accelerator.wait_for_everyone()
+
+
+def load_initial_weights(model, checkpoint: str) -> None:
+    """--init-from: the weights of another run, from its resume.pt (fp32 master weights) or a
+    full_stepNNNNNN.safetensors (bf16, cast to the fp32 parameters). Every parameter must be there."""
+    if checkpoint.endswith(".pt"):
+        weights = torch.load(checkpoint, map_location="cpu", weights_only=False)["weights"]
+    else:
+        from safetensors.torch import load_file
+        weights = load_file(checkpoint)
+    missing, unexpected = model.load_state_dict(weights, strict=False)
+    parameter_names = {name for name, _ in model.named_parameters()}
+    if unexpected or any(name in parameter_names for name in missing):
+        raise RuntimeError(f"{checkpoint} doesn't match the model: missing {missing[:5]}, unexpected {unexpected[:5]}")
 
 
 def load_resume_state(checkpoint_dir: Path, model, optimizer, scheduler, grad_accum: int) -> dict:

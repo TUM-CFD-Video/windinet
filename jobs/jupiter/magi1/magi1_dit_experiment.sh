@@ -5,9 +5,15 @@
 # repo root; it only calls sbatch.
 #
 #   bash jobs/jupiter/magi1/magi1_dit_experiment.sh --name <run> --vae-ckpt <vae_best.safetensors> [--n-dit 5] \
-#       [--clean-chunks] [--dry-run]
+#       [--clean-chunks] [--init-from <ckpt>] [--steps N] [--train-shift S] [--save-every N] [--lr LR] [--dry-run]
 #     --clean-chunks  MAGI-1's video-continuation samples in training: some samples start with clean chunks
 #                     (no loss on them), as the 4-chunk sampler meets them (dit.sample_num_clean_chunks)
+#     --init-from     start from another run's weights (resume.pt or full_stepNNNNNN.safetensors) with a fresh
+#                     optimizer and lr schedule, e.g. a continuation of full_8000steps_on_F3
+#     --steps         training steps (default 8000); the evaluation uses the last checkpoint
+#     --train-shift   sd3 shift of the training timesteps (default 3; 1 = uniform t, more near-clean samples)
+#     --save-every    bf16 checkpoint interval (default 1000)
+#     --lr            peak learning rate of the cosine schedule (default settings.FULL_FT: 1e-5)
 #
 # Checkpoints (bf16 every 1000 steps + resume state): $MAGI1_SCRATCH/magi1_dit_<run>/
 # Args/logs: $MAGI1_OUTPUTS/dit_experiments/<run>/        results: .../<run>/eval/results.md
@@ -23,12 +29,18 @@ VAE_CKPT=""
 N_DIT=5
 TRAIN_ARGS=()
 DRY_RUN=0
+STEPS=8000
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --name)     NAME="$2"; shift 2 ;;
         --vae-ckpt) VAE_CKPT="$2"; shift 2 ;;
         --n-dit)    N_DIT="$2"; shift 2 ;;
         --clean-chunks) TRAIN_ARGS+=(--clean-chunks); shift ;;
+        --init-from) [[ -f "$2" ]] || { echo "--init-from: no file $2" >&2; exit 1; }; TRAIN_ARGS+=(--init-from "$2"); shift 2 ;;
+        --steps)      STEPS="$2"; shift 2 ;;
+        --train-shift) TRAIN_ARGS+=(--shift "$2"); shift 2 ;;
+        --save-every) TRAIN_ARGS+=(--save-every "$2"); shift 2 ;;
+        --lr)         TRAIN_ARGS+=(--lr "$2"); shift 2 ;;
         --dry-run)  DRY_RUN=1; shift ;;
         *) echo "unknown option: $1 (see the header of $0)" >&2; exit 1 ;;
     esac
@@ -51,10 +63,10 @@ submit() {  # submit <job id to wait for, or ""> <sbatch args...>; prints the ne
 prev=""
 for i in $(seq 1 "${N_DIT}"); do
     prev=$(submit "${prev}" --job-name="ig_magi1_dit_${NAME}" "${JOBS}/magi1_official_dit.sbatch" \
-        --vae-ckpt "${VAE_CKPT}" --ckpt-dir "${CKPT_DIR}" --out "${OUT}" "${TRAIN_ARGS[@]}")
+        --vae-ckpt "${VAE_CKPT}" --ckpt-dir "${CKPT_DIR}" --out "${OUT}" --steps "${STEPS}" "${TRAIN_ARGS[@]}")
     echo "full DiT ${i}/${N_DIT}: ${prev}"
 done
-prev=$(submit "${prev}" "${JOBS}/evaluate_magi1.sbatch" --dit-ckpt "${CKPT_DIR}/full_step008000.safetensors" \
+prev=$(submit "${prev}" "${JOBS}/evaluate_magi1.sbatch" --dit-ckpt "${CKPT_DIR}/full_step$(printf %06d "${STEPS}").safetensors" \
     --vae-ckpt "${VAE_CKPT}" --frames 100 --metric-sims 500 --out "${OUT}/eval" --archive-name "dit_${NAME}")
 echo "eval        : ${prev}   -> ${OUT}/eval/results.md"
 (( DRY_RUN )) && echo "(dry run: nothing submitted)"

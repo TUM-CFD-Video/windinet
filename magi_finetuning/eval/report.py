@@ -49,54 +49,6 @@ def save_case_panels(prediction, target, case_name: str, frame_numbers, output_d
     )
 
 
-def save_case_video(prediction, target, title: str, path: Path, fps: int = 8, first_frame_given: bool = False) -> Path:
-    """Video of the whole rollout: per frame a 4 x 3 panel (GT | prediction | difference = prediction - GT;
-    white = no difference, red = prediction too high, blue = too low). With first_frame_given, frame 0 is the
-    given condition (prediction == truth there) and frames are numbered 0..F; otherwise 1..T. Colour limits
-    are fixed per field over the whole clip (the difference symmetric around 0) so the video doesn't
-    flicker. Writes .mp4 if ffmpeg is available, otherwise .gif."""
-    import imageio.v2 as imageio
-
-    gt = target[0].float().cpu().numpy()          # (4, T, H, W)
-    pred = prediction[0].float().cpu().numpy()
-    difference = pred - gt
-    limits = [(gt[c].min(), gt[c].max()) for c in range(4)]
-    difference_max = [max(np.abs(difference[c]).max(), 1e-12) for c in range(4)]
-
-    frames = []
-    for t in range(gt.shape[1]):
-        # 9.6 x 11.2 in at 100 dpi = 960 x 1120 px: divisible by 16, so the video encoder needn't resize
-        fig, axes = plt.subplots(4, 3, figsize=(9.6, 11.2), dpi=100, constrained_layout=True)
-        for c, name in enumerate(CHANNEL_NAMES):
-            panels = [  # (image, colour map, limits, title, colour bar): GT and prediction share one bar
-                (gt[c, t], "viridis", limits[c], f"{name}: ground truth", False),
-                (pred[c, t], "viridis", limits[c], "prediction", True),
-                (difference[c, t], "RdBu_r", (-difference_max[c], difference_max[c]), "difference", True),
-            ]
-            for col, (image, cmap, (vmin, vmax), label, with_bar) in enumerate(panels):
-                shown = axes[c, col].imshow(image, cmap=cmap, vmin=vmin, vmax=vmax)
-                axes[c, col].set_xticks([]); axes[c, col].set_yticks([])
-                axes[c, col].set_title(label)
-                bar = fig.colorbar(shown, ax=axes[c, col], fraction=0.046, pad=0.04)
-                bar.ax.set_visible(with_bar)  # hidden bars still take their space: all panels the same size
-        if first_frame_given:
-            frame_label = f"frame {t}/{gt.shape[1] - 1}" + ("  (given)" if t == 0 else "  (generated)")
-        else:
-            frame_label = f"frame {t + 1}/{gt.shape[1]}"
-        fig.suptitle(f"{title}   {frame_label}")
-        fig.canvas.draw()
-        frames.append(np.asarray(fig.canvas.buffer_rgba())[..., :3].copy())
-        plt.close(fig)
-
-    # Appended, not with_suffix: case names may contain dots (sim ids like 0456_gamma1.7599999905).
-    try:
-        imageio.mimsave(path.with_name(path.name + ".mp4"), frames, fps=fps)
-        return path.with_name(path.name + ".mp4")
-    except Exception:  # no ffmpeg backend on this node
-        imageio.mimsave(path.with_name(path.name + ".gif"), frames, duration=1 / fps)
-        return path.with_name(path.name + ".gif")
-
-
 def save_error_over_time(curves: dict, chunk_boundaries: list[int], path: Path,
                          comparison: str = "DiT rollout vs dataset") -> Path:
     """Error per frame (frames 1..F; for the rollout: generated from frame 0 only) for each case; dashed
