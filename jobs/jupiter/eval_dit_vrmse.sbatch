@@ -37,6 +37,10 @@
 # follows the run; "none" = the manifest's val split instead), SAVE_VIS_SAMPLES (default 3), SAVE_NPZ_SAMPLES (default 3), SAVE_VIDEO (1 = MP4s too),
 # NUM_INFERENCE_STEPS (default: config's 5; 20 = thesis protocol), SIM_IDS (space-separated: evaluate only these
 # sims, any split, with an npz for each; pair with TEST_H5=none for training sims).
+# Standardized videos (docs/video_spec.md): SAVE_ROLLOUTS=<n> saves the full physical-unit
+# rollout of n gamma-spread sims (with SIM_IDS: of every one) to ROLLOUT_DIR (default
+# scratch rollouts/<run>_<job>); with VIDEO_STATS=<stats json> they are then rendered by
+# scripts/make_rollout_videos.py into <OUT_DIR>/spec_videos (VIDEO_MODEL: name, default the run).
 #
 # Results: logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json (tracked);
 # panels there are gitignored, npz figure fields go to scratch.
@@ -111,6 +115,9 @@ EXTRA_ARGS=()
 # SHOCK_ANALYSIS=1: error by region (shock / band / contact / smooth) and per latent token
 # (windinet.shock_regions); per-sim token arrays go to ${NPZ_DIR}/shock_tokens_<job>.npz.
 [[ "${SHOCK_ANALYSIS:-0}" == 1 ]] && EXTRA_ARGS+=(--shock_analysis --npz_dir "${NPZ_DIR}")
+ROLLOUT_DIR=${ROLLOUT_DIR:-${SCRATCH}/wh_work/rollouts/${RUN}_${SLURM_JOB_ID}}
+[[ -n "${SAVE_ROLLOUTS:-}" ]] && EXTRA_ARGS+=(--save_rollouts "${SAVE_ROLLOUTS}" --rollout_dir "${ROLLOUT_DIR}")
+if [[ -n "${VIDEO_STATS:-}" && ! -f "${VIDEO_STATS}" ]]; then echo "error: missing ${VIDEO_STATS}" >&2; exit 1; fi
 [[ "${SAVE_NPZ_SAMPLES}" != 0 ]] && EXTRA_ARGS+=(--save_npz_samples "${SAVE_NPZ_SAMPLES}" --npz_dir "${NPZ_DIR}")
 
 echo "PREPROCESSED_ROOT=${PREPROCESSED_ROOT}"
@@ -137,3 +144,8 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Is)" "${SLURM_JOB_ID}" "${SLURM_JOB_NAME}
 # Benchmark block as markdown tables (mean +- std over sims, then per frame), row name
 # TABLE_NAME (default: the DiT run): <OUT_DIR>/benchmark_table.md and this log.
 "${PYTHON}" scripts/benchmark_table.py "${TABLE_NAME:-${RUN}}=${OUT_DIR}/vrmse_summary.json" | tee "${OUT_DIR}/benchmark_table.md"
+
+if [[ -n "${SAVE_ROLLOUTS:-}" && -n "${VIDEO_STATS:-}" ]]; then
+    "${PYTHON}" scripts/make_rollout_videos.py "${ROLLOUT_DIR}" "${VIDEO_STATS}" "${OUT_DIR}/spec_videos" \
+        --model "${VIDEO_MODEL:-${RUN}}" --vae_only --json --frames 25 50 75 96
+fi

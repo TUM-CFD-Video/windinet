@@ -359,6 +359,14 @@ def parse_args():
                           "frame). For comparing a 101-frame model against a 97-frame one on the same "
                           "frames: the model still runs on its own full length, only the metric is cropped.")
     ap.add_argument("--npz_dir", type=Path, default=None, help="Where the npz samples go (default: <out_dir>/samples)")
+    ap.add_argument("--save_rollouts", type=int, default=0,
+                     help="Save the full rollout of N gamma-spread sims (with --sim_ids: of every given sim) in "
+                          "physical units for windinet/video.py (docs/video_spec.md): <rollout_dir>/<sid>.npz "
+                          "with gt, pred (VAE+DiT), pred_vae_only [T, C, H, W] float32, times [T], channels [C]")
+    ap.add_argument("--rollout_dir", type=Path, default=None, help="Where --save_rollouts goes (default: <out_dir>/rollouts)")
+    ap.add_argument("--rollout_dt", type=float, default=0.015,
+                     help="Physical time between stored frames for --save_rollouts' times (The Well "
+                          "euler_multi_quadrants: 0.015 s); frame_stride is applied on top")
     ap.add_argument("--sim_ids", type=str, nargs="+", default=None,
                      help="Evaluate exactly these sim ids of the h5 (the manifest's data_root, or --test_h5) "
                           "and save an npz for each, e.g. a hand-picked sim for a thesis figure. They may "
@@ -438,6 +446,12 @@ def main():
     npz_dir = args.npz_dir or args.out_dir / "samples"
     if npz_ids:
         print(f"Saving npz fields for {sorted(npz_ids)} (frames {args.npz_frames}) to {npz_dir}")
+    rollout_ids = set()
+    if args.save_rollouts:
+        rollout_ids = set(val_ids) if args.sim_ids else pick_spread_ids(val_ids, args.save_rollouts, dataset_name)
+    rollout_dir = args.rollout_dir or args.out_dir / "rollouts"
+    if rollout_ids:
+        print(f"Saving physical-unit rollouts for {sorted(rollout_ids)} to {rollout_dir}")
 
     model_source = cfg.get("model_source", "LTXV_2B_0.9.6_DEV")
     checkpoint = None if args.untrained_dit else ensure_checkpoint(cfg["checkpoint"])
@@ -715,6 +729,30 @@ def main():
                 normalization_clip=float(stats["normalization_clip"]),
                 vae_only_vrmse_chmean=vo_chmean,
                 vae_dit_vrmse_chmean=vd_chmean,
+            )
+
+        if sid in rollout_ids:
+            # Video spec: ground truth straight from the dataset (unclipped physical
+            # units), predictions denormalized -- their range is bounded by
+            # normalization_clip (mean ± clip·std), the ground truth's is not.
+            T = n_px
+            gt_phys = torch.stack([sample[name][:T] for name in channel_names], dim=1)  # [T, C, H, W]
+            rollout = {
+                label: denormalize_fields(
+                    pred[:, :, :T], stats["channel_mean"], stats["channel_std"], stats["normalization_clip"],
+                )[0].transpose(0, 1).cpu().numpy().astype(np.float32)
+                for label, pred in (("pred", dit_pred), ("pred_vae_only", vae_recon))
+            }
+            rollout_dir.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                rollout_dir / f"{sid}.npz",
+                gt=gt_phys.numpy().astype(np.float32),
+                **rollout,
+                times=np.arange(T) * frame_stride * args.rollout_dt,
+                channels=np.array(channel_names),
+                sim_id=sid,
+                num_conditioning_frames=num_cond_frames,  # frames 0..n-1 are ground truth given to the DiT
+                **{f"meta_{k}": float(v) for k, v in sample["meta"].items()},
             )
 
         if sid in vis_ids:

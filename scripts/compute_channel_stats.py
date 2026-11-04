@@ -26,6 +26,11 @@ Usage:
     python scripts/compute_channel_stats.py euler_mq_dataset/128x128_ds/train.h5
     python scripts/compute_channel_stats.py euler_mq_dataset/256x256_ds/train.h5 \
         --output euler_mq_dataset/256x256_ds/channel_stats.json
+
+    # rollout-video statistics (docs/video_spec.md), percentiles in the same single pass:
+    python scripts/compute_channel_stats.py euler_mq_dataset/256x256_ds/train.h5 \
+        --video-stats configs/video/euler_mq_256_video_stats.json \
+        --hist-range-from configs/finetune_vae/euler_mq_256_only_train.yaml
 """
 
 import json
@@ -80,6 +85,49 @@ class RunningStats:
         }
 
 
+class RunningHistogram:
+    """Fine fixed-range histogram for streaming quantiles (second pass, once the
+    exact min/max from RunningStats are known). With 2**20 bins the quantile is
+    off by at most (max - min) / 2**20 -- ~6e-5 for momentum's ±30 range, far
+    below the 0.5σ the video spec's percentiles are read at."""
+
+    def __init__(self, lo: float, hi: float, bins: int = 2**20) -> None:
+        self.lo, self.hi, self.bins = lo, hi, bins
+        self.counts = np.zeros(bins, dtype=np.int64)
+
+    def update(self, values: np.ndarray) -> None:
+        flat = values.reshape(-1).astype(np.float64)
+        idx = ((flat - self.lo) / (self.hi - self.lo) * self.bins).astype(np.int64)
+        self.counts += np.bincount(np.clip(idx, 0, self.bins - 1), minlength=self.bins)
+
+    def quantile(self, p: float) -> float:
+        cum = np.cumsum(self.counts)
+        target = p * cum[-1]
+        i = int(np.searchsorted(cum, target))
+        below = cum[i - 1] if i > 0 else 0
+        frac = (target - below) / max(self.counts[i], 1)  # linear within the bin
+        return float(self.lo + (i + frac) * (self.hi - self.lo) / self.bins)
+
+
+# Video spec (docs/video_spec.md): channels drawn diverging around physical 0.
+SIGNED_CHANNELS = {"momentum_x", "momentum_y"}
+
+
+def scan(f, ids: list[str], description: str, visit) -> None:
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task(description, total=len(ids))
+        for sid in ids:
+            visit(f[sid])
+            progress.advance(task)
+
+
 @app.command()
 def main(
     h5_path: Path = typer.Argument(..., help="Path to the ShockWave HDF5 file (e.g. .../128x128_ds/train.h5)"),
@@ -102,6 +150,25 @@ def main(
         "--compare-to",
         help="A YAML file with a data_normalization_stats block (e.g. configs/finetune_vae/euler_mq_128_only_train.yaml) to diff the computed stats against",
     ),
+    video_stats: Path | None = typer.Option(
+        None,
+        "--video-stats",
+        help=(
+            "Also write the rollout-video statistics (docs/video_spec.md, windinet/video.py's "
+            "{channel: {mean, std, min, max, p0_5, p99_5, unit, signed}}) for the raw channels here. "
+            "Costs a second pass over the file for the percentiles."
+        ),
+    ),
+    hist_range_from: Path | None = typer.Option(
+        None,
+        "--hist-range-from",
+        help=(
+            "--video-stats in ONE pass: a YAML with a data_normalization_stats block whose min/max for this "
+            "same file (e.g. configs/finetune_vae/euler_mq_256_only_train.yaml) set the histogram range up front, "
+            "instead of a second pass after the min/max are known. Checked against the computed min/max."
+        ),
+    ),
+    unit: str = typer.Option("", "--unit", help="--video-stats: the channels' unit (The Well euler: dimensionless)"),
 ) -> None:
     """Stream every simulation in --h5 and report mean/std/min/max per channel."""
     import os
@@ -120,31 +187,50 @@ def main(
 
         stats = {name: RunningStats() for name in ALL_STATS_NAMES}
 
-        with Progress(
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-            TimeRemainingColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Scanning simulations", total=len(ids))
-            for sid in ids:
-                group = f[sid]
-                raw_values = {}
+        hists = {}
+        if video_stats is not None and hist_range_from is not None:
+            import yaml
+
+            ranges = yaml.safe_load(hist_range_from.read_text())["data_normalization_stats"]
+            hists = {name: RunningHistogram(ranges[name]["min"], ranges[name]["max"]) for name in RAW_CHANNELS}
+
+        def first_pass(group) -> None:
+            raw_values = {}
+            for name in RAW_CHANNELS:
+                values = group[name][:]
+                raw_values[name] = values
+                stats[name].update(values)
+                if name in hists:
+                    hists[name].update(values)
+            for log_name, source in LOG_CHANNELS.items():
+                source_values = raw_values[source]
+                if np.any(source_values <= 0):
+                    raise ValueError(
+                        f"{group.name}/{source} has non-positive values (min={source_values.min()}); "
+                        f"log({source}) is undefined there"
+                    )
+                stats[log_name].update(np.log(source_values))
+
+        scan(f, ids, "Scanning simulations", first_pass)
+
+        percentiles = {}
+        if video_stats is not None and hists:
+            for name, h in hists.items():  # values beyond the given range would pile up in the edge bins
+                if stats[name].min < h.lo or stats[name].max > h.hi:
+                    raise ValueError(
+                        f"{name}: data range [{stats[name].min}, {stats[name].max}] exceeds --hist-range-from's "
+                        f"[{h.lo}, {h.hi}]: drop --hist-range-from for an exact two-pass run"
+                    )
+        elif video_stats is not None:
+            hists = {name: RunningHistogram(stats[name].min, stats[name].max) for name in RAW_CHANNELS}
+
+            def second_pass(group) -> None:
                 for name in RAW_CHANNELS:
-                    values = group[name][:]
-                    raw_values[name] = values
-                    stats[name].update(values)
-                for log_name, source in LOG_CHANNELS.items():
-                    source_values = raw_values[source]
-                    if np.any(source_values <= 0):
-                        raise ValueError(
-                            f"{sid}/{source} has non-positive values (min={source_values.min()}); "
-                            f"log({source}) is undefined there"
-                        )
-                    stats[log_name].update(np.log(source_values))
-                progress.advance(task)
+                    hists[name].update(group[name][:])
+
+            scan(f, ids, "Percentiles (2nd pass)", second_pass)
+        if video_stats is not None:
+            percentiles = {n: {"p0_5": h.quantile(0.005), "p99_5": h.quantile(0.995)} for n, h in hists.items()}
 
     results = {name: stat.finalize() for name, stat in stats.items()}
 
@@ -194,6 +280,24 @@ def main(
                 indent=2,
             )
         console.print(f"[green]Wrote {output}[/green]")
+
+    if video_stats is not None:
+        video = {}
+        for name in RAW_CHANNELS:
+            r = results[name]
+            video[name] = {k: r[k] for k in ("mean", "std", "min", "max")} | percentiles[name]
+            video[name] |= {"unit": unit, "signed": name in SIGNED_CHANNELS}
+            if not (r["min"] <= video[name]["p0_5"] <= video[name]["p99_5"] <= r["max"]):
+                raise ValueError(f"{name}: percentiles outside the extrema: {video[name]}")
+        pct = Table(title="Video statistics (percentiles)")
+        for col in ("channel", "p0_5", "p99_5", "signed"):
+            pct.add_column(col)
+        for name, v in video.items():
+            pct.add_row(name, f"{v['p0_5']:.6g}", f"{v['p99_5']:.6g}", str(v["signed"]))
+        console.print(pct)
+        video_stats.parent.mkdir(parents=True, exist_ok=True)
+        video_stats.write_text(json.dumps(video, indent=2))
+        console.print(f"[green]Wrote {video_stats}[/green]")
 
 
 if __name__ == "__main__":
