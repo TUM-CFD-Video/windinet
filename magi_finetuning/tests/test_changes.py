@@ -297,6 +297,66 @@ def test_clean_chunk_training() -> None:
           abs(velocity_loss(v, x1, noise, num_body, 4).item() - mean_sq(24)) < 1e-3)
 
 
+def test_context_noise_and_schedule() -> None:
+    from types import SimpleNamespace
+
+    from magi_finetuning.settings import CHUNK_WIDTH
+    from magi_finetuning.train.train_full import make_noisy_input, make_scheduler
+
+    num_body, latents, clean_t = 25, 30, 0.9999
+    torch.manual_seed(0)
+    x1 = (torch.randn(1, 16, latents, 4, 4, device="cuda") * torch.linspace(0.5, 2.0, 16, device="cuda").view(1, 16, 1, 1, 1))
+    off = SimpleNamespace(clean_chunks=True, shift=3.0, context_noise=0.0)
+    on = SimpleNamespace(clean_chunks=True, shift=3.0, context_noise=0.25)
+    seen = set()
+    for _ in range(400):
+        noisy, t, noise, num_clean = make_noisy_input(x1, 5, num_body, on, clean_t)
+        seen.add(num_clean)
+        context = slice(1, num_clean * CHUNK_WIDTH)
+        rest = slice(max(1, num_clean * CHUNK_WIDTH), latents)
+        tf = t.repeat_interleave(CHUNK_WIDTH, dim=1)[:, None, :, None, None]
+        expected_rest = (tf * x1 + (1 - tf) * noise)[:, :, rest]
+        if not (torch.equal(noisy[:, :, :1], x1[:, :, :1]) and torch.allclose(noisy[:, :, rest], expected_rest)
+                and bool((t[0, :num_clean] == clean_t).all())):
+            check("context noise: latent 0 clean, noisy chunks from the exact clean latents, context at clean_t", False)
+            return
+        if num_clean:
+            ratio = ((noisy - x1)[:, :, context].std(dim=(0, 2, 3, 4)) / x1[:, :, 1:1 + num_body].std(dim=(0, 2, 3, 4)))
+            if not (ratio.max() <= 0.25 * 1.3 and (ratio.max() - ratio.min()) / ratio.mean().clamp_min(1e-6) < 0.6):
+                check("context noise: sigma * std(z) per channel, sigma <= 0.25", False, f"ratios {ratio.tolist()}")
+                return
+    check("context noise: latent 0 clean, noisy chunks from the exact clean latents, context at clean_t, "
+          "per-channel sigma * std(z) with sigma <= 0.25", seen == {0, 1, 2, 3, 4}, f"clean counts seen {sorted(seen)}")
+    torch.manual_seed(3)
+    a = make_noisy_input(x1, 5, num_body, off, clean_t)
+    torch.manual_seed(3)
+    from magi_finetuning.dit import add_noise, keep_image_clean, sample_chunk_t, sample_num_clean_chunks
+    num_clean = sample_num_clean_chunks(5)
+    t = sample_chunk_t(5, 3.0, num_clean)
+    noise = torch.randn_like(x1)
+    check("context noise 0: same draw as before (bit for bit)",
+          torch.equal(a[0], keep_image_clean(add_noise(x1, t, noise), x1)) and torch.equal(a[1], t))
+
+    def lrs(warmup, steps=2000, lr=2e-6, lr_min=1e-7):
+        opt = torch.optim.SGD([torch.nn.Parameter(torch.zeros(1))], lr=lr)
+        sched = make_scheduler(opt, SimpleNamespace(steps=steps, warmup=warmup, lr=lr, lr_min=lr_min))
+        out = []
+        for _ in range(steps):
+            out.append(sched.get_last_lr()[0])
+            opt.step()
+            sched.step()
+        return out, type(sched).__name__
+
+    cos, kind = lrs(0, steps=8000, lr=1e-5, lr_min=1e-8)
+    check("schedule, warmup 0: CosineAnnealingLR from lr (the earlier runs' schedule)",
+          kind == "CosineAnnealingLR" and cos[0] == 1e-5 and abs(cos[4000] - (1e-5 + 1e-8) / 2) < 1e-9)
+    w, _ = lrs(100)
+    check("schedule, warmup 100: lr/100 at step 0, 2e-6 at step 100, cosine to ~1e-7 at step 2000",
+          abs(w[0] - 2e-8) < 1e-12 and abs(w[50] - 1.01e-6) < 1e-10 and abs(w[100] - 2e-6) < 1e-12
+          and abs(w[1050] - 1.05e-6) < 1e-9 and abs(w[-1] - 1e-7) < 1e-9 and all(a >= b for a, b in zip(w[100:], w[101:])),
+          f"lr at 0 / 50 / 100 / 1050 / 1999: {w[0]:.3g} {w[50]:.3g} {w[100]:.3g} {w[1050]:.3g} {w[-1]:.3g}")
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--old-vae", default=None, help="a VAE checkpoint from before the metadata existed")
@@ -307,4 +367,5 @@ if __name__ == "__main__":
     test_wide_decoder()
     test_windowed_sampler()
     test_clean_chunk_training()
+    test_context_noise_and_schedule()
     print(f"\n{sum(RESULTS)}/{len(RESULTS)} checks passed -> {'ALL PASS' if all(RESULTS) else 'FAILURES'}", flush=True)

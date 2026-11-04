@@ -22,14 +22,22 @@ def parse_args():
     p.add_argument("--clean-chunks", action="store_true",
                    help="MAGI-1's video-continuation samples: some samples start with clean chunks (up to 5%% noise, "
                         "no loss), as often as the windowed sampler meets them (dit.sample_num_clean_chunks)")
+    p.add_argument("--context-noise", type=float, default=0.0,
+                   help="full FT, needs --clean-chunks: the clean context chunks get additive noise "
+                        "sigma * std(z) * eps, sigma ~ U(0, this) per sample, while their timestep stays at "
+                        "inference's clean_t (the model is told they are finished, as at rollout); latent 0 "
+                        "and the targets stay clean (train_full.make_noisy_input). 0 = off")
     p.add_argument("--save-every", type=int, default=250)
     p.add_argument("--log-every", type=int, default=10)
     p.add_argument("--vae-ckpt", default=None, help="adapted VAE from magi_finetuning/train/train_vae.py (default: released VAE)")
     p.add_argument("--lr", type=float, default=None,
                    help="peak learning rate (cosine to settings.FULL_FT eta_min for full FT). Default: 1e-4 for LoRA, "
                         "settings.FULL_FT['lr'] (1e-5) for full FT")
+    p.add_argument("--warmup", type=int, default=None,
+                   help="linear warmup steps. Default: 50 for LoRA, settings.FULL_FT['warmup'] (0) for full FT")
+    p.add_argument("--lr-min", type=float, default=None,
+                   help="full FT: end of the cosine schedule (default settings.FULL_FT['eta_min'], 1e-8)")
     # LoRA only (full FT uses settings.FULL_FT instead)
-    p.add_argument("--warmup", type=int, default=50)
     p.add_argument("--grad-accum", type=int, default=None, help="default: 32 / number of GPUs (effective batch 32)")
     p.add_argument("--lora-rank", type=int, default=32)
     p.add_argument("--ckpt-dir", default=None,
@@ -49,9 +57,17 @@ def parse_args():
     p.add_argument("--inference-kv-range", choices=["block_causal", "noise2clean"], default="block_causal",
                    help="recorded for sampling: cross-chunk attention at inference (training is block-causal)")
     args = p.parse_args()
+    from magi_finetuning.settings import FULL_FT
     if args.lr is None:
-        from magi_finetuning.settings import FULL_FT
         args.lr = FULL_FT["lr"] if args.full_finetune else 1e-4
+    if args.warmup is None:
+        args.warmup = FULL_FT["warmup"] if args.full_finetune else 50
+    if args.lr_min is None:
+        args.lr_min = FULL_FT["eta_min"]
+    if args.context_noise and not (args.full_finetune and args.clean_chunks):
+        raise ValueError("--context-noise needs --full-finetune and --clean-chunks (it noises the clean context chunks)")
+    if args.full_finetune and args.warmup >= args.steps:
+        raise ValueError("--warmup must be shorter than --steps")
     if args.frames % 4 or not 4 <= args.frames <= 100:
         raise ValueError("--frames must be a multiple of 4 (the VAE's time patch) between 4 and 100")
     return args

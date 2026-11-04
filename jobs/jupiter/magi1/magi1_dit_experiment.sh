@@ -5,7 +5,8 @@
 # repo root; it only calls sbatch.
 #
 #   bash jobs/jupiter/magi1/magi1_dit_experiment.sh --name <run> --vae-ckpt <vae_best.safetensors> [--n-dit 5] \
-#       [--clean-chunks] [--init-from <ckpt>] [--steps N] [--train-shift S] [--save-every N] [--lr LR] [--dry-run]
+#       [--clean-chunks] [--init-from <ckpt>] [--steps N] [--train-shift S] [--save-every N] [--lr LR] \
+#       [--warmup N] [--lr-min LR] [--context-noise S] [--dry-run]
 #     --clean-chunks  MAGI-1's video-continuation samples in training: some samples start with clean chunks
 #                     (no loss on them), as the 4-chunk sampler meets them (dit.sample_num_clean_chunks)
 #     --init-from     start from another run's weights (resume.pt or full_stepNNNNNN.safetensors) with a fresh
@@ -14,6 +15,10 @@
 #     --train-shift   sd3 shift of the training timesteps (default 3; 1 = uniform t, more near-clean samples)
 #     --save-every    bf16 checkpoint interval (default 1000)
 #     --lr            peak learning rate of the cosine schedule (default settings.FULL_FT: 1e-5)
+#     --warmup        linear warmup steps before the cosine (default 0)
+#     --lr-min        end of the cosine (default settings.FULL_FT eta_min: 1e-8)
+#     --context-noise with --clean-chunks: clean context chunks get sigma * std(z) noise, sigma ~ U(0, S),
+#                     timestep left at clean_t (train_full.make_noisy_input)
 #
 # Checkpoints (bf16 every 1000 steps + resume state): $MAGI1_SCRATCH/magi1_dit_<run>/
 # Args/logs: $MAGI1_OUTPUTS/dit_experiments/<run>/        results: .../<run>/eval/results.md
@@ -41,6 +46,9 @@ while [[ $# -gt 0 ]]; do
         --train-shift) TRAIN_ARGS+=(--shift "$2"); shift 2 ;;
         --save-every) TRAIN_ARGS+=(--save-every "$2"); shift 2 ;;
         --lr)         TRAIN_ARGS+=(--lr "$2"); shift 2 ;;
+        --warmup)     TRAIN_ARGS+=(--warmup "$2"); shift 2 ;;
+        --lr-min)     TRAIN_ARGS+=(--lr-min "$2"); shift 2 ;;
+        --context-noise) TRAIN_ARGS+=(--context-noise "$2"); shift 2 ;;
         --dry-run)  DRY_RUN=1; shift ;;
         *) echo "unknown option: $1 (see the header of $0)" >&2; exit 1 ;;
     esac

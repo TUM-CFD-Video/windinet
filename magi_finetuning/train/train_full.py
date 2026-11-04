@@ -24,7 +24,7 @@ import magi_finetuning.compat as compat
 from magi_finetuning.data import Normalization, batch_to_latents, make_loader
 from magi_finetuning.dit import (Model, add_noise, enable_gradient_checkpointing, gamma_embedding, keep_image_clean,
                                  load_dit, sample_chunk_t, sample_num_clean_chunks, velocity_loss)
-from magi_finetuning.settings import FULL_FT
+from magi_finetuning.settings import CHUNK_WIDTH, FULL_FT
 from magi_finetuning.utils.resume import batches_from, restore_rng_states, save_rng_states
 from magi_finetuning.utils.runtime import JobTimer, check_adamw8bit, check_ckpt_dir, init_distributed, shutdown
 from magi_finetuning.vae import load_vae_encoder
@@ -54,9 +54,9 @@ def run(args):
     accelerator.print(f"normalization: {normalization.describe()}")
     loader, sampler = make_loader(args, seed=FULL_FT["seed"])
 
-    # 4. Optimizer and learning-rate schedule (cosine to eta_min, no warmup)
+    # 4. Optimizer and learning-rate schedule (optional linear warmup, then cosine to --lr-min)
     optimizer = make_adamw8bit(trainable_params, args.lr)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.steps, eta_min=FULL_FT["eta_min"])
+    scheduler = make_scheduler(optimizer, args)
     # Continue a run that stopped at --max-minutes (8000 steps don't fit one 12 h job), if there is one.
     progress = {"step": 0, "micro_batches_done": 0, "world_size": None}
     if args.resume and (checkpoint_dir_for_resume(args) / "resume.pt").is_file():
@@ -89,7 +89,8 @@ def run(args):
         clean_latents, gamma, num_body, num_chunks, tokens_per_chunk = batch_to_latents(
             batch, vae_encoder, normalization, magi_config.runtime_config.scale_factor
         )
-        noisy_latents, chunk_times, noise, num_clean = make_noisy_input(clean_latents, num_chunks, args)
+        noisy_latents, chunk_times, noise, num_clean = make_noisy_input(
+            clean_latents, num_chunks, num_body, args, magi_config.runtime_config.clean_t)
 
         loss, grad_norm = training_micro_step(
             accelerator, model, optimizer, trainable_params,
@@ -199,16 +200,42 @@ def make_adamw8bit(trainable_params, lr: float):
 
 # ---------------------------------------------------------------- one training step
 
-def make_noisy_input(clean_latents, num_chunks, args):
+def make_scheduler(optimizer, args):
+    """Cosine from args.lr to args.lr_min over the run; with args.warmup > 0, first a linear ramp from
+    lr / warmup to lr over `warmup` steps and the cosine over the remaining steps. warmup 0 is exactly the
+    schedule of the earlier runs (CosineAnnealingLR, same resume state)."""
+    cosine_steps = args.steps - args.warmup
+    cosine = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cosine_steps, eta_min=args.lr_min)
+    if args.warmup == 0:
+        return cosine
+    ramp = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1 / args.warmup, total_iters=args.warmup)
+    return torch.optim.lr_scheduler.SequentialLR(optimizer, [ramp, cosine], milestones=[args.warmup])
+
+
+def make_noisy_input(clean_latents, num_chunks, num_body: int, args, clean_t: float):
     """Noise every chunk to its own random level t (0 = pure noise, 1 = clean); earlier chunks cleaner.
     With --clean-chunks the first few chunks may be clean context (dit.sample_num_clean_chunks).
+    With --context-noise those context chunks are instead set up like the rollout's finished chunks: timestep
+    clean_t (what the sampler passes for them), content clean + sigma * std(z) * eps, sigma ~ U(0, context_noise)
+    per sample, std(z) per latent channel of this sample's body latents 1..num_body. The model is told "finished" but sees
+    an imperfect chunk, as with its own earlier output at inference. The noisy chunks are made from the exact
+    clean latents, and the loss target (clean - noise) uses them too: context noise never enters the target.
     Latent frame 0 (the image = given frame 0) is then put back clean, as MAGI-1's image-to-video does
     at every sampling step. Returns (noisy_latents, chunk_times, noise, number of clean chunks).
     """
     num_clean = sample_num_clean_chunks(num_chunks) if args.clean_chunks else 0
     chunk_times = sample_chunk_t(num_chunks, args.shift, num_clean)  # shape (1, num_chunks)
+    if args.context_noise and num_clean:
+        chunk_times[:, :num_clean] = clean_t
     noise = torch.randn_like(clean_latents)
-    noisy_latents = keep_image_clean(add_noise(clean_latents, chunk_times, noise), clean_latents)
+    noisy_latents = add_noise(clean_latents, chunk_times, noise)
+    if args.context_noise and num_clean:
+        context = slice(0, num_clean * CHUNK_WIDTH)  # latent 0 is reset to clean below
+        body_std = clean_latents[:, :, 1:1 + num_body].std(dim=(2, 3, 4), keepdim=True)  # (1, C, 1, 1, 1)
+        sigma = args.context_noise * torch.rand((), device=clean_latents.device)
+        noisy_latents[:, :, context] = (clean_latents[:, :, context]
+                                        + sigma * body_std * torch.randn_like(clean_latents[:, :, context]))
+    noisy_latents = keep_image_clean(noisy_latents, clean_latents)
     return noisy_latents, chunk_times, noise, num_clean
 
 
