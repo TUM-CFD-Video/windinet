@@ -99,7 +99,7 @@ class RolloutFigure:
             field_norm = AsinhNorm(FIELD_WIDTH * s.std, s.lo - s.centre, s.hi - s.centre)
             field_cmap = plt.get_cmap(s.cmap).with_extremes(**EXTREMES)
             images = [
-                ax.imshow(np.zeros(shape), norm=norm, cmap=cmap)
+                ax.imshow(np.zeros(shape), norm=norm, cmap=cmap, interpolation="nearest")  # sharp cells
                 for ax, norm, cmap in zip(
                     row, (field_norm, field_norm, error_norm), (field_cmap, field_cmap, error_cmap), strict=True
                 )
