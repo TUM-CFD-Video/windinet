@@ -1,11 +1,11 @@
 """Standardized CFD rollout videos (cfd_video_spec.md): one row per channel, ground truth | prediction | signed error
 on scales fixed by training statistics. ★ marks a change against the spec's reference code.
 
-    python cfd_video.py rollout.npz stats.json out/model_0456 --signed momentum_x momentum_y --title "model, 0456"
+    python cfd_video.py rollout.npz stats.json out/model_0456 --title "model, trajectory 0456"
 
 rollout.npz: gt and pred [T, C, H, W] in physical units, times [T], channels [C]. stats.json: {channel: Stats}.
-Writes <out>.mp4 and <out>.json (--per-channel: <out>_<channel>.mp4 and .json each; --frame i: <out>_t<i>.png of
-time step i instead). From Python: write_video and write_frame. Needs numpy, matplotlib and imageio-ffmpeg.
+Writes <out>.mp4 with the scales and statistics in its metadata (--json: also <out>.json with the per-frame numbers;
+--per-channel: <out>_<channel>.mp4 each; --frame i: <out>_t<i>.png of time step i instead). From Python: write_video and write_frame. Needs numpy, matplotlib and imageio-ffmpeg.
 """
 
 import argparse
@@ -27,6 +27,7 @@ WIDTH, ROW, HEAD, LINE, DPI = 9.6, 2.5, 0.5, 0.2, 100  # inches
 SPAN = 2.0  # ★ shown range in training std: mean ± 2σ (was min..max, set by rare shocks: fields looked flat)
 FIELD_WIDTH = 0.1  # ★ asinh linear width of the fields in σ (was 1σ): fronts and vortices are 0.1-0.5σ
 ERROR_WIDTH = 0.05  # ★ asinh linear width of the error in σ (was 1σ): typical errors are 0.01-0.5σ
+TIME_UNIT = "s"  # The Well's euler_multi_quadrants: Δt 0.015 s
 EXTREMES = {"under": "cyan", "over": "magenta", "bad": "gray"}
 
 
@@ -40,6 +41,7 @@ class Stats(TypedDict):
     p0_5: NotRequired[float]  # 0.5th percentile, recorded in the .json only
     p99_5: NotRequired[float]  # 99.5th percentile, recorded in the .json only
     unit: NotRequired[str]
+    signed: NotRequired[bool]  # ★ drawn diverging around 0 (momentum): shared, so every collaborator gets the same
 
 
 @dataclass(frozen=True)
@@ -53,11 +55,11 @@ class Scale:
     cmap: str
 
 
-def scale(stats: Stats, signed: bool) -> Scale:
+def scale(stats: Stats) -> Scale:
     mean, std = stats["mean"], stats["std"]
     if not (std > 0 and stats["max"] > stats["min"]):
         raise ValueError("constant or invalid channel: needs an explicit special case")
-    if signed:  # ★ diverging around physical 0 with symmetric bounds, a channel policy the spec allows
+    if stats.get("signed"):  # ★ diverging around physical 0 with symmetric bounds, a channel policy the spec allows
         half = abs(mean) + SPAN * std
         return Scale(0.0, -half, half, std, "RdBu_r")
     # ★ never below the training minimum: density and pressure are positive
@@ -67,9 +69,9 @@ def scale(stats: Stats, signed: bool) -> Scale:
 class RolloutFigure:
     """The frame of a rollout, one row per channel: built once, then filled per time step."""
 
-    def __init__(self, names: list[str], stats: list[Stats], signed: list[bool], shape: tuple[int, int], title: str):
+    def __init__(self, names: list[str], stats: list[Stats], shape: tuple[int, int], title: str):
         n, self.title = len(names), title
-        self.scales = [scale(st, sg) for st, sg in zip(stats, signed, strict=True)]
+        self.scales = [scale(st) for st in stats]
         foot = 2 * LINE  # the scale line with a gap above and below
         height = 2 * round((HEAD + ROW * n + foot) * DPI / 2) / DPI  # even pixels for the video encoder
         self.fig, axes = plt.subplots(n, 3, figsize=(WIDTH, height), dpi=DPI, squeeze=False)
@@ -135,14 +137,14 @@ class RolloutFigure:
                     "fraction_nonfinite": float(1 - finite.mean()),
                 }
             )
-        self.fig.suptitle(f"{self.title}, t = {t:.3g}", fontsize=11, y=1 - 0.15 / self.fig.get_figheight())
+        self.fig.suptitle(f"{self.title}, t = {t:.3g} {TIME_UNIT}", fontsize=11, y=1 - 0.15 / self.fig.get_figheight())
         self.fig.canvas.draw()
         return np.asarray(self.fig.canvas.buffer_rgba())[..., :3].copy(), numbers
 
 
-def write_frame(gt, pred, t: float, names, stats, signed, path: Path, title: str = "") -> None:
+def write_frame(gt, pred, t: float, names, stats, path: Path, title: str = "") -> None:
     """One time step (gt, pred [C, H, W]) as a png."""
-    figure = RolloutFigure(names, stats, signed, gt.shape[1:], title)
+    figure = RolloutFigure(names, stats, gt.shape[1:], title)
     plt.imsave(path, figure.frame(t, gt, pred)[0])
     plt.close(figure.fig)
 
@@ -153,15 +155,36 @@ def write_video(
     times: np.ndarray,  # [T], physical time
     names: list[str],  # [C]
     stats: list[Stats],  # [C], training ground truth
-    signed: list[bool],  # [C], diverging around 0
-    path: Path,  # <path>.mp4 and <path>.json
+    path: Path,  # <path>.mp4, <path>.json
     title: str = "",
-    fps: int = 4,
-) -> None:
-    """The rollout's video and its metadata: scales, statistics, mapping and per-frame numbers."""
-    figure, frames = RolloutFigure(names, stats, signed, gt.shape[2:], title), []
+    slowdown: float = 8.0,  # video seconds per physical second
+    save_json: bool = False,
+) -> list[dict]:
+    """The rollout's video, its scales, statistics and mapping in the mp4's comment tag (ffprobe shows them); with
+    `save_json` also a .json with them and the per-frame numbers. Returns the per-frame numbers."""
+    figure, frames = RolloutFigure(names, stats, gt.shape[2:], title), []
     size = figure.fig.canvas.get_width_height()
-    writer = imageio_ffmpeg.write_frames(str(path.with_suffix(".mp4")), size, fps=fps, macro_block_size=1)
+    # ★ playback follows physical time (was a fixed fps): rollouts with any time step play in step side by side
+    fps = (len(times) - 1) / ((times[-1] - times[0]) * slowdown)
+    meta = {
+        "title": title,
+        "fps": fps,
+        "slowdown": slowdown,
+        "frame_size": size,
+        "stats": dict(zip(names, stats, strict=True)),
+    }
+    meta["scales"] = {name: asdict(s) for name, s in zip(names, figure.scales, strict=True)}
+    meta["mapping"] = {
+        "fields": f"AsinhNorm(linear_width={FIELD_WIDTH} * std, vmin=lo - centre, vmax=hi - centre)(value - centre)",
+        "error": f"AsinhNorm(linear_width={ERROR_WIDTH}, vmin=-{SPAN}, vmax={SPAN})((pred - truth) / std)",
+    }
+    writer = imageio_ffmpeg.write_frames(
+        str(path.with_suffix(".mp4")),
+        size,
+        fps=fps,
+        macro_block_size=1,
+        output_params=["-metadata", f"comment={json.dumps(meta)}"],
+    )
     writer.send(None)
     for t, g, p in zip(times, gt, pred, strict=True):
         image, numbers = figure.frame(t, g, p)
@@ -169,13 +192,9 @@ def write_video(
         frames.append({"time": float(t), **dict(zip(names, numbers, strict=True))})
     writer.close()
     plt.close(figure.fig)
-    meta = {"title": title, "fps": fps, "frame_size": size, "stats": dict(zip(names, stats, strict=True))}
-    meta["scales"] = {name: asdict(s) for name, s in zip(names, figure.scales, strict=True)}
-    meta["mapping"] = {
-        "fields": f"AsinhNorm(linear_width={FIELD_WIDTH} * std, vmin=lo - centre, vmax=hi - centre)(value - centre)",
-        "error": f"AsinhNorm(linear_width={ERROR_WIDTH}, vmin=-{SPAN}, vmax={SPAN})((pred - truth) / std)",
-    }
-    path.with_suffix(".json").write_text(json.dumps(meta | {"frames": frames}, indent=1))
+    if save_json:
+        path.with_suffix(".json").write_text(json.dumps(meta | {"frames": frames}, indent=1))
+    return frames
 
 
 if __name__ == "__main__":
@@ -183,9 +202,9 @@ if __name__ == "__main__":
     parser.add_argument("rollout", type=Path, help="npz: gt, pred [T, C, H, W], times [T], channels [C]")
     parser.add_argument("stats", type=Path, help="json: {channel: Stats} of the training ground truth")
     parser.add_argument("out", type=Path, help="output path without extension, e.g. videos/model_0456")
-    parser.add_argument("--signed", nargs="*", default=[], help="channels drawn diverging around 0")
     parser.add_argument("--title", default="", help="shown before the time, e.g. model and trajectory")
-    parser.add_argument("--fps", type=int, default=4)
+    parser.add_argument("--slowdown", type=float, default=8.0, help="video seconds per physical second")
+    parser.add_argument("--json", action="store_true", help="also a .json with the per-frame RMSE and fractions")
     parser.add_argument("--per-channel", action="store_true", help="one video per channel")
     parser.add_argument("--frame", type=int, help="only this time step, as a png")
     args = parser.parse_args()
@@ -195,10 +214,19 @@ if __name__ == "__main__":
     groups = [[i] for i in range(len(names))] if args.per_channel else [list(range(len(names)))]
     for idx in groups:
         sel = [names[i] for i in idx]
-        common = (sel, [all_stats[c] for c in sel], [c in args.signed for c in sel])
+        common = (sel, [all_stats[c] for c in sel])
         out = args.out.with_name(f"{args.out.name}_{sel[0]}") if args.per_channel else args.out
         if args.frame is None:
-            write_video(data["gt"][:, idx], data["pred"][:, idx], data["times"], *common, out, args.title, args.fps)
+            write_video(
+                data["gt"][:, idx],
+                data["pred"][:, idx],
+                data["times"],
+                *common,
+                out,
+                args.title,
+                args.slowdown,
+                args.json,
+            )
         else:
             t = args.frame
             write_frame(
