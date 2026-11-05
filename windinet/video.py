@@ -88,10 +88,10 @@ class RolloutFigure:
                 plt.get_cmap("RdBu_r").with_extremes(**EXTREMES),
             )
             error_label, error_ticks = "(prediction − truth) / σ", [-2, -0.5, 0, 0.5, 2]
-        else:  # plasma holds magenta itself: cyan flags beyond the range
+        else:  # magma holds magenta itself: cyan flags beyond the range
             error_norm, error_cmap = (
                 AsinhNorm(ERROR_WIDTH, 0, SPAN),
-                plt.get_cmap("plasma").with_extremes(over="cyan", bad="gray"),
+                plt.get_cmap("magma").with_extremes(over="cyan", bad="gray"),
             )
             error_label, error_ticks = "|prediction − truth| / σ", [0, 0.1, 0.5, 2]
         self.images = []
