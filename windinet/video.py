@@ -5,7 +5,8 @@ on scales fixed by training statistics. ★ marks a change against the spec's re
 
 rollout.npz: gt and pred [T, C, H, W] in physical units, times [T], channels [C]. stats.json: {channel: Stats}.
 Writes <out>.mp4 with the scales and statistics in its metadata (--json: also <out>.json with the per-frame numbers;
---per-channel: <out>_<channel>.mp4 each; --frame i: <out>_t<i>.png of time step i instead). From Python: `from windinet.video import write_video, write_frame`. Needs numpy, matplotlib and imageio-ffmpeg.
+--per-channel: <out>_<channel>.mp4 each; --frame i: <out>_t<i>.png of time step i instead).
+From Python: `from windinet.video import write_video, write_frame`. Needs numpy, matplotlib and imageio-ffmpeg.
 """
 
 import argparse
@@ -95,7 +96,7 @@ class RolloutFigure:
             )
             error_label, error_ticks = "|prediction − truth| / σ", [0, 0.1, 0.5, 2]
         self.images = []
-        for row, name, st, s in zip(axes, names, stats, self.scales, strict=True):
+        for row, name, s in zip(axes, names, self.scales, strict=True):
             field_norm = AsinhNorm(FIELD_WIDTH * s.std, s.lo - s.centre, s.hi - s.centre)
             field_cmap = plt.get_cmap(s.cmap).with_extremes(**EXTREMES)
             images = [
@@ -127,8 +128,9 @@ class RolloutFigure:
         self.fig.text(
             0.5,
             foot / (2 * height),
-            f"fields: mean ± {SPAN:g}σ, asinh width {FIELD_WIDTH}σ    error: {'±' if signed_error else '0 .. '}{SPAN:g}σ, "
-            f"asinh width {ERROR_WIDTH}σ    magenta/cyan: beyond the range",
+            f"fields: mean ± {SPAN:g}σ, asinh width {FIELD_WIDTH}σ    "
+            f"error: {'±' if signed_error else '0 .. '}{SPAN:g}σ, asinh width {ERROR_WIDTH}σ    "
+            "magenta/cyan: beyond the range",
             fontsize=8.5,
             ha="center",
             va="center",
@@ -180,7 +182,7 @@ def write_video(
     figure, frames = RolloutFigure(names, stats, gt.shape[2:], title, signed_error), []
     size = figure.fig.canvas.get_width_height()
     # ★ playback follows physical time (was a fixed fps): rollouts with any time step play in step side by side
-    fps = (len(times) - 1) / ((times[-1] - times[0]) * slowdown)
+    fps = (len(times) - 1) / ((times[-1] - times[0]) * slowdown) if len(times) > 1 else 1.0
     meta = {
         "title": title,
         "fps": fps,
