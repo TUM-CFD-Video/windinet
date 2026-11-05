@@ -10,14 +10,20 @@ import torch
 from windinet.field_adapter import GroupedAdapter, group_tag
 
 
-def save_state(run_dir: Path, name: str, state: dict, weights_dir: str | None = None) -> None:
-    """<run_dir>/<name>; with `weights_dir` the file lives in <weights_dir>/<run>/<name>, symlinked from the run."""
-    path = Path(weights_dir) / run_dir.name / name if weights_dir else run_dir / name
+def big_file(run_dir: Path, name: str, weights_dir: str | None = None) -> Path:
+    """Where a large output of the run goes: <run_dir>/<name>, or with `weights_dir` the same path under weights_dir
+    (the results tree mirrored, so nested stages of different runs cannot collide), symlinked from the run."""
+    rel = run_dir.relative_to("results") if run_dir.parts[:1] == ("results",) else Path(run_dir.name)
+    path = Path(weights_dir) / rel / name if weights_dir else run_dir / name
     if weights_dir:
         path.parent.mkdir(parents=True, exist_ok=True)
         (run_dir / name).unlink(missing_ok=True)
         (run_dir / name).symlink_to(path)
-    torch.save(state, path)
+    return path
+
+
+def save_state(run_dir: Path, name: str, state: dict, weights_dir: str | None = None) -> None:
+    torch.save(state, big_file(run_dir, name, weights_dir))
 
 
 def vae_file(i: int, n_vaes: int) -> str:

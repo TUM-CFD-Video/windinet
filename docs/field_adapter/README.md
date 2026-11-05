@@ -26,10 +26,10 @@ python scripts/wan/train_vae.py configs/wan/vae.yaml --name pairs_joint --desc "
 
 # evaluate a saved adapter on the frozen VAE without training
 python scripts/wan/train_vae.py configs/wan/vae.yaml --name eval --desc "..." --set train.steps=0 \
-    --set load=results/wan/vae/pairs_adapter
+    --set load=results/wan/vae/res256/pairs/adapter
 
 # reproduce any run from its own config
-python scripts/wan/train_vae.py results/wan/vae/pairs_joint/config.yaml --name repro --overwrite
+python scripts/wan/train_vae.py results/wan/vae/res256/pairs/two_stage_joint/config.yaml --name repro --overwrite
 
 # the first LUMI baselines: six runs on one node, one GPU each
 sbatch --time=05:00:00 --partition=small-g jobs/lumi/lc/run.sbatch bash jobs/lc/one_per_gpu.sh jobs/lc/vae_baselines.txt

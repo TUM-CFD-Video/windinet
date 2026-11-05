@@ -37,9 +37,20 @@ class DataConfig(_Base):
     )
     frame_stride: int = Field(
         default=1,
-        description="whole trajectories (evaluation, latent encoding) take every n-th frame, 4k + 1 frames kept",
+        description="every n-th frame: in clips, and in whole trajectories (evaluation, latent encoding; 4k + 1 kept)",
+    )
+    augment: bool = Field(
+        default=False,
+        description="training data under the dataset's symmetries (eulermq.data.symmetry): VAE-stage frames and clips "
+        "under a random one, latent encoding stores every one, corrector: the Wan/truth pairs under one random one; "
+        "evaluation never",
     )
     num_workers: int = Field(default=4, description="data-loader worker processes per training process")
+    latents: str | None = Field(
+        default=None,
+        description="folder of DiT rollout latents (train_dit's rollouts): train and evaluate the decoders on decoding "
+        "them against the same sims' whole trajectories (frame_stride), not on the round trip; the sims it holds",
+    )
 
     @property
     def clip_len(self) -> int:
@@ -62,6 +73,11 @@ class AdapterConfig(_Base):
 class LossConfig(_Base):
     rmse: float = Field(default=1.0, description="weight of the RMSE term, measured in z-scored field space")
     h1: float = Field(default=1.0, description="weight of the H1 seminorm term (spatial gradients), same space")
+    kind: Literal["rmse_h1", "l1_gdl", "amse"] = Field(
+        default="rmse_h1",
+        description="rmse_h1: the weighted RMSE + H1; l1_gdl: L1 + gradient-difference L1 (Mathieu et al. "
+        "2016); amse: adjusted MSE per wavenumber shell (Subich et al. 2025), does not reward blur; same space",
+    )
 
 
 class TrainConfig(_Base):

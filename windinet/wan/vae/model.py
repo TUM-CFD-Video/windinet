@@ -23,7 +23,8 @@ TEMPORAL = 4  # frames per latent frame
 
 class WanVAE:
     """`train`: 'none' (frozen), 'decoder' (decoder + post_quant_conv, latents unchanged) or 'all'.
-    `channels` > 3: the VAE reads and writes that many channels (`widen_io`)."""
+    `channels` > 3: the VAE reads and writes that many channels (`widen_io`). `checkpointing`: recompute the blocks
+    in backward also when frozen, for gradients through a frozen decoder (the DiT stage's pixel loss)."""
 
     def __init__(
         self,
@@ -32,6 +33,7 @@ class WanVAE:
         repo: str = REPO,
         train: str = "none",
         channels: int = 3,
+        checkpointing: bool = False,
     ):
         # fp32 on purpose: the Wan pipeline keeps its VAE in fp32
         vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=dtype)
@@ -44,7 +46,7 @@ class WanVAE:
         self.trainable_params = [p for p in vae.parameters() if p.requires_grad]
         io = (vae.encoder.conv_in, vae.decoder.conv_out)  # the field interface: its own lr in the VAE stage
         self.io_params = [p for m in io for p in m.parameters() if p.requires_grad]
-        if trainable:  # recompute each block in backward: the full graph of a clip needs several times the memory
+        if trainable or checkpointing:  # recompute each block in backward: a clip's graph is several times the memory
             for block in [*vae.encoder.down_blocks, *vae.decoder.up_blocks]:
                 block.forward = _checkpointed(block.forward)
         self.dtype = dtype
