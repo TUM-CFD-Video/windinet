@@ -1,0 +1,16 @@
+# Corrector stage: a small U-Net on top of the frozen stage3_d4 2-step rollouts (scripts/wan/train_corrector.py),
+# autoregressive; control arm: --set model.history=0. Every run needs --name and --desc.
+name: corrector
+rollouts:   # decoded rollouts, one folder per sampling seed; the first is the scored one (test VRMSE 0.232)
+  - /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_val500
+  - /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_seed11
+  - /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_seed12
+  - /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_seed13
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
+  frame_stride: 2
+  augment: true
+  eval_sims: 64
+weights_dir: /scratch/project_465003416/lc_work/weights

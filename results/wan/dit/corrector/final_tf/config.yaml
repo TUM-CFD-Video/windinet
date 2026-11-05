@@ -1,0 +1,54 @@
+# final_tf: best-practice corrector: teacher-forced noisy true history (1 frame), frame 0, MSE on z-scored fields, EMA 0.995, lr 1e-4
+# Re-run: python scripts/wan/train_corrector.py results/wan/dit/corrector/final_tf/config.yaml --name <new name>
+name: final_tf
+description: 'best-practice corrector: teacher-forced noisy true history (1 frame), frame 0, MSE on z-scored fields, EMA 0.995, lr 1e-4'
+model:
+  history: 1
+  first_frame: true
+  channels:
+  - 64
+  - 128
+  - 128
+  - 256
+  layers_per_block: 2
+  precision: mixed
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 64
+  test_sims: null
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 2
+  clip: false
+  frame_stride: 2
+  augment: true
+  num_workers: 4
+  latents: null
+train:
+  steps: 10000
+  batch_sims: 32
+  window: 4
+  teacher_forcing: true
+  history_noise: 0.1
+  loss: mse
+  ema: 0.995
+  lr: 0.0001
+  weight_decay: 0.01
+  warmup_steps: 500
+  lr_floor: 0.01
+  max_grad_norm: 1.0
+  eval_every: 1000
+  log_every: 50
+  seed: 0
+rollouts:
+- /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_val500
+- /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_seed11
+- /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_seed12
+- /scratch/project_465003416/lc_work/fields/stage3_d4_steps2_seed13
+load: null
+results_dir: results/wan/dit/corrector
+weights_dir: /scratch/project_465003416/lc_work/weights
