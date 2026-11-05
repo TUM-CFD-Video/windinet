@@ -107,6 +107,7 @@ class WanDiT:
         self.modulation = Modulation()
         self.transformer.condition_embedder.time_embedder.register_forward_hook(self.modulation)
         self.device, self.dtype = torch.device(device), dtype
+        self.delta_scale: torch.Tensor | None = None  # [2, C] when it generates scaled changes (dit/delta.py)
 
     def velocity(self, latents: torch.Tensor, timestep: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
         """The transformer's prediction (noise - x0) at `timestep` in 0..1000, one per sample [B] or per latent frame

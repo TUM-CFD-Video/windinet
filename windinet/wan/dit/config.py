@@ -92,6 +92,11 @@ class LatentConfig(_Base):
         default=None,
         description="training on random windows of this many latent frames instead of whole trajectories; None = whole",
     )
+    delta: bool = Field(
+        default=False,
+        description="the DiT generates every latent frame after the first as its change from the one before, scaled "
+        "by the train std of such changes (measured at the start, delta.pt in the run); rollouts are summed back up",
+    )
 
 
 class DitTrainConfig(_Base):
@@ -250,6 +255,10 @@ class DitStageConfig(_Base):
             raise ValueError("train.history_noise needs cond.context >= 1: frame 0 stays clean")
         if self.train.front_loss and not self.train.pixel_loss:
             raise ValueError("train.front_loss is part of the pixel loss: needs train.pixel_loss > 0")
+        if self.latents.delta and self.latents.ar_window is not None:
+            raise ValueError("latents.delta scales the change into latent 1 apart: windows would start mid-trajectory")
+        if self.latents.delta and self.train.pixel_loss:
+            raise ValueError("latents.delta: the pixel loss would decode changes, not states; set train.pixel_loss 0")
         if self.train.pixel_loss and self.train.history_noise is not None:
             raise ValueError("train.pixel_loss needs one sigma per latent: train.history_noise None")
         return self

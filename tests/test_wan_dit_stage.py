@@ -266,7 +266,7 @@ def test_rollout_chunks_regrow_the_history():
 
     calls = []
     sample = lambda c, u, shape, *a, **k: calls.append(k["context"]) or torch.full(shape, float(len(calls)))  # noqa: E731
-    dit = NS(device=torch.device("cpu"), sample=sample)
+    dit = NS(device=torch.device("cpu"), sample=sample, delta_scale=None)
     for chunk, k, contexts in ((4, 1, [1, 5, 9]), (6, 1, [1, 7]), (4, 2, [2, 6, 10]), (None, 1, [1])):
         calls.clear()
         cfg = NS(cond=NS(context=k), sampling=NS(steps=1, guidance=1.0, chunk=chunk, history_noise=0.0, stochastic=0.0))

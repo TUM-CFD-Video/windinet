@@ -41,6 +41,7 @@ from windinet.experiment.runs import provenance, write_index
 from windinet.field_adapter import load_adapter
 from windinet.wan.dit import conditioning
 from windinet.wan.dit.config import DitStageConfig
+from windinet.wan.dit.delta import scales, to_delta
 from windinet.wan.dit.evaluate import evaluate
 from windinet.wan.dit.flow import clean_estimate, draw_sigmas, frame_sigmas, gated, noised, velocity_target
 from windinet.wan.dit.latents import LatentDataset, encode_info, with_augmentations
@@ -120,6 +121,8 @@ def train_step(cfg: DitStageConfig, dit: WanDiT, cond, adapter, vaes, latents, g
     clip, step. Returns the terms (means over the batch)."""
     opt.zero_grad(set_to_none=True)
     z_all, terms = latents.flatten(1, 2), {"loss": 0.0, "pixel": 0.0, "front": 0.0}  # a sample's latents in channels
+    if dit.delta_scale is not None:
+        z_all = to_delta(z_all, dit.delta_scale)
     t, groups = cfg.train, latents.shape[1]
     for z, g in zip(z_all.split(t.micro_batch), gamma.split(t.micro_batch), strict=True):
         noise = torch.randn_like(z)
@@ -233,6 +236,17 @@ def main(
     )
 
     adapter, vaes, dit, cond = build(cfg, device)
+    if cfg.latents.delta:  # the delta scale of the run continued from, else measured on the train latents
+        loaded = Path(cfg.load or "") / "delta.pt"
+        if cfg.load and loaded.exists():
+            dit.delta_scale = torch.load(loaded, map_location=device)
+        else:
+            sims = LatentDataset(cfg.latents.dir, "train", shard(train_ids), cfg.latents.frames)
+            dit.delta_scale = scales(DataLoader(sims, 8, num_workers=cfg.data.num_workers), device)
+        if rank == 0:  # with the run from the start: every eval point (load_step) uses the same scale
+            torch.save(dit.delta_scale.cpu(), run_dir / "delta.pt")
+        first, later = dit.delta_scale.median(1).values.tolist()
+        print(f"delta scales (median over channels): into latent 1 {first:.3g}, later {later:.3g}")
     if cfg.rollouts:
         write_rollouts(
             cfg, dit, cond, {"test": (test_h5, test_ids), "val": (val_h5, eval_ids), "train": (train_h5, train_ids)}
