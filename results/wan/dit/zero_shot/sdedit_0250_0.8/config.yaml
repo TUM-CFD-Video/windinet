@@ -1,6 +1,6 @@
-# sdedit_0250_0.8: test sim 0250 noised to strength 0.8 and denoised by the pretrained DiT with the physics prompt
-# Re-run: python scripts/wan/sample_dit.py results/wan/dit/sdedit_0250_0.8/config.yaml --name <new name>
-name: sdedit_0250_0.8
+# zero_shot/sdedit_0250_0.8: test sim 0250 noised to strength 0.8 and denoised by the pretrained DiT with the physics prompt
+# Re-run: python scripts/wan/sample_dit.py results/wan/dit/zero_shot/sdedit_0250_0.8/config.yaml --name <new name>
+name: zero_shot/sdedit_0250_0.8
 description: test sim 0250 noised to strength 0.8 and denoised by the pretrained DiT with the physics prompt
 prompt: Top-down 2D simulation of a compressible inviscid gas (Euler equations, ratio of specific heats 1.40). The square domain starts as four quadrants of piecewise-constant density, pressure and velocity,
   a 2D Riemann problem. Shock waves, rarefaction waves and contact discontinuities form at the quadrant interfaces, propagate and interact; open boundaries let waves leave the domain. No text, smooth frame-by-frame
@@ -15,9 +15,9 @@ guidance: 5.0
 seed: 0
 fps: 16
 source: euler_mq_dataset/256x256_ds/test.h5:0250_gamma1.3999999762
-adapter: results/wan/vae/rgb3_adapter
+adapter: results/wan/vae/res256/rgb3/adapter
 strength: 0.8
 keep_first_frame: false
 load: null
-results_dir: results/wan/dit/zero_shot
+results_dir: results/wan/dit
 video_dir: /scratch/project_465003416/lc_work/videos

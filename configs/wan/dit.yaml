@@ -3,8 +3,8 @@
 # rollouts. Variants via --set; every run needs --name and --desc.
 name: dit
 latents:
-  dir: /scratch/project_465003416/lc_work/latents/rgb3
-vae: results/wan/vae/rgb3_two_stage   # the adapter behind the latents and its fine-tuned decoder
+  dir: /scratch/project_465003416/lc_work/latents/rgb3/stride1
+vae: results/wan/vae/res256/rgb3/two_stage   # the adapter behind the latents and its fine-tuned decoder
 
 data:                                  # the simulations: split and ground truth of the evaluation (as in vae.yaml)
   h5_path: euler_mq_dataset/256x256_ds/train.h5

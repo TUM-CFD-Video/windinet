@@ -1,6 +1,6 @@
-# zs_256: zero-shot, physics prompt, 256x256x101 (our format)
-# Re-run: python scripts/wan/sample_dit.py results/wan/dit/zs_256/config.yaml --name <new name>
-name: zs_256
+# zero_shot/zs_256: zero-shot, physics prompt, 256x256x101 (our format)
+# Re-run: python scripts/wan/sample_dit.py results/wan/dit/zero_shot/zs_256/config.yaml --name <new name>
+name: zero_shot/zs_256
 description: zero-shot, physics prompt, 256x256x101 (our format)
 prompt: Top-down 2D simulation of a compressible inviscid gas (Euler equations, ratio of specific heats 1.40). The square domain starts as four quadrants of piecewise-constant density, pressure and velocity,
   a 2D Riemann problem. Shock waves, rarefaction waves and contact discontinuities form at the quadrant interfaces, propagate and interact; open boundaries let waves leave the domain. No text, smooth frame-by-frame
@@ -19,5 +19,5 @@ adapter: null
 strength: 1.0
 keep_first_frame: false
 load: null
-results_dir: results/wan/dit/zero_shot
+results_dir: results/wan/dit
 video_dir: /scratch/project_465003416/lc_work/videos

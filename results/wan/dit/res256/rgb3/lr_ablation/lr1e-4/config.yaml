@@ -1,0 +1,58 @@
+# res256/rgb3/lr_ablation/lr1e-4: lr sweep: 1e-4, 2000 updates, otherwise the rgb3 recipe
+# Re-run: python scripts/wan/train_dit.py results/wan/dit/res256/rgb3/lr_ablation/lr1e-4/config.yaml --name <new name>
+name: res256/rgb3/lr_ablation/lr1e-4
+description: 'lr sweep: 1e-4, 2000 updates, otherwise the rgb3 recipe'
+model:
+  repo: Wan-AI/Wan2.1-T2V-1.3B-Diffusers
+  precision: mixed
+  checkpointing: true
+cond:
+  kind: gamma
+  context: 1
+  tokens: 4
+  gamma_range:
+  - 1.0
+  - 2.0
+  prompt: ''
+  negative_prompt: ''
+latents:
+  dir: /scratch/project_465003416/lc_work/latents/rgb3/stride1
+  frames: null
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 16
+  test_sims: null
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 2
+  clip: false
+  num_workers: 2
+train:
+  steps: 2000
+  batch_sims: 32
+  micro_batch: 4
+  lr: 0.0001
+  patchify_lr: 0.0001
+  weight_decay: 0.01
+  warmup_steps: 0
+  lr_floor: 0.001
+  max_grad_norm: 1.0
+  sigma_mean: 0.0
+  sigma_std: 1.0
+  sigma_shift: 3.0
+  eval_every: 1000
+  log_every: 10
+  seed: 0
+sampling:
+  steps: 20
+  guidance: 1.0
+  batch: 4
+vae: results/wan/vae/res256/rgb3/two_stage
+load: null
+load_step: null
+results_dir: results/wan/dit
+weights_dir: /scratch/project_465003416/lc_work/weights

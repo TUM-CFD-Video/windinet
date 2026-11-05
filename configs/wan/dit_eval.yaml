@@ -1,8 +1,11 @@
 # Evaluation of a finished DiT run: no updates, the test rollouts only. Everything else comes from the run's config.yaml:
 #   torchrun --standalone --nproc_per_node=8 scripts/wan/train_dit.py configs/wan/dit_eval.yaml \
-#       --set load=results/wan/dit/<run> --set sampling.steps=50 --name sampling_ablation/steps50 --desc "..."
+#       --set load=results/wan/dit/<run> --set sampling.steps=50 --name res256/pairs/unrolled/unrolled/bench_steps50 --desc "..."
 extends: load
 description: the final weights evaluated on the test set
 load_step: null
 train:
   steps: 0
+sampling:  # stochastic sampling at 5 steps: the best single prediction of v3_unrolled (docs/wan/dit_sampling.md)
+  steps: 5
+  stochastic: 1.0

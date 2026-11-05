@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from windinet.wan import REPO
 from windinet.wan.vae.config import DataConfig, _Base
@@ -18,10 +18,10 @@ class EncodeConfig(_Base):
     load: str = Field(description="VAE-stage run folder: its adapter.pt and adapter groups (config.yaml)")
     out: str = Field(description="latent folder: <out>/<split>/<sim id>.pt and <out>/encode.yaml")
     sims: int | None = Field(default=None, description="first n sims per split (smoke); None = all")
-    augmentations: int = Field(
-        default=1,
-        description="copies of every train simulation under the square's symmetries (eulermq.data.symmetry, exact for "
-        "the Euler equations): 1 = as recorded, 8 = every rotation and reflection; files <sim id>_s<k>.pt",
+    all_starts: bool = Field(
+        default=False,
+        description="also encode every train sim from each chunk boundary of its first half (<sim id>_t<frame>.pt): "
+        "mid-trajectory single-frame starts for autoregressive training",
     )
 
 
@@ -71,8 +71,11 @@ class CondConfig(_Base):
         description="gamma as cross-attention tokens (Li), gamma added to the time embedding that drives Wan's adaLN "
         "(cross-attention gets one zero token), or a fixed text prompt",
     )
-    first_frame: bool = Field(
-        default=True, description="the first latent frame stays clean (timestep 0, no loss) and conditions the rest"
+    context: int = Field(
+        default=1,
+        ge=0,
+        description="clean latent frames at the start (timestep 0, no loss) that condition the rest: k = pixel frames "
+        "0 to 4 (k - 1) x stride; 1 = the first frame alone, 0 = none",
     )
     tokens: int = Field(default=4, description="gamma: tokens produced by the embedding")
     gamma_range: tuple[float, float] = Field(default=(1.0, 2.0), description="gamma: scaled to [0, 1] over this range")
@@ -84,6 +87,10 @@ class LatentConfig(_Base):
     dir: str = Field(description="latent folder written by scripts/wan/encode_latents.py")
     frames: int | None = Field(
         default=None, description="latent frames per sample (the first n); None = whole trajectories (26)"
+    )
+    ar_window: int | None = Field(
+        default=None,
+        description="training on random windows of this many latent frames instead of whole trajectories; None = whole",
     )
 
 
@@ -113,6 +120,56 @@ class DitTrainConfig(_Base):
     sigma_shift: float = Field(
         default=3.0, description="time shift of the draw, as in the sampler: Wan's scheduler default (3 at 480p)"
     )
+    history_noise: float | None = Field(
+        default=None,
+        ge=0,
+        description="Diffusion Forcing: per-frame timesteps, a random history of at least cond.context frames at one "
+        "sigma in [0, this] (0 for a fifth of the samples, frame 0 clean) and out of the loss; None = one timestep, "
+        "the context clean",
+    )
+    pixel_loss: float = Field(
+        default=0.0,
+        ge=0,
+        description="weight of the pixel loss: L1 + gradient-difference L1 (Mathieu et al. 2016) in z-scored field "
+        "space between the decoded clean-latent estimate x_σ - σ v and the decoded clean latent, for the "
+        "pixel_gate_samples lowest-sigma latents under pixel_gate of each micro-batch; 0 = off",
+    )
+    pixel_gate: float = Field(
+        default=0.8,
+        gt=0,
+        le=1,
+        description="pixel loss only for latents noised at sigma <= this: the 2-step sampler evaluates at 1 and 0.75, "
+        "and the estimate at sigma 1 is the prior",
+    )
+    pixel_gate_samples: int = Field(
+        default=1,
+        ge=1,
+        description="latents per micro-batch and process that get the pixel loss: each decodes its 49 frames forward "
+        "and backward, about two DiT steps of compute",
+    )
+    pixel_window: int | None = Field(
+        default=None,
+        ge=2,
+        description="latent frames decoded for the pixel loss: a window starting at latent s >= 1 with probability "
+        "proportional to s (late frames, where fronts drift, more often); None = all, about 4x the cost of 6",
+    )
+    front_loss: float = Field(
+        default=0.0,
+        ge=0,
+        description="weight of the front-distance term added to L1 + GDL in the pixel loss: symmetric soft Chamfer "
+        "between the density and pressure fronts of the decoded estimate and of the decoded clean latent; 0 = off",
+    )
+    unrolled: float | None = Field(
+        default=None,
+        gt=0,
+        le=1,
+        description="share of each micro-batch trained on its own state, as the sampler sees it: call k of an n-step "
+        "chain from noise (the steps before it without gradient, Euler), its clean estimate against the clean latent "
+        "(MSE); None = off",
+    )
+    unrolled_steps: tuple[int, int] = Field(
+        default=(2, 5), description="range of the chain length n (uniform); the trained call k is uniform in 2..n"
+    )
     eval_every: int = Field(default=1000, description="validation rollouts (and weight save) every n updates")
     log_every: int = Field(default=10, description="training-progress line every n updates")
     seed: int = Field(default=0, description="torch seed (+ rank under torchrun)")
@@ -126,6 +183,26 @@ class SamplingConfig(_Base):
     )
     guidance: float = Field(default=1.0, description="classifier-free guidance scale; 1 = off")
     batch: int = Field(default=4, description="simulations per rollout batch in evaluation")
+    samples: int = Field(default=1, ge=1, description="rollouts per simulation, averaged in field space: ensemble")
+    seed: int = Field(
+        default=0, description="noise seed: every simulation draws its own from its id, so all runs share their noise"
+    )
+    chunk: int | None = Field(
+        default=None,
+        ge=1,
+        description="latent frames kept per sampler run: the trajectory is generated again with the history grown by "
+        "this many predicted frames, from cond.context on; None = one shot",
+    )
+    history_noise: float = Field(
+        default=0, ge=0, description="sigma the context frames after frame 0 are re-noised to and marked with"
+    )
+    stochastic: float = Field(
+        default=0,
+        ge=0,
+        le=1,
+        description="share of fresh noise when each step re-noises the clean estimate to the next sigma (DDIM eta, "
+        "Euler steps): fresh detail at every step instead of the mean; 0 = UniPC, deterministic",
+    )
 
 
 class DitStageConfig(_Base):
@@ -139,12 +216,40 @@ class DitStageConfig(_Base):
     sampling: SamplingConfig = SamplingConfig()
     vae: str = Field(description="VAE-stage run folder: the adapter and the (fine-tuned) decoders behind the latents")
     load: str | None = Field(default=None, description="DiT run folder to continue from: its dit.pt and cond.pt")
+    load_step: int | None = Field(
+        default=None, description="with load: this eval point (dit_<step>.pt, cond_<step>.pt), not the final dit.pt"
+    )
     benchmark: bool = Field(
         default=False,
-        description="also cfd_bench's metrics (Harish): RMSE, VRMSE, 1-SSIM, MLW on frames 40, 50, ..., 100 in Li's "
-        "clipped normalised space, prediction and truth clamped to [-1, 1]",
+        description="also cfd_bench's metrics (Harish): RMSE, VRMSE, 1-SSIM, MLW on frames 10, 20, ..., 100 in Li's "
+        "clipped normalised space, prediction and truth clamped to [-1, 1]; bench_shared on the frames LoLA reaches",
+    )
+    score_from: int = Field(
+        default=0,
+        ge=0,
+        description="first original frame the per-field metrics and frame windows score (never the context frames): "
+        "the same frames for every context size; 0 = all predicted frames",
+    )
+    rollouts: str | None = Field(
+        default=None,
+        description="write the rollout latents of every train sim and of the evaluated val and test sims to "
+        "<this>/<split>/<sim id>.pt (the latent folder layout) and stop: the VAE stage's data.latents",
     )
     results_dir: str = Field(default="results/wan/dit", description="one folder per run is created here")
     weights_dir: str | None = Field(
-        default=None, description="where dit.pt (5.7 GB) and cond.pt go, symlinked from the run folder; None = the run"
+        default=None,
+        description="where dit.pt (5.7 GB), cond.pt and the mp4 go (the results tree mirrored), symlinked from the "
+        "run; None = the run folder",
     )
+
+    @model_validator(mode="after")
+    def _windows_continue_from_context(self):
+        if self.latents.ar_window is not None and not 0 < self.cond.context < self.latents.ar_window:
+            raise ValueError("latents.ar_window needs 0 < cond.context < ar_window: windows continue from the last")
+        if self.train.history_noise is not None and self.cond.context < 1:
+            raise ValueError("train.history_noise needs cond.context >= 1: frame 0 stays clean")
+        if self.train.front_loss and not self.train.pixel_loss:
+            raise ValueError("train.front_loss is part of the pixel loss: needs train.pixel_loss > 0")
+        if self.train.pixel_loss and self.train.history_noise is not None:
+            raise ValueError("train.pixel_loss needs one sigma per latent: train.history_noise None")
+        return self

@@ -48,9 +48,9 @@ def main(
         frames, _ = FrameSampler(h5, [sid], None, 0, consecutive=True)[0]
         init = vae.encode(adapter(adapter.select(frames.to(device)))[0].movedim(0, 1)[None])
     shape = init.shape if init is not None else (1, 16, (cfg.frames - 1) // 4 + 1, cfg.height // 8, cfg.width // 8)
-    dit = WanDiT(device, load=cfg.load)
+    dit = WanDiT(device, load=Path(cfg.load) / "dit.pt" if cfg.load else None)
     latents = dit.sample(
-        cond[:1], cond[1:], shape, cfg.steps, cfg.guidance, cfg.seed, init, cfg.strength, cfg.keep_first_frame
+        cond[:1], cond[1:], shape, cfg.steps, cfg.guidance, cfg.seed, init, cfg.strength, int(cfg.keep_first_frame)
     )
     video = vae.decode(latents)[0]  # [3, F, H, W] in (-1, 1)
 

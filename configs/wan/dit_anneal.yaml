@@ -1,0 +1,11 @@
+# Stage 2 of a DiT run: the cosine tail after a stage at constant lr (warm-up 100, cosine 1e-5 -> 1e-8 over 2000
+# updates, fresh seed). Everything else comes from the parent run's config.yaml:
+#   torchrun --standalone --nproc_per_node=8 scripts/wan/train_dit.py configs/wan/dit_anneal.yaml \
+#       --set load=results/wan/dit/<run> --name <run>/stage2_anneal
+extends: load
+description: cosine tail of 2000 updates (warm-up 100) from the parent's final weights
+load_step: null
+train:
+  steps: 2000
+  warmup_steps: 100
+  seed: 1
