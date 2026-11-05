@@ -49,6 +49,9 @@ class WanVAE:
             module.requires_grad_(True)
         self.trainable_params = [p for p in vae.parameters() if p.requires_grad]
         self.io_params = [p for m in io for p in m.parameters() if p.requires_grad]
+        if precision == "mixed":  # bf16 rounding of the output, amplified by the adapter's atanh, wrecks conv_out
+            for conv in io:
+                conv.forward = _fp32(conv.forward)
         if checkpointing:  # recompute each block in backward: a clip's graph is several times the memory
             for block in [*vae.encoder.down_blocks, *vae.decoder.up_blocks]:
                 block.forward = _checkpointed(block.forward)
@@ -90,6 +93,18 @@ def widen_io(vae: AutoencoderKLWan, channels: int) -> None:
         if dim == 0:
             conv.bias = nn.Parameter(pad(conv.bias, (0, extra)))
         conv.in_channels, conv.out_channels = conv.weight.shape[1], conv.weight.shape[0]
+
+
+def _fp32(forward):
+    """Run a module's forward in fp32 under an active autocast."""
+
+    def run(*args, **kw):
+        args = [a.float() if torch.is_tensor(a) else a for a in args]
+        kw = {k: v.float() if torch.is_tensor(v) else v for k, v in kw.items()}
+        with torch.autocast(args[0].device.type, enabled=False):
+            return forward(*args, **kw)
+
+    return run
 
 
 def _checkpointed(block_forward):
