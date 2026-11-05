@@ -8,8 +8,8 @@ This package provides:
 
 
 from .rmse import rmse_loss
-from .h1_semi_norm import h1_seminorm_loss
-from .h2_semi_norm import h2_seminorm_loss
+from .h1_semi_norm import h1_seminorm_loss, h1_seminorm_per_channel
+from .h2_semi_norm import h2_seminorm_loss, h2_seminorm_per_channel
 from .ssim import SSIMLoss
 from .mlw import mlw_loss
 from .pcc import pcc_loss
@@ -22,7 +22,9 @@ from .reconstruction import reconstruction_losses
 __all__ = [
     "rmse_loss",
     "h1_seminorm_loss",
+    "h1_seminorm_per_channel",
     "h2_seminorm_loss",
+    "h2_seminorm_per_channel",
     "SSIMLoss",
     "mlw_loss",
     "pcc_loss",
