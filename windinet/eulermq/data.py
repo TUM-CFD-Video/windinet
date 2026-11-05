@@ -16,6 +16,7 @@ from windinet.training.shockwave_data import CHANNEL_NAMES, ShockWaveDataset, pa
 FIELDS = CHANNEL_NAMES  # dataset order: density, momentum_x, momentum_y, pressure
 SYMBOLS = {"density": "ρ", "momentum_x": "m_x", "momentum_y": "m_y", "pressure": "p"}
 SYMMETRIES = 8  # the square's symmetry group D4: exact symmetries of this dataset (outflow on every side), `symmetry`
+FRAME_DT = 0.015  # time between stored frames (The Well: t = 0 .. 1.5 over 101 frames)
 
 
 def sim_ids(h5_path: str | Path) -> list[str]:

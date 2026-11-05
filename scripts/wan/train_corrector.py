@@ -40,7 +40,7 @@ from windinet.wan.weights import save_state
 
 def eval_loader(cfg: CorrectorStageConfig, split: str, h5: str, ids: list[str], batch: int) -> DataLoader:
     """Whole rollouts of the first folder with their sims, this rank's share, in order; every sim must have one."""
-    data = RolloutFields(cfg.rollouts[:1], split, h5, shard(ids))
+    data = RolloutFields(cfg.rollouts[:1], split, h5, shard(ids), cfg.data.frame_stride)
     if len(data) != len(shard(ids)):  # a partial folder would score other sims than the DiT's evaluation
         raise typer.BadParameter(f"{cfg.rollouts[0]}/{split} lacks {len(shard(ids)) - len(data)} of this rank's sims")
     return DataLoader(data, batch, num_workers=cfg.data.num_workers)

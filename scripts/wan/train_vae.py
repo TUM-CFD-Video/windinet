@@ -142,7 +142,7 @@ def write_outputs(
     """Figures, videos, weights, metrics.json and the results index."""
     save_panel(example, adapter.fields, run_dir / "panel.png")
     kind = "rollout" if cfg.data.latents else "recon"
-    save_examples(examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, kind)
+    save_examples(examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, kind, cfg.data.frame_stride)
     save_vae_curves(record["steps"], record["history"], adapter.fields, run_dir / "curves.png", drift)
     save_weights(run_dir, adapter, vaes, cfg.weights_dir)
     (run_dir / "metrics.json").write_text(json.dumps(record, indent=1))

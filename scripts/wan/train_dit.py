@@ -307,7 +307,7 @@ def main(
     if rank != 0:
         return
     save_examples(
-        examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, "rollout"
+        examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, "rollout", cfg.data.frame_stride
     )
     save_dit_curves(steps, history, final, adapter.fields, run_dir / "curves.png")
     if cfg.train.steps:

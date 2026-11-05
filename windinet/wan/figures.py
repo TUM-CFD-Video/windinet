@@ -58,51 +58,29 @@ def save_strip(video: torch.Tensor, path: Path, reference: torch.Tensor | None =
     plt.close(fig)
 
 
-def _scales(truth: torch.Tensor, f: int, stds: torch.Tensor) -> tuple[dict, dict]:
-    """imshow kwargs of field `f`: truth and prediction on the truth's own range over the trajectory (linear, viridis),
-    the signed difference on ±0.5 dataset std (the same scale in every run)."""
-    same = {"vmin": truth[:, f].min().item(), "vmax": truth[:, f].max().item()}
-    diff = {"vmin": -0.5 * stds[f].item(), "vmax": 0.5 * stds[f].item(), "cmap": "RdBu_r"}
-    return same, diff
-
-
-def frame_label(i: int) -> str:
-    return "frame 0 (given)" if i == 0 else f"frame {i}"
-
-
-def save_fields_video(
-    pred: torch.Tensor, truth: torch.Tensor, fields: list[str], stds: torch.Tensor, path: Path, title: str, fps: int = 8
+def save_examples(
+    examples: dict,
+    fields: list[str],
+    stats_json: str,
+    run_dir: Path,
+    weights_dir: str | None,
+    kind: str,
+    frame_stride: int,
 ) -> None:
-    """mp4 of [F, C, H, W] fields, the strip's panels per frame: one row per field, columns truth, prediction and
-    their signed difference, a colour bar per row, `title` (which simulation) and the frame number on top."""
-    import matplotlib
+    """<kind>_gamma<g>.mp4 (windinet/video.py: truth, prediction, |error| per field on train-stat scales) and
+    example_gamma<g>.pt of the examples {gamma: (sim id, truth, pred)}, [F, C, H, W] physical fields."""
+    from windinet.eulermq.data import FRAME_DT, load_field_stats
+    from windinet.video import write_video
+    from windinet.wan.weights import big_file
 
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    fig, axes = plt.subplots(len(fields), 3, figsize=(9.6, 2.6 * len(fields)), dpi=80, squeeze=False)  # 16-px multiples
-    images = []
-    for f, name in enumerate(fields):
-        same, diff = _scales(truth, f, stds)
-        row = [axes[f, 0].imshow(truth[0, f], **same), axes[f, 1].imshow(pred[0, f], **same)]
-        row.append(axes[f, 2].imshow(pred[0, f] - truth[0, f], **diff))
-        fig.colorbar(row[1], ax=axes[f, :2], fraction=0.03)
-        fig.colorbar(row[2], ax=axes[f, 2], fraction=0.06)
-        for ax, label in zip(axes[f], (f"{name}: ground truth", "prediction", "difference"), strict=True):
-            ax.set_title(label, fontsize=9)
-            ax.axis("off")
-        images.append(row)
-    frames = []
-    for i in range(len(truth)):
-        fig.suptitle(f"{title}, {frame_label(i)} / {len(truth) - 1}", fontsize=10)
-        for f, row in enumerate(images):
-            for im, data in zip(row, (truth[i, f], pred[i, f], pred[i, f] - truth[i, f]), strict=True):
-                im.set_data(data)
-        fig.canvas.draw()
-        frames.append(np.asarray(fig.canvas.buffer_rgba())[..., :3].copy())
-    plt.close(fig)
-    write_video(frames, path, fps)
+    stats = load_field_stats(stats_json)
+    shown = [{**stats[n], "signed": n.startswith("momentum")} for n in fields]
+    for g, (sid, truth, pred) in examples.items():
+        times = [FRAME_DT * frame_stride * i for i in range(len(truth))]
+        title = f"sim {sid.split('_')[0]} (γ {g:g})"
+        path = big_file(run_dir, f"{kind}_gamma{g:g}.mp4", weights_dir)
+        write_video(truth.numpy(), pred.numpy(), times, fields, shown, path, title)
+        torch.save({"id": sid, "truth": truth, "pred": pred}, big_file(run_dir, f"example_gamma{g:g}.pt", weights_dir))
 
 
 def _curves(steps: list[dict], history: list[dict], fields: list[str]):
