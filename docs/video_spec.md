@@ -9,7 +9,7 @@
   and looked flat.
 - ★ **asinh linear width 0.1σ for the fields (was σ).** Fronts and vortices differ by 0.1–0.5σ; the narrower width
   gives them contrast.
-- ★ **Error |prediction − truth|/σ shown 0..2σ with asinh width 0.05σ, colormap `plasma` (was up to (max − min)/σ,
+- ★ **Error |prediction − truth|/σ shown 0..2σ with asinh width 0.05σ, colormap `magma` (was up to (max − min)/σ,
   width 1, inferno).** Typical errors are 0.01–0.5σ: on the old scale they sat in the bottom few percent of the
   colormap and the panel was black, so models looked better than they are. Optional (`--signed-error`): the signed
   error (prediction − truth)/σ on ±2σ with `RdBu_r`, which shows whether a prediction is too high or too low and
@@ -84,7 +84,7 @@ $\pm\min(|\mu_c|+2\sigma_c,\ \max(|a_c|, |b_c|))$.
 ## 4. Column 3: pointwise error
 
 $$e_c=\frac{|\hat u_c-u_c|}{\sigma_c},$$ ★ shown on $[0, 2]$ with `AsinhNorm(linear_width=0.05, vmin=0, vmax=2)` and
-`plasma`; errors beyond 2σ are drawn cyan (plasma itself contains magenta). ★ With `--signed-error`:
+`magma`; errors beyond 2σ are drawn cyan (magma itself contains magenta). ★ With `--signed-error`:
 $e_c=(\hat u_c-u_c)/\sigma_c$ on $[-2, 2]$, `AsinhNorm(linear_width=0.05, vmin=-2, vmax=2)`, `RdBu_r` (0 = white),
 beyond drawn cyan/magenta. Errors beyond the range are counted, never removed. The error is always normalized by the training $\sigma_c$, never by a model's own errors.
 
@@ -114,7 +114,7 @@ already rendered RGB images.
 
 ## 7. Acceptance checks
 
-- A prediction equal to the ground truth gives a zero error panel (darkest plasma; white when signed).
+- A prediction equal to the ground truth gives a zero error panel (black in magma; white when signed).
 - A physical value has the same color for every model, trajectory and frame.
 - $\Phi_c(\mathrm{lo}_c)=0$, $\Phi_c(\mathrm{hi}_c)=1$; the error maps $0, 2$ to $0, 1$ (signed: $-2, 0, 2$ to $0, 0.5, 1$).
 - Values beyond a display bound and NaNs are visibly flagged and counted.
