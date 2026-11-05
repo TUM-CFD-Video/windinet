@@ -263,10 +263,11 @@ def main(
     t0 = t_log = time.time()
     for step in range(1, cfg.train.steps + 1):
         latents, gamma = next(batches)
+        lr = opt.param_groups[0]["lr"]  # this update's: the cosine makes a flat curve ambiguous without it
         terms = train_step(cfg, dit, cond, adapter, vaes, latents.to(device), gamma.to(device), opt, sched, params)
         if ema:
             ema.update()
-        steps.append({"step": step, **terms})
+        steps.append({"step": step, "lr": lr, **terms})
         if step % cfg.train.log_every == 0:
             recent = steps[-cfg.train.log_every :]
             now, per_step = time.time(), (time.time() - t_log) / len(recent)
@@ -288,8 +289,8 @@ def main(
             if ema:
                 ema.swap()
             metrics = validate(dit, cond, adapter, vaes, val_loaders, train_eval_loaders, gammas, cfg)
-            history.append({"step": step, "train": terms, **metrics, **as_raw(raw)})
-            log_metrics(f"val {step}", metrics, terms["loss"], time.time() - t0)
+            history.append({"step": step, "lr": lr, "train": terms, **metrics, **as_raw(raw)})
+            log_metrics(f"val {step} (lr {lr:.1e})", metrics, terms["loss"], time.time() - t0)
             if rank == 0 and step < cfg.train.steps:  # the last point is the final dit.pt below
                 save_run(run_dir, dit, cond, cfg.weights_dir, step)
                 (run_dir / "history.json").write_text(json.dumps(history, indent=1))  # the curve so far, if killed

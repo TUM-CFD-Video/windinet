@@ -119,10 +119,31 @@ def _save(fig, path: Path) -> None:
     plt.close(fig)
 
 
+def _lr_and_gain(ax_loss, ax_val, steps: list[dict], history: list[dict], fields: list[str]) -> None:
+    """The lr per update over the train loss, and over the validation curve its gain per unit lr: the drop of the
+    field-mean VRMSE between two evaluations divided by the summed lr of the updates in between. A flat gain means the
+    curve flattens only because the cosine lowers the lr; a gain falling to 0 means the model saturates."""
+    lr = ax_loss.twinx()
+    lr.plot([s["step"] for s in steps], [s["lr"] for s in steps], c="gray", lw=1)
+    lr.set_ylabel("lr", color="gray")
+    if len(history) < 2:
+        return
+    mean = [sum(h[f"vrmse_{n}"] for n in fields) / len(fields) for h in history]
+    summed = torch.tensor([s["lr"] for s in steps]).cumsum(0)
+    at = [summed[h["step"] - 1].item() for h in history]
+    gain = [(mean[i - 1] - mean[i]) / (at[i] - at[i - 1]) for i in range(1, len(history))]
+    twin = ax_val.twinx()
+    twin.plot([h["step"] for h in history[1:]], gain, "r^:", label="gain per summed lr")
+    twin.axhline(0, c="r", lw=0.5)
+    twin.set_ylabel("val gain per summed lr", color="r")
+
+
 def save_dit_curves(steps: list[dict], history: list[dict], final: dict, fields: list[str], path: Path) -> None:
     """The shared top row, then the VRMSE per frame (last validation, else the test) and per gamma (last validation
     and test)."""
     fig, ax = _curves(steps, history, fields)
+    if steps and "lr" in steps[0]:
+        _lr_and_gain(ax[0, 0], ax[0, 1], steps, history, fields)
     last = history[-1] if history else final  # an eval-only run has no validation
     what = f"validation, step {last['step']}" if history else "test"
     curve = last["vrmse_per_frame"]
