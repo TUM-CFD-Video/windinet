@@ -64,12 +64,13 @@ class PreNorm(nn.Module):
 
 
 class Mix(nn.Module):
-    """Linear channel mix n -> n_out (3: a colour image), initialised as identity (field i -> channel i).
+    """Linear channel mix n -> n_out (3: a colour image), initialised as identity (field i -> channel i; one field:
+    grayscale, every channel).
     Inverse is the pseudo-inverse."""
 
     def __init__(self, n_in: int, n_out: int = 3):
         super().__init__()
-        self.weight = nn.Parameter(torch.eye(n_out, n_in))
+        self.weight = nn.Parameter(torch.eye(n_out, n_in) if n_in > 1 else torch.ones(n_out, n_in))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.einsum("oi,bi...->bo...", self.weight, x)

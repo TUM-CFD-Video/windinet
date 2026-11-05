@@ -48,6 +48,15 @@ def all_mean(*tensors: torch.Tensor) -> None:
             t /= world
 
 
+def gather(obj) -> list:
+    """Every rank's `obj` (any picklable), in rank order."""
+    if world == 1:
+        return [obj]
+    out = [None] * world
+    dist.all_gather_object(out, obj)
+    return out
+
+
 def sync(module: torch.nn.Module) -> None:
     """Copy rank 0's parameters and buffers to every rank (after a data-dependent init)."""
     if world > 1:

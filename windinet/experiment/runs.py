@@ -76,7 +76,7 @@ def run_row(run_dir: Path, label: str) -> list[str] | None:
     prov = metrics.get("provenance", {})
     return [
         f"[{label}]({label}/)",
-        cfg.get("description", ""),
+        cfg.get("description", "").replace("|", "\\|"),  # a bare | would end the table cell
         settings(cfg),
         *(f"{v:.3f}" if v is not None else "–" for v in vrmse),
         f"{final.get('vrmse_mean', sum(present) / len(present)):.3f}"
@@ -86,13 +86,16 @@ def run_row(run_dir: Path, label: str) -> list[str] | None:
     ]
 
 
+def run_rows(stage_dir: Path, folder: Path) -> list[list[str]]:
+    """Index rows of `folder` and every folder below it, labelled by the path from the stage dir."""
+    rows = [r] if (r := run_row(folder, str(folder.relative_to(stage_dir)))) else []
+    return rows + [row for d in sorted(p for p in folder.iterdir() if p.is_dir()) for row in run_rows(stage_dir, d)]
+
+
 def write_index(stage_dir: Path) -> Path:
-    """README.md of a stage: one row per run folder, from config.yaml + metrics.json; a run's continuations and
-    evaluations (nested folders, `--name <run>/<stage>`) follow their run."""
-    rows = []
-    for d in sorted(p for p in stage_dir.iterdir() if p.is_dir()):
-        rows += [r] if (r := run_row(d, d.name)) else []
-        rows += [r for s in sorted(d.iterdir()) if s.is_dir() and (r := run_row(s, f"{d.name}/{s.name}"))]
+    """README.md of a stage: one row per run folder at any depth, from config.yaml + metrics.json (families like
+    `pairs/2dec`, continuations and evaluations like `run/stage` follow their parent)."""
+    rows = [row for d in sorted(p for p in stage_dir.iterdir() if p.is_dir()) for row in run_rows(stage_dir, d)]
     head = ["run", "description", "settings", *SYMBOLS.values(), "mean ± std over sims", "H1", "SSIM", "commit"]
     lines = [
         f"# Runs in `{stage_dir}`",

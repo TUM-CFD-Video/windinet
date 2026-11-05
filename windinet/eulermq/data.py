@@ -15,6 +15,7 @@ from windinet.training.shockwave_data import CHANNEL_NAMES, ShockWaveDataset, pa
 
 FIELDS = CHANNEL_NAMES  # dataset order: density, momentum_x, momentum_y, pressure
 SYMBOLS = {"density": "ρ", "momentum_x": "m_x", "momentum_y": "m_y", "pressure": "p"}
+SYMMETRIES = 8  # the square's symmetry group D4: exact symmetries of this dataset (outflow on every side), `symmetry`
 
 
 def sim_ids(h5_path: str | Path) -> list[str]:
@@ -67,8 +68,9 @@ class FrameSampler(ShockWaveDataset):
     """One item = `frames_per_item` frames of one simulation, fields [k, 4, H, W] in physical units, plus gamma.
 
     Only the chosen frames are read from HDF5. `seed` None: random frames per access (training), else fixed
-    (evaluation). `consecutive`: a clip instead of frames spread over the trajectory. `frames_per_item` None:
-    the whole trajectory in order (every `stride`-th frame, 4k + 1 of them)."""
+    (evaluation). `consecutive`: a clip (every `stride`-th frame) instead of frames spread over the trajectory.
+    `frames_per_item` None: the whole trajectory in order (every `stride`-th frame, 4k + 1 of them). `augment`: every
+    item under a random one of the dataset's symmetries."""
 
     def __init__(
         self,
@@ -78,6 +80,7 @@ class FrameSampler(ShockWaveDataset):
         seed: int | None = None,
         consecutive: bool = False,
         stride: int = 1,
+        augment: bool = False,
     ):
         super().__init__(h5_path)
         self.ids = list(ids)
@@ -85,6 +88,7 @@ class FrameSampler(ShockWaveDataset):
         self.seed = seed
         self.consecutive = consecutive
         self.stride = stride
+        self.augment = augment
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, float]:
         self._init_file()
@@ -98,10 +102,21 @@ class FrameSampler(ShockWaveDataset):
             k = self.k
             # fixed frames belong to the sim, not to its list position, so a sharded loader evaluates the same clips
             rng = random if self.seed is None else random.Random(f"{self.seed}/{sid}")
-            start = rng.randrange(n_frames - k + 1)
-            frames = list(range(start, start + k)) if self.consecutive else sorted(rng.sample(range(n_frames), k))
-        fields = np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)  # [k, 4, H, W]
-        return torch.from_numpy(fields).float(), parse_gamma(sid)
+            if self.consecutive:
+                start = rng.randrange(n_frames - (k - 1) * self.stride)
+                frames = list(range(start, start + k * self.stride, self.stride))
+            else:
+                frames = sorted(rng.sample(range(n_frames), k))
+        fields = self.read(idx, frames)
+        if self.augment:
+            fields = symmetry(fields, random.randrange(SYMMETRIES))
+        return fields, parse_gamma(sid)
+
+    def read(self, idx: int, frames: list[int]) -> torch.Tensor:
+        """Fields [len(frames), 4, H, W] of sim idx at these (increasing) frames, physical units."""
+        self._init_file()
+        group = self._get_group(self.ids[idx])
+        return torch.from_numpy(np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)).float()
 
 
 def symmetry(fields: torch.Tensor, k: int) -> torch.Tensor:

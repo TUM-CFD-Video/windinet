@@ -24,5 +24,13 @@ export OMP_NUM_THREADS=$(( SLURM_CPUS_PER_TASK / SLURM_GPUS_ON_NODE ))  # one GP
 MIOPEN_SAVED=${WORK}/miopen_cache
 mkdir -p "${MIOPEN_USER_DB_PATH}"
 [ -d "${MIOPEN_SAVED}" ] && cp -r "${MIOPEN_SAVED}/." "${MIOPEN_USER_DB_PATH}/"
-trap 'mkdir -p "${MIOPEN_SAVED}" && cp -r "${MIOPEN_USER_DB_PATH}/." "${MIOPEN_SAVED}/"' EXIT TERM
+# Caches only grow, so a file goes back only when larger: a job that started from an older cache cannot shrink it.
+save_cache() {
+    mkdir -p "${MIOPEN_SAVED}"
+    for f in "${MIOPEN_USER_DB_PATH}"/*; do
+        s="${MIOPEN_SAVED}/${f##*/}"
+        [ -f "${s}" ] && [ "$(stat -c %s "${f}")" -le "$(stat -c %s "${s}")" ] || cp "${f}" "${s}"
+    done
+}
+trap save_cache EXIT TERM
 srun "${RUN[@]}" "$@"

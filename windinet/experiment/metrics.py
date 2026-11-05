@@ -31,20 +31,51 @@ def h1(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     return (num / (sum(g.square().sum((0, 2, 3)) for g in grads(x)) + eps)).sqrt()
 
 
-def spectral(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
-    """The Well's binned spectral error per field: the error energy in three isotropic wavenumber bins (log-spaced
-    from 2 pi / N to pi sqrt 2) relative to the truth's energy in the bin, as a root (1 = predicting zero at those
-    scales). [C, 3] for low, mid, high."""
+def _wavenumbers(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """|k| of every FFT coefficient of [..., H, W] (flattened) and The Well's bin edges: three isotropic bins,
+    log-spaced from 2 pi / N to pi sqrt 2."""
     h, w = x.shape[-2:]
     freqs = torch.meshgrid(torch.fft.fftfreq(h, device=x.device), torch.fft.fftfreq(w, device=x.device), indexing="ij")
     k = torch.stack(freqs).norm(dim=0).flatten() * 2 * math.pi
     edges = torch.logspace(math.log10(2 * math.pi / max(h, w)), math.log10(math.pi * math.sqrt(2) + 1e-6), 4).to(k)
-    masks = F.one_hot((k[:, None] > edges[1:-1]).sum(1), 3).to(x.dtype)  # [H W, 3]; k = 0 counts as low
+    return k, edges
 
-    def energy(t: torch.Tensor) -> torch.Tensor:  # [C, 3]
-        return torch.fft.fft2(t).abs().square().flatten(-2).sum(0) @ masks
 
-    return (energy(x_hat - x) / (energy(x) + eps)).sqrt()
+def shells(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Integer wavenumber shell of every FFT coefficient of [..., H, W] (flattened) and The Well's bin edges, both in
+    units of 2 pi / N."""
+    k, edges = _wavenumbers(x)
+    unit = 2 * math.pi / max(x.shape[-2:])
+    return (k / unit).round().long(), edges / unit
+
+
+def _energy(t: torch.Tensor) -> torch.Tensor:
+    """Spectral energy of [N, C, H, W] per field and FFT coefficient, summed over frames. [C, H W]."""
+    return torch.fft.fft2(t).abs().square().flatten(-2).sum(0)
+
+
+def spectral(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+    """The Well's binned spectral error per field: the error energy per bin relative to the truth's (k = 0 counts as
+    low), as a root (1 = predicting zero at those scales). [C, 3] for low, mid, high."""
+    k, edges = _wavenumbers(x)
+    masks = F.one_hot((k[:, None] > edges[1:-1]).sum(1), 3).to(x.dtype)  # [H W, 3]
+    return ((_energy(x_hat - x) @ masks) / (_energy(x) @ masks + eps)).sqrt()
+
+
+def power(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+    """Power ratio per field, prediction over truth, per integer wavenumber shell (Subich et al. 2025) from k = 1 to
+    the Nyquist circle, geometric mean over the shells of each of The Well's bins: below 1 = smoothed, above 1 =
+    spurious detail; a position error alone leaves it at 1. [C, 3]."""
+    shell, edges = shells(x)
+    n = max(x.shape[-2:]) // 2 + 1  # beyond Nyquist the shells are incomplete
+
+    def per_shell(t: torch.Tensor) -> torch.Tensor:
+        e = torch.zeros(t.shape[1], int(shell.max()) + 1, device=x.device, dtype=x.dtype)
+        return e.index_add_(1, shell, _energy(t))[:, 1:n]
+
+    log_ratio = (per_shell(x_hat) + eps).log() - (per_shell(x) + eps).log()
+    band = (torch.arange(1, n, device=x.device)[:, None] > edges[1:-1]).sum(1)
+    return torch.stack([log_ratio[:, band == b].mean(1).exp() for b in range(3)], 1)
 
 
 def ssim(x_hat: torch.Tensor, x: torch.Tensor, window: int = 11, sigma: float = 1.5) -> torch.Tensor:
@@ -66,15 +97,84 @@ def ssim(x_hat: torch.Tensor, x: torch.Tensor, window: int = 11, sigma: float = 
     return s.mean((0, 2, 3))
 
 
-FIELD_METRICS = ("vrmse", "h1", "ssim", "spectral_low", "spectral_mid", "spectral_high")
+def gauss(x: torch.Tensor, sigma: float) -> torch.Tensor:
+    """Separable Gaussian blur of [N, C, H, W], radius 3 sigma, edge padding."""
+    r = int(3 * sigma + 0.5)
+    k = torch.exp(-(torch.arange(-r, r + 1, device=x.device, dtype=x.dtype) ** 2) / (2 * sigma**2))
+    k, (n, c, h, w) = k / k.sum(), x.shape
+    y = F.conv2d(F.pad(x.reshape(n * c, 1, h, w), (r, r, 0, 0), mode="replicate"), k.view(1, 1, 1, -1))
+    return F.conv2d(F.pad(y, (0, 0, r, r), mode="replicate"), k.view(1, 1, -1, 1)).reshape(n, c, h, w)
+
+
+def lde(x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+    """Local detail-energy error per field: sum |A(x_hat) - A(x)| / sum A(x), A the local (8 px) amplitude of the
+    detail below 2 px blur. Tolerates small shifts, penalises blur and spurious detail (0 = the truth's detail). [C]."""
+
+    def amp(t: torch.Tensor) -> torch.Tensor:
+        return gauss((t - gauss(t, 2.0)).square(), 8.0).clamp(min=0).sqrt()
+
+    a_hat, a = amp(x_hat), amp(x)
+    return (a_hat - a).abs().sum((0, 2, 3)) / (a.sum((0, 2, 3)) + 1e-8)
+
+
+def shift(x_hat: torch.Tensor, x: torch.Tensor, radius: int = 12, tile: int = 32, top: float = 0.25) -> torch.Tensor:
+    """Front displacement per field in pixels: on the `top` share of tiles with the steepest truth, the best integer
+    shift of the prediction within `radius`; mean |shift| over the tiles it fits (removes half their error or more),
+    0 if none. [C]."""
+    tile = min(tile, *x.shape[-2:])
+
+    def err(a: torch.Tensor) -> torch.Tensor:  # squared error per tile [N, C, tiles]
+        return F.avg_pool2d((a - x).square(), tile).flatten(2)
+
+    grad = F.pad(x.diff(dim=-1)[..., :-1, :].square() + x.diff(dim=-2)[..., :-1].square(), (0, 1, 0, 1))
+    steep = F.avg_pool2d(grad, tile).flatten(2)
+    front = steep >= steep.quantile(1 - top, dim=2, keepdim=True)
+    pad, (h, w) = F.pad(x_hat, (radius,) * 4, mode="replicate"), x.shape[-2:]
+    err0 = best = err(x_hat)
+    dist = torch.zeros_like(best)
+    offsets = [(dy, dx) for dy in range(-radius, radius + 1) for dx in range(-radius, radius + 1)]
+    for dy, dx in sorted(offsets, key=lambda o: math.hypot(*o)):  # nearest first; a farther shift must gain 1 %, so
+        e = err(pad[..., radius - dy : radius - dy + h, radius - dx : radius - dx + w])  # one along a front loses
+        better = e < 0.99 * best
+        dist, best = torch.where(better, math.hypot(dy, dx), dist), torch.where(better, e, best)
+    fits = front & (best <= 0.5 * err0)
+    return (dist * fits).sum((0, 2)) / fits.sum((0, 2)).clamp(min=1)
+
+
+BINS = ("low", "mid", "high")
+FIELD_METRICS = ("vrmse", "h1", "ssim", "lde", "shift") + tuple(f"{m}_{b}" for m in ("spectral", "power") for b in BINS)
 
 
 def field_metrics(x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
     """Every per-field metric of one trajectory, stacked in the order of FIELD_METRICS. [len(FIELD_METRICS), C]."""
-    return torch.cat([vrmse(x_hat, x)[None], h1(x_hat, x)[None], ssim(x_hat, x)[None], spectral(x_hat, x).T])
+    rows = [f(x_hat, x)[None] for f in (vrmse, h1, ssim, lde, shift)]
+    return torch.cat([*rows, spectral(x_hat, x).T, power(x_hat, x).T])
+
+
+def ensemble_scores(samples: torch.Tensor, x: torch.Tensor, given: int = 0) -> torch.Tensor:
+    """Per frame and field, of n >= 2 samples [n, N, C, H, W] of one simulation against it [N, C, H, W], each over
+    the simulation's variance after the `given` frames (as the VRMSE): the ensemble variance (unbiased, mean over
+    pixels), the squared error of the ensemble mean, and the fair CRPS (Ferro 2014) over the std. [3, N, C]; summed
+    over sims and frames, sqrt((n + 1) / n * var / err) is the spread-skill ratio (Fortin et al. 2014; 1 =
+    calibrated)."""
+    n, dims = len(samples), (2, 3)
+    scale = x[given:].var((0, 2, 3), unbiased=False) + 1e-8
+    spread = samples.var(0).mean(dims) / scale
+    skill = (samples.mean(0) - x).square().mean(dims) / scale
+    rank = 2 * torch.arange(1, n + 1, device=x.device, dtype=x.dtype) - n - 1  # half of sum_ij |s_i - s_j|, sorted
+    pairs = (rank.view(-1, 1, 1, 1, 1) * samples.sort(0).values).sum(0) / (n * (n - 1))
+    crps = ((samples - x).abs().mean(0) - pairs).mean(dims) / scale.sqrt()
+    return torch.stack([spread, skill, crps])
 
 
 WELL_WINDOWS = ((2, 8), (9, 26), (27, 56), (57, 100))  # rollout windows of The Well's benchmark tables (frames)
+
+
+def well_windows(per_frame: torch.Tensor, stride: int = 1) -> dict[str, torch.Tensor]:
+    """The entries of a per-frame tensor [N, ...] in each of The Well's windows (given in original frames: `stride`
+    frames per entry), keyed "<lo>_<hi>"; windows the trajectory does not reach are left out."""
+    windows = {f"{lo}_{hi}": per_frame[math.ceil(lo / stride) : hi // stride + 1] for lo, hi in WELL_WINDOWS}
+    return {w: v for w, v in windows.items() if len(v)}
 
 
 def vrmse_per_frame(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
@@ -86,10 +186,11 @@ def vrmse_per_frame(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> 
 class Aggregate:
     """Per-field metrics of every evaluated simulation, aggregated: `add` one simulation at a time, `reduce` the sums
     over ranks, `metrics` at the end. `trajectory`: the frames are one trajectory in time order (else random clips:
-    no per-frame curve)."""
+    no per-frame curve). `given`: leading frames the model was shown; the per-field metrics skip them, the per-frame
+    curve keeps them."""
 
-    def __init__(self, fields: list[str], device, trajectory: bool = True):
-        self.fields = fields
+    def __init__(self, fields: list[str], device, trajectory: bool = True, given: int = 0):
+        self.fields, self.given = fields, given
         self.n = torch.zeros((), device=device)
         self.sum = torch.zeros(len(FIELD_METRICS), len(fields), device=device)  # of field_metrics over sims
         self.sum_sq = torch.zeros((), device=device)  # of each sim's mean VRMSE: its std over sims
@@ -97,7 +198,7 @@ class Aggregate:
 
     def add(self, x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
         """Scores one simulation [N, C, H, W]; returns its field_metrics."""
-        m = field_metrics(x_hat, x)
+        m = field_metrics(x_hat[self.given :], x[self.given :])
         self.n += 1
         self.sum += m
         self.sum_sq += m[0].mean() ** 2
@@ -120,6 +221,7 @@ class Aggregate:
         if self.curve is not None:
             curve = self.curve / self.n
             out["vrmse_per_frame"] = curve.tolist()
-            windows = {w: curve[math.ceil(w[0] / stride) : w[1] // stride + 1] for w in WELL_WINDOWS}
-            out |= {f"vrmse_frames_{lo}_{hi}": c.mean().item() for (lo, hi), c in windows.items() if len(c)}
+            scored = torch.cat([torch.full_like(curve[: self.given], torch.nan), curve[self.given :]])
+            windows = well_windows(scored, stride).items()
+            out |= {f"vrmse_frames_{w}": c.nanmean().item() for w, c in windows if not c.isnan().all()}
         return out
