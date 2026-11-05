@@ -6,9 +6,10 @@ import torch
 from torch.utils.data import DataLoader
 
 from windinet.eulermq.data import parse_gamma
+from windinet.experiment.distributed import all_sum, world
 from windinet.experiment.metrics import Aggregate
 from windinet.field_adapter import GroupedAdapter
-from windinet.wan.vae.roundtrip import decode, round_trip
+from windinet.wan.vae.roundtrip import decode, encode, round_trip
 
 
 @torch.no_grad()
@@ -40,3 +41,35 @@ def evaluate(
             examples[g] = (sid, x.cpu(), x_hat.cpu())
     aggregate.reduce()
     return aggregate.metrics(stride), example, examples
+
+
+@torch.no_grad()
+def latent_stats(adapter: GroupedAdapter, loader: DataLoader, vaes: list, start_vaes: list, sims: int = 20) -> dict:
+    """Normalised latents of `sims` whole trajectories against N(0, 1) (natural video under Wan's latents_mean/std):
+    per-channel mean and std, and their drift from the latents of the run's starting VAEs on the same input."""
+    device = next(adapter.parameters()).device
+    sums = torch.zeros(5, 16, device=device)  # count, sum, sum of squares, squared change, squared start latent
+    for i, (frames, _) in enumerate(loader):
+        if i >= -(-sims // world):  # this rank's share of the sims
+            break
+        x = adapter.select(frames.flatten(0, 1).to(device))
+        z, z0 = (encode(adapter, x, v, len(x))[0].transpose(0, 2).flatten(1).double() for v in (vaes, start_vaes))
+        sums += torch.stack(
+            [
+                torch.full_like(z[:, 0], z.shape[1]),
+                z.sum(1),
+                z.square().sum(1),
+                (z - z0).square().sum(1),
+                z0.square().sum(1),
+            ]
+        ).float()
+    all_sum(sums)
+    n, s, sq, change, ref = sums
+    mean, std = s / n, (sq / n - (s / n).square()).clamp(min=0).sqrt()
+    return {
+        "latent_mean": mean.tolist(),
+        "latent_std": std.tolist(),
+        "latent_mean_abs": mean.abs().mean().item(),
+        "latent_std_mean": std.mean().item(),
+        "latent_drift": (change.sum() / ref.sum()).sqrt().item(),
+    }

@@ -42,7 +42,7 @@ from windinet.field_adapter import GroupedAdapter, group_tag
 from windinet.wan.dit.latents import WithLatents
 from windinet.wan.figures import save_examples, save_panel, save_vae_curves
 from windinet.wan.vae.config import TrainConfig, VaeStageConfig
-from windinet.wan.vae.evaluate import evaluate
+from windinet.wan.vae.evaluate import evaluate, latent_stats
 from windinet.wan.vae.loss import loss_terms
 from windinet.wan.weights import load_weights, save_weights
 
@@ -78,7 +78,14 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
         from windinet.wan.vae.model import WanVAE  # diffusers only when a VAE is used
 
         n_vaes = len(cfg.adapter.groups) if cfg.train.vae_per_group else 1
-        vaes = [WanVAE(device=device, train=cfg.train.vae_parts, channels=adapter.channels) for _ in range(n_vaes)]
+        t = cfg.train
+        checkpointing = t.checkpointing and t.vae_parts != "none"
+        vaes = [
+            WanVAE(
+                device, train=t.vae_parts, channels=adapter.channels, checkpointing=checkpointing, precision=t.precision
+            )
+            for _ in range(n_vaes)
+        ]
     if cfg.load:
         load_weights(Path(cfg.load), adapter, vaes, device)
     else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw
@@ -86,6 +93,16 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
         adapter.init_from_data(adapter.select(torch.cat([probe[i][0] for i in range(len(probe))])).to(device))
     sync(adapter)  # the init subsamples at random: every rank takes rank 0's
     return adapter, vaes
+
+
+def start_copies(vaes: list, channels: int, device: torch.device) -> list:
+    """Frozen copies of the VAEs as the run starts: the reference of the latent drift."""
+    from windinet.wan.vae.model import WanVAE
+
+    copies = [WanVAE(device, channels=channels) for _ in vaes]
+    for c, v in zip(copies, vaes, strict=True):
+        c.vae.load_state_dict(v.vae.state_dict())
+    return copies
 
 
 def optimizer(cfg: TrainConfig, adapter: GroupedAdapter, vaes: list) -> tuple:
@@ -172,6 +189,7 @@ def main(
     )
 
     adapter, vaes = build(cfg, train_ids, device)
+    start_vaes = start_copies(vaes, adapter.channels, device)
     clip = cfg.data.clip_len
     rollouts = bool(cfg.data.latents)
     val_args = (None, cfg.data.frame_stride, True) if rollouts else (clip,)  # rollouts: whole trajectories
@@ -181,16 +199,18 @@ def main(
     vae_params = [p for vae in vaes for p in vae.trainable_params]
     opt, sched = optimizer(cfg.train, adapter, vaes)
     params = [p for g in opt.param_groups for p in g["params"]]
-    w0 = [p.detach().cpu() for p in vae_params]  # start weights for the drift; read at evals only
+    w0 = [p.detach().to("cpu", copy=True) for p in vae_params]  # start weights for the drift; read at evals only
     steps, history = [], []  # per update / per evaluation
     metrics = init  # last validation; stays the init for an eval-only run
     batches = endless(train_loader)
     t0 = t_log = time.time()
     for step in range(1, cfg.train.steps + 1):
+        t_step = time.time()
         frames, z = next(batches)
         x = adapter.select(frames.flatten(0, 1).to(device))
         result = train_step(cfg, adapter, vaes, x, opt, sched, params, z.to(device) if rollouts else None)
-        steps.append({"step": step, "loss": result["loss"], "update_ratio": result["update_ratio"]})
+        seconds = time.time() - t_step  # data wait + update, no evaluation
+        steps.append({"step": step, "loss": result["loss"], "update_ratio": result["update_ratio"], "seconds": seconds})
         if step % cfg.train.log_every == 0:
             recent = steps[-cfg.train.log_every :]
             now, per_step = time.time(), (time.time() - t_log) / len(recent)
@@ -203,12 +223,13 @@ def main(
                 [g["lr"] for g in opt.param_groups],
                 recent[-1]["update_ratio"],
                 per_step * (cfg.train.steps - step),
+                f"{sum(s['seconds'] for s in recent) / len(recent):.2f} s/update",
             )
         if step % cfg.train.eval_every == 0 or step == cfg.train.steps:
             metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args)
             if w0:
                 metrics["vae_drift"] = rel_change(vae_params, w0)
-            history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1")}, **metrics})
+            history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1", "latent")}, **metrics})
             loss = result["loss"]
             log_metrics(f"val {step}", metrics, loss, time.time() - t0)
             if rank == 0:
@@ -217,6 +238,15 @@ def main(
 
     final, example, examples = evaluate(adapter, test_loader, vaes, None, cfg.data.frame_stride, rollouts)
     log_metrics(f"test {len(test_ids)} sims, whole trajectories", final, elapsed=time.time() - t0)
+    latent_start = None
+    if vaes and not rollouts:
+        final |= latent_stats(adapter, test_loader, vaes, start_vaes)
+        latent_start = latent_stats(adapter, test_loader, start_vaes, start_vaes)
+        print(
+            f"latents: |mean| {final['latent_mean_abs']:.3f} (start {latent_start['latent_mean_abs']:.3f}), std "
+            f"{final['latent_std_mean']:.3f} (start {latent_start['latent_std_mean']:.3f}), drift from start "
+            f"{final['latent_drift']:.3f}"
+        )
     if rank != 0:
         return
     record = {
@@ -225,6 +255,7 @@ def main(
         "init": init,
         "val": metrics,
         "final": final,
+        "latent_start": latent_start,
         "history": history,
         "steps": steps,
         "n_params": sum(p.numel() for p in adapter.parameters()),

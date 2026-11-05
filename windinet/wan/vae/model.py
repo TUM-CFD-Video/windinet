@@ -17,14 +17,16 @@ from torch.nn.functional import pad
 from torch.utils.checkpoint import checkpoint
 
 from windinet.wan import REPO
+from windinet.wan.dit.model import autocast
 
 TEMPORAL = 4  # frames per latent frame
 
 
 class WanVAE:
-    """`train`: 'none' (frozen), 'decoder' (decoder + post_quant_conv, latents unchanged) or 'all'.
-    `channels` > 3: the VAE reads and writes that many channels (`widen_io`). `checkpointing`: recompute the blocks
-    in backward also when frozen, for gradients through a frozen decoder (the DiT stage's pixel loss)."""
+    """`train`: 'none' (frozen), 'io' (encoder.conv_in and decoder.conv_out, the field interface), 'decoder'
+    (decoder + post_quant_conv, latents unchanged) or 'all'. `channels` > 3: the VAE reads and writes that many
+    channels (`widen_io`). `checkpointing`: recompute the blocks in backward (memory for time). `precision` 'mixed':
+    bf16 autocast inside encode and decode when gradients flow, fp32 weights and outputs."""
 
     def __init__(
         self,
@@ -34,25 +36,31 @@ class WanVAE:
         train: str = "none",
         channels: int = 3,
         checkpointing: bool = False,
+        precision: str = "fp32",
     ):
         # fp32 on purpose: the Wan pipeline keeps its VAE in fp32
         vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=dtype)
         if channels > 3:
             widen_io(vae, channels)
         self.vae = vae.to(device).eval().requires_grad_(False)
-        trainable = {"none": [], "decoder": [vae.decoder, vae.post_quant_conv], "all": [vae]}[train]
+        io = (vae.encoder.conv_in, vae.decoder.conv_out)  # the field interface: its own lr in the VAE stage
+        trainable = {"none": [], "io": io, "decoder": [vae.decoder, vae.post_quant_conv], "all": [vae]}[train]
         for module in trainable:
             module.requires_grad_(True)
         self.trainable_params = [p for p in vae.parameters() if p.requires_grad]
-        io = (vae.encoder.conv_in, vae.decoder.conv_out)  # the field interface: its own lr in the VAE stage
         self.io_params = [p for m in io for p in m.parameters() if p.requires_grad]
-        if trainable or checkpointing:  # recompute each block in backward: a clip's graph is several times the memory
+        if checkpointing:  # recompute each block in backward: a clip's graph is several times the memory
             for block in [*vae.encoder.down_blocks, *vae.decoder.up_blocks]:
                 block.forward = _checkpointed(block.forward)
         self.dtype = dtype
+        self.precision, self.device = precision, torch.device(device)
         shape = (1, -1, 1, 1, 1)
         self.latents_mean = torch.tensor(vae.config.latents_mean, device=device, dtype=dtype).view(shape)
         self.latents_std = torch.tensor(vae.config.latents_std, device=device, dtype=dtype).view(shape)
+
+    def _autocast(self) -> torch.autocast:
+        """bf16 only where gradients flow: evaluation stays fp32, comparable across runs."""
+        return autocast(self.precision if torch.is_grad_enabled() else "fp32", self.device)
 
     @staticmethod
     def pad_frames(x: torch.Tensor) -> torch.Tensor:
@@ -63,11 +71,14 @@ class WanVAE:
 
     def encode(self, rgb: torch.Tensor) -> torch.Tensor:
         """Deterministic (posterior mean), normalised latents. Differentiable w.r.t. `rgb`."""
-        z = self.vae.encode(self.pad_frames(rgb).to(self.dtype)).latent_dist.mode()
-        return (z - self.latents_mean) / self.latents_std
+        with self._autocast():
+            z = self.vae.encode(self.pad_frames(rgb).to(self.dtype)).latent_dist.mode()
+        return (z.to(self.dtype) - self.latents_mean) / self.latents_std
 
     def decode(self, z: torch.Tensor) -> torch.Tensor:
-        return self.vae.decode(z * self.latents_std + self.latents_mean).sample
+        with self._autocast():
+            rgb = self.vae.decode(z * self.latents_std + self.latents_mean).sample
+        return rgb.to(self.dtype)  # fp32 for the adapter's atanh near +-1
 
 
 def widen_io(vae: AutoencoderKLWan, channels: int) -> None:

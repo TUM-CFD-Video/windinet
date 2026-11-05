@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from windinet.experiment.metrics import shells
 from windinet.field_adapter import GroupedAdapter
 from windinet.wan.vae.config import LossConfig
-from windinet.wan.vae.roundtrip import decode, round_trip
+from windinet.wan.vae.roundtrip import decode, encode
 
 if TYPE_CHECKING:
     from windinet.wan.vae.model import WanVAE
@@ -25,6 +25,12 @@ def rmse(d: torch.Tensor) -> torch.Tensor:
 def h1(d: torch.Tensor) -> torch.Tensor:
     """H1 seminorm of the residual: its squared forward differences in x and in y, per pixel."""
     return (d.diff(dim=-1).square().sum() + d.diff(dim=-2).square().sum()) / d.numel()
+
+
+def latent_moments(z: torch.Tensor) -> torch.Tensor:
+    """Distance of latents [B, G, 16, F', h, w] from N(0, 1) per channel: squared mean plus (std - 1)^2, averaged."""
+    per_channel = z.transpose(0, 2).flatten(1)  # [16, rest]
+    return (per_channel.mean(1).square() + (per_channel.std(1) - 1).square()).mean()
 
 
 def l1_gdl(x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
@@ -115,11 +121,10 @@ def loss_terms(
 ) -> dict[str, torch.Tensor]:
     """The terms on the round trip of `x` (or on decoding `latents` [n, G, 16, F', h, w] against it) in z-scored field
     space, and the loss weights.kind makes of them, "loss"."""
-    x_hat = (
-        decode(adapter, latents, vaes).flatten(0, 1) if latents is not None else round_trip(adapter, x, vaes, clip)[0]
-    )
+    z = latents if latents is not None else encode(adapter, x, vaes, clip)[0]
+    x_hat = decode(adapter, z, vaes).flatten(0, 1)
     x_hat, x = adapter.normalized(x_hat), adapter.normalized(x)
-    terms = {"rmse": rmse(x_hat - x), "h1": h1(x_hat - x)}
+    terms = {"rmse": rmse(x_hat - x), "h1": h1(x_hat - x), "latent": latent_moments(z)}
     match weights.kind:
         case "l1_gdl":
             loss = l1_gdl(x_hat, x)
@@ -127,4 +132,4 @@ def loss_terms(
             loss = amse(x_hat, x)
         case _:
             loss = weights.rmse * terms["rmse"] + weights.h1 * terms["h1"]
-    return {"loss": loss, **terms}
+    return {"loss": loss + weights.latent * terms["latent"], **terms}

@@ -73,6 +73,11 @@ class AdapterConfig(_Base):
 class LossConfig(_Base):
     rmse: float = Field(default=1.0, description="weight of the RMSE term, measured in z-scored field space")
     h1: float = Field(default=1.0, description="weight of the H1 seminorm term (spatial gradients), same space")
+    latent: float = Field(
+        default=0.0,
+        description="weight of the latent anchor: per channel the squared batch mean and (std - 1)^2 of the normalised "
+        "latents, toward the N(0, 1) of natural video that Wan's DiT was trained on; 0 = off",
+    )
     kind: Literal["rmse_h1", "l1_gdl", "amse"] = Field(
         default="rmse_h1",
         description="rmse_h1: the weighted RMSE + H1; l1_gdl: L1 + gradient-difference L1 (Mathieu et al. "
@@ -85,8 +90,15 @@ class TrainConfig(_Base):
     batch_sims: int = Field(default=1, description="simulations per update (under torchrun: global, split over ranks)")
     micro_batch: int = Field(default=1, description="clips (frames without data.clip) per backward pass")
     adapter_lr: float = Field(default=3e-3, description="peak lr of the adapter; 0 = adapter fixed")
-    vae_parts: Literal["none", "decoder", "all"] = Field(
-        default="none", description="which part of the Wan VAE to fine-tune alongside the adapter"
+    vae_parts: Literal["none", "io", "decoder", "all"] = Field(
+        default="none",
+        description="which part of the Wan VAE to fine-tune alongside the adapter; io: its in and out convolutions",
+    )
+    precision: Literal["fp32", "mixed"] = Field(
+        default="fp32", description="mixed: bf16 autocast in the VAE passes of training, fp32 weights; evaluation fp32"
+    )
+    checkpointing: bool = Field(
+        default=True, description="recompute the VAE blocks in backward: less memory, about a third more time"
     )
     vae_per_group: bool = Field(
         default=False, description="one VAE (and so one fine-tuned decoder) per image group instead of one shared"
