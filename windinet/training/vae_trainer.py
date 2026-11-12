@@ -67,6 +67,7 @@ from windinet.loss_weighting.utils import (
     compute_grad_norms,
 )
 
+from windinet.losses.energy import energy_vrmse_from_normalized
 from windinet.training.shockwave_data import DATASETS, ShockWaveDataset, TemporalClipDataset, build_shockwave_video
 from windinet.training.sds_loss import SdsDistillationLoss
 from windinet.training.vae_visualization import (
@@ -972,6 +973,9 @@ class VaeTrainer:
                     # logged, so keep it out of the graph.
                     with torch.set_grad_enabled(cfg.loss_weighting.weights.get("swd", 0.0) != 0.0):
                         losses["swd"] = self._swd_prior(latents)
+                    # Total-energy consistency (windinet.losses.energy); in the graph only when weighted.
+                    with torch.set_grad_enabled(cfg.loss_weighting.weights.get("energy", 0.0) != 0.0):
+                        losses["energy"] = self._energy_loss(recon, x_target, batch)
 
                     grad_norms = None
 
@@ -1237,6 +1241,23 @@ class VaeTrainer:
         self._accelerator.end_training()
         return saved_path
 
+    def _energy_loss(self, recon: torch.Tensor, target: torch.Tensor, batch: dict) -> torch.Tensor:
+        """VRMSE of the total energy p/(gamma-1) + |m|^2/(2 rho) (windinet.losses.energy); zero for
+        runs without the four Euler_MQ channels or without a gamma in the sample meta."""
+        data = self._config.data
+        gamma = batch.get("meta", {}).get("gamma")
+        if gamma is None:
+            return recon.new_zeros(())
+        return energy_vrmse_from_normalized(
+            recon, target,
+            gamma=torch.as_tensor(gamma),
+            channel_mean=data.channel_mean,
+            channel_std=data.channel_std,
+            normalization_clip=data.normalization_clip,
+            channel_order=data.channel_order,
+            log_transform_channels=data.log_transform_channels,
+        )
+
     @torch.no_grad()
     def _evaluate(self, eval_loader: DataLoader, device: torch.device) -> dict[str, float]:
         """Evaluate the same reconstruction objective used for training plus VRMSE.
@@ -1291,6 +1312,7 @@ class VaeTrainer:
             )
             # Ranked against the training bank, which eval leaves untouched.
             losses["swd"] = self._swd_prior(latents, update_bank=False)
+            losses["energy"] = self._energy_loss(recon, target, batch)
             # .get(name, 0.0): see the matching comment in train()'s backward
             # total_loss -- an opt-in loss absent from this config's weights
             # contributes 0 rather than KeyError.

@@ -210,9 +210,11 @@ def save_metrics_history(rows: list[dict[str, float]], output_dir: str | Path) -
     metrics_dir = Path(output_dir) / "metrics"
     metrics_dir.mkdir(parents=True, exist_ok=True)
     csv_path = metrics_dir / "metrics.csv"
-    fieldnames = list(rows[0])
+    # Union over all rows, first-seen order: a run resumed after a new metric was added (e.g.
+    # "energy", 2026-11-12) has older rows without it; those cells stay empty.
+    fieldnames = list(dict.fromkeys(key for row in rows for key in row))
     with csv_path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, restval="")
         writer.writeheader()
         writer.writerows(rows)
 

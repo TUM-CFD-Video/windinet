@@ -777,7 +777,10 @@ REQUIRED_LOSS_NAMES = {"rmse", "h1", "ssim", "mlw"}
 # switch (see SdsLossConfig). "swd" (added 2026-10-09,
 # windinet.losses.sliced_wasserstein) is always computed and logged, like the
 # cheap ones; its sliced-Wasserstein estimator settings live in SwdLossConfig.
-OPTIONAL_LOSS_NAMES = {"h2", "pcc", "vrms", "kl", "sds", "swd"}
+# "energy" (added 2026-11-12, windinet.losses.energy, Harish): VRMSE of the total energy
+# p/(gamma-1) + |m|^2/(2 rho) of the denormalized fields; always computed and logged
+# (train_energy / val_energy), zero for runs without all four Euler_MQ channels.
+OPTIONAL_LOSS_NAMES = {"h2", "pcc", "vrms", "kl", "sds", "swd", "energy"}
 
 
 class LossWeightingConfig(ConfigBaseModel):

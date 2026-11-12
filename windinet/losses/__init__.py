@@ -17,6 +17,7 @@ from .vrms import vrms_chmean, vrms_per_channel
 from .kl_divergence import kl_divergence_loss
 from .sliced_wasserstein import SlicedWassersteinPrior
 from .reconstruction import reconstruction_losses
+from .energy import energy_vrmse, energy_vrmse_from_normalized, has_energy_channels, total_energy
 
 
 __all__ = [
@@ -33,4 +34,8 @@ __all__ = [
     "kl_divergence_loss",
     "SlicedWassersteinPrior",
     "reconstruction_losses",
+    "energy_vrmse",
+    "energy_vrmse_from_normalized",
+    "has_energy_channels",
+    "total_energy",
 ]

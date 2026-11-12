@@ -118,6 +118,7 @@ from windinet.losses import (
     rmse_loss,
     vrms_per_channel,
 )
+from windinet.losses.energy import energy_vrmse, has_energy_channels, total_energy
 from windinet.scalar_embeddings import ScalarEmbedding
 from windinet.shock_regions import (
     REGIONS,
@@ -265,6 +266,7 @@ BENCHMARK_METRICS = ("rmse", "vrmse", "ssim", "mlw", "h1", "h2")
 # Benchmark blocks of vrmse_summary.json: "benchmark" scores every 10th frame
 # from 40 (cfd_bench), "benchmark_10" every 10th frame from 10 (Harish, 2026-11-02).
 BENCHMARK_BLOCKS = {"benchmark": 40, "benchmark_10": 10}
+ENERGY_LABELS = ("gt_clipped", "vae_only", "vae_dit")
 # Per-frame curve: MLW has a temporal wavelet term, so it is undefined on one frame.
 PER_FRAME_METRICS = ("rmse", "vrmse", "ssim", "h1", "h2")
 
@@ -528,6 +530,10 @@ def main():
         for blk in BENCHMARK_BLOCKS
     }
     block_frames = {}  # benchmark block -> its scored stored frames, same for every sim
+    # Total energy p/(gamma-1) + |m|^2/(2 rho) (windinet.losses.energy, Harish 2026-11-07), Euler_MQ only.
+    # label -> scope ("all_frames" or a benchmark block) -> [sim]; *_per_frame: [sim][scored frame].
+    energy_on = dataset_name == "euler_mq" and has_energy_channels(channel_names)
+    energy_values: dict = {label: {} for label in ENERGY_LABELS}
     sum_channel = {"vae_only": [0.0] * n_ch, "vae_dit": [0.0] * n_ch}
     sum_lat_rmse, sum_lat_mse = 0.0, 0.0
     sum_lat_channel = None  # lazily sized to the latent's own channel count on first sample
@@ -672,6 +678,30 @@ def main():
                     per_frame_values[blk][label][m].append(per_frame[blk][label][m])
         frame_idx, target_scored, vae_only_scored, vae_dit_scored = scored["benchmark"]
 
+        if energy_on:
+            # Physical units: predictions denormalized (clamped to [-1, 1] first if clamp_prediction, as
+            # in the benchmark block), E_true from the raw unclipped ground truth. "gt_clipped" = the
+            # clamped normalized ground truth itself: the floor that the ±clip·σ range alone imposes.
+            gamma = float(sample["meta"]["gamma"])
+            gt_raw = torch.stack([sample[name][:n_avail] for name in channel_names]).unsqueeze(0).to(device).float()
+            e_true = total_energy(gt_raw, channel_names, gamma)  # [1, T, H, W]
+            norm_args = (stats["channel_mean"], stats["channel_std"], stats["normalization_clip"])
+            energy_sim = {}
+            for label, pred in (("gt_clipped", target), ("vae_only", vae_recon), ("vae_dit", dit_full)):
+                pred = pred[:, :, :n_avail].float()
+                if args.clamp_prediction:
+                    pred = pred.clamp(-1.0, 1.0)
+                e_pred = total_energy(denormalize_fields(pred, *norm_args), channel_names, gamma)
+                row = {"all_frames": float(energy_vrmse(e_pred, e_true)[0])}
+                for blk, (idx, *_rest) in scored.items():
+                    row[blk] = float(energy_vrmse(e_pred[:, idx], e_true[:, idx])[0])
+                    row[f"{blk}_per_frame"] = energy_vrmse(e_pred[:, idx], e_true[:, idx], per_frame=True)[0].tolist()
+                for key, value in row.items():
+                    energy_values[label].setdefault(key, []).append(value)
+                energy_sim[label] = row
+            print(f"    energy vrmse (benchmark): gt_clipped={energy_sim['gt_clipped']['benchmark']:.4f}  "
+                  f"vae_only={energy_sim['vae_only']['benchmark']:.4f}  vae+dit={energy_sim['vae_dit']['benchmark']:.4f}")
+
         if args.shock_analysis:
             fields = {name: sample[name][:n_avail].to(device) for name in channel_names}
             masks = region_masks(fields, top_frac=args.shock_top_frac, dilate_px=args.shock_dilate_px)
@@ -700,6 +730,7 @@ def main():
             "latent_vrmse_chmean": lat_vrmse, "latent_rmse": lat_rmse, "latent_mse": lat_mse,
             **{blk: bench[blk] for blk in bench},
             **{f"{blk}_per_frame": per_frame[blk] for blk in per_frame},
+            **({"energy_vrmse": energy_sim} if energy_on else {}),
             "generation_seconds": gen_seconds[-1],
         })
         for c in range(n_ch):
@@ -910,6 +941,20 @@ def main():
                 "pixel_mse_vae_only_chmean": tokens["pixel_mse_vae_only"].double().mean(dim=1).nanmean(dim=0).tolist(),
             },
         }
+    if energy_on:
+        def sim_stats(values: list) -> dict:
+            v = torch.tensor(values, dtype=torch.float64)
+            return {"mean": v.mean(0).tolist(), "std_over_sims": v.std(0, unbiased=False).tolist()}
+
+        summary["energy_vrmse"] = {
+            "notes": "VRMSE of the total energy E = p/(gamma-1) + (m_x^2 + m_y^2)/(2 rho) (windinet.losses.energy), "
+                     "physical units, per sim then mean over sims; E_true from the raw unclipped ground truth, "
+                     "predictions denormalized (clamped to [-1, 1] first if clamp_prediction); gt_clipped = the "
+                     "clamped normalized ground truth, the floor set by the ±clip·std range alone; all_frames "
+                     "includes the conditioning frames; <block>_per_frame follows that block's scored_frames",
+            "clamp_prediction": bool(args.clamp_prediction),
+            **{label: {key: sim_stats(v) for key, v in rows.items()} for label, rows in energy_values.items()},
+        }
     (args.out_dir / "vrmse_summary.json").write_text(json.dumps(summary, indent=2))
 
     print("\n" + "=" * 60)
@@ -922,6 +967,12 @@ def main():
             print(f"  {label:9s} " + "  ".join(f"{m}={b[label][m]['mean']:.5f}" for m in BENCHMARK_METRICS))
         print("  per frame (vae_dit): " + "  ".join(
             f"f{f}: vrmse={v:.4f}" for f, v in zip(b["scored_frames"], b["per_frame"]["vae_dit"]["vrmse"]["mean"])))
+    if energy_on:
+        e = summary["energy_vrmse"]
+        print("Total-energy VRMSE (physical units):")
+        for label in ENERGY_LABELS:
+            print(f"  {label:10s} " + "  ".join(
+                f"{k}={e[label][k]['mean']:.5f}" for k in ["all_frames", *block_frames] if k in e[label]))
     gt = summary["generation_time"]
     print(f"Generation time ({gt['device']}, {gt['num_inference_steps']} steps): {gt['total_seconds']:.1f} s for "
           f"{n} trajectories = mean {gt['seconds_per_trajectory']:.2f} s/trajectory, median "
