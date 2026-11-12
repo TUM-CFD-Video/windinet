@@ -1,11 +1,12 @@
-"""Standardized CFD rollout videos (cfd_video_spec.md): one row per channel, ground truth | prediction | signed error
+"""Standardized CFD rollout videos (docs/video_spec.md): one row per channel, ground truth | prediction | signed error
 on scales fixed by training statistics. ★ marks a change against the spec's reference code.
 
-    python cfd_video.py rollout.npz stats.json out/model_0456 --title "model, trajectory 0456"
+    python -m windinet.video rollout.npz stats.json out/model_0456 --title "model, trajectory 0456"
 
 rollout.npz: gt and pred [T, C, H, W] in physical units, times [T], channels [C]. stats.json: {channel: Stats}.
 Writes <out>.mp4 with the scales and statistics in its metadata (--json: also <out>.json with the per-frame numbers;
---per-channel: <out>_<channel>.mp4 each; --frame i: <out>_t<i>.png of time step i instead). From Python: write_video and write_frame. Needs numpy, matplotlib and imageio-ffmpeg.
+--per-channel: <out>_<channel>.mp4 each; --frame i: <out>_t<i>.png of time step i instead).
+From Python: `from windinet.video import write_video, write_frame`. Needs numpy, matplotlib and imageio-ffmpeg.
 """
 
 import argparse
@@ -62,17 +63,19 @@ def scale(stats: Stats) -> Scale:
     if not (std > 0 and stats["max"] > stats["min"]):
         raise ValueError("constant or invalid channel: needs an explicit special case")
     if stats.get("signed"):  # ★ diverging around physical 0 with symmetric bounds, a channel policy the spec allows
-        half = abs(mean) + SPAN * std
+        half = min(abs(mean) + SPAN * std, max(-stats["min"], stats["max"]))
         return Scale(0.0, -half, half, std, "RdBu_r")
-    # ★ never below the training minimum: density and pressure are positive
-    return Scale(mean, max(mean - SPAN * std, stats["min"]), mean + SPAN * std, std, "viridis")
+    # ★ within the training extremes (density and pressure are positive)
+    return Scale(mean, max(mean - SPAN * std, stats["min"]), min(mean + SPAN * std, stats["max"]), std, "viridis")
 
 
 class RolloutFigure:
     """The frame of a rollout, one row per channel: built once, then filled per time step."""
 
-    def __init__(self, names: list[str], stats: list[Stats], shape: tuple[int, int], title: str):
-        n, self.title = len(names), title
+    def __init__(
+        self, names: list[str], stats: list[Stats], shape: tuple[int, int], title: str, signed_error: bool = False
+    ):
+        n, self.title, self.signed_error = len(names), title, signed_error
         self.scales = [scale(st) for st in stats]
         foot = 2 * LINE  # the scale line with a gap above and below
         height = 2 * round((HEAD + ROW * n + foot) * DPI / 2) / DPI  # even pixels for the video encoder
@@ -80,21 +83,31 @@ class RolloutFigure:
         self.fig.subplots_adjust(
             left=0.01, right=0.93, top=1 - HEAD / height, bottom=foot / height, wspace=0.25, hspace=0.2
         )
-        error_norm = AsinhNorm(ERROR_WIDTH, -SPAN, SPAN)
-        error_cmap = plt.get_cmap("RdBu_r").with_extremes(**EXTREMES)
+        # ★ the error shown up to 2σ (was (max - min)/σ, where errors stayed black), asinh width 0.05σ (was 1σ);
+        # signed on request: too high or too low, a front ahead or behind
+        if signed_error:
+            error_norm, error_cmap = (
+                AsinhNorm(ERROR_WIDTH, -SPAN, SPAN),
+                plt.get_cmap("RdBu_r").with_extremes(**EXTREMES),
+            )
+            error_label, error_ticks = "(prediction − truth) / σ", [-2, -0.5, 0, 0.5, 2]
+        else:  # magma holds magenta itself: cyan flags beyond the range
+            error_norm, error_cmap = (
+                AsinhNorm(ERROR_WIDTH, 0, SPAN),
+                plt.get_cmap("magma").with_extremes(over="cyan", bad="gray"),
+            )
+            error_label, error_ticks = "|prediction − truth| / σ", [0, 0.1, 0.5, 2]
         self.images = []
-        for row, name, st, s in zip(axes, names, stats, self.scales, strict=True):
+        for row, name, s in zip(axes, names, self.scales, strict=True):
             field_norm = AsinhNorm(FIELD_WIDTH * s.std, s.lo - s.centre, s.hi - s.centre)
             field_cmap = plt.get_cmap(s.cmap).with_extremes(**EXTREMES)
-            # ★ signed error (was |error|): shows where the prediction is too high or low, a front ahead or behind;
-            # ±2σ (was 0..(max - min)/σ, where errors stayed black), diverging with 0 white (was inferno)
             images = [
-                ax.imshow(np.zeros(shape), norm=norm, cmap=cmap)
+                ax.imshow(np.zeros(shape), norm=norm, cmap=cmap, interpolation="nearest")  # sharp cells
                 for ax, norm, cmap in zip(
                     row, (field_norm, field_norm, error_norm), (field_cmap, field_cmap, error_cmap), strict=True
                 )
             ]
-            for ax, label in zip(row, (f"{name}: ground truth", "prediction", "(prediction − truth) / σ"), strict=True):
+            for ax, label in zip(row, (f"{name}: ground truth", "prediction", error_label), strict=True):
                 ax.set_title(label, fontsize=9)
                 ax.set_axis_off()
             ticks = []
@@ -105,8 +118,9 @@ class RolloutFigure:
                     ticks.append(t)  # labels apart on the bar
             bar = self.fig.colorbar(images[1], ax=row[1], fraction=0.046, pad=0.03, extend="both")
             bar.set_ticks([t - s.centre for t in ticks], labels=[f"{t:.3g}" for t in ticks])  # physical values
-            bar_err = self.fig.colorbar(images[2], ax=row[2], fraction=0.046, pad=0.03, extend="both")
-            bar_err.set_ticks([-2, -0.5, 0, 0.5, 2], labels=["−2σ", "−0.5", "0", "0.5", "2σ"])
+            extend = "both" if signed_error else "max"
+            bar_err = self.fig.colorbar(images[2], ax=row[2], fraction=0.046, pad=0.03, extend=extend)
+            bar_err.set_ticks(error_ticks, labels=[f"{t:g}σ" if abs(t) == SPAN else f"{t:g}" for t in error_ticks])
             for b in (bar, bar_err):
                 b.minorticks_off()
                 b.ax.tick_params(labelsize=7)
@@ -116,7 +130,8 @@ class RolloutFigure:
         self.fig.text(
             0.5,
             foot / (2 * height),
-            f"fields: mean ± {SPAN:g}σ, asinh width {FIELD_WIDTH}σ    error: ±{SPAN:g}σ, asinh width {ERROR_WIDTH}σ    "
+            f"fields: mean ± {SPAN:g}σ, asinh width {FIELD_WIDTH}σ    "
+            f"error: {'±' if signed_error else '0 .. '}{SPAN:g}σ, asinh width {ERROR_WIDTH}σ    "
             "magenta/cyan: beyond the range",
             fontsize=8.5,
             ha="center",
@@ -128,7 +143,8 @@ class RolloutFigure:
         numbers = []
         for images, s, g, p in zip(self.images, self.scales, gt, pred, strict=True):
             error = (p - g) / s.std
-            for image, data in zip(images, (g - s.centre, p - s.centre, error), strict=True):
+            shown = error if self.signed_error else np.abs(error)
+            for image, data in zip(images, (g - s.centre, p - s.centre, shown), strict=True):
                 image.set_data(data)
             finite = np.isfinite(g) & np.isfinite(p)  # non-finite pixels are counted, never scored
             numbers.append(
@@ -144,9 +160,9 @@ class RolloutFigure:
         return np.asarray(self.fig.canvas.buffer_rgba())[..., :3].copy(), numbers
 
 
-def write_frame(gt, pred, t: float, names, stats, path: Path, title: str = "") -> None:
+def write_frame(gt, pred, t: float, names, stats, path: Path, title: str = "", signed_error: bool = False) -> None:
     """One time step (gt, pred [C, H, W]) as a png."""
-    figure = RolloutFigure(names, stats, gt.shape[1:], title)
+    figure = RolloutFigure(names, stats, gt.shape[1:], title, signed_error)
     plt.imsave(path, figure.frame(t, gt, pred)[0])
     plt.close(figure.fig)
 
@@ -161,13 +177,14 @@ def write_video(
     title: str = "",
     slowdown: float = 8.0,  # video seconds per physical second
     save_json: bool = False,
+    signed_error: bool = False,
 ) -> list[dict]:
     """The rollout's video, its scales, statistics and mapping in the mp4's comment tag (ffprobe shows them); with
     `save_json` also a .json with them and the per-frame numbers. Returns the per-frame numbers."""
-    figure, frames = RolloutFigure(names, stats, gt.shape[2:], title), []
+    figure, frames = RolloutFigure(names, stats, gt.shape[2:], title, signed_error), []
     size = figure.fig.canvas.get_width_height()
     # ★ playback follows physical time (was a fixed fps): rollouts with any time step play in step side by side
-    fps = (len(times) - 1) / ((times[-1] - times[0]) * slowdown)
+    fps = (len(times) - 1) / ((times[-1] - times[0]) * slowdown) if len(times) > 1 else 1.0
     meta = {
         "title": title,
         "fps": fps,
@@ -178,7 +195,9 @@ def write_video(
     meta["scales"] = {name: asdict(s) for name, s in zip(names, figure.scales, strict=True)}
     meta["mapping"] = {
         "fields": f"AsinhNorm(linear_width={FIELD_WIDTH} * std, vmin=lo - centre, vmax=hi - centre)(value - centre)",
-        "error": f"AsinhNorm(linear_width={ERROR_WIDTH}, vmin=-{SPAN}, vmax={SPAN})((pred - truth) / std)",
+        "error": f"AsinhNorm(linear_width={ERROR_WIDTH}, vmin=-{SPAN}, vmax={SPAN})((pred - truth) / std)"
+        if signed_error
+        else f"AsinhNorm(linear_width={ERROR_WIDTH}, vmin=0, vmax={SPAN})(|pred - truth| / std)",
     }
     writer = imageio_ffmpeg.write_frames(
         str(path.with_suffix(".mp4")),
@@ -207,6 +226,7 @@ if __name__ == "__main__":
     parser.add_argument("--title", default="", help="shown before the time, e.g. model and trajectory")
     parser.add_argument("--slowdown", type=float, default=8.0, help="video seconds per physical second")
     parser.add_argument("--json", action="store_true", help="also a .json with the per-frame RMSE and fractions")
+    parser.add_argument("--signed-error", action="store_true", help="signed error (pred - truth) instead of |error|")
     parser.add_argument("--per-channel", action="store_true", help="one video per channel")
     parser.add_argument("--frame", type=int, help="only this time step, as a png")
     args = parser.parse_args()
@@ -228,6 +248,7 @@ if __name__ == "__main__":
                 args.title,
                 args.slowdown,
                 args.json,
+                args.signed_error,
             )
         else:
             t = args.frame
@@ -238,4 +259,5 @@ if __name__ == "__main__":
                 *common,
                 out.with_name(f"{out.name}_t{t}.png"),
                 args.title,
+                args.signed_error,
             )

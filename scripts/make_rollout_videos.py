@@ -1,7 +1,7 @@
 """Standardized rollout videos (docs/video_spec.md) from eval_dit_vrmse.py --save_rollouts.
 
 Every <rollout_dir>/<sid>.npz (gt, pred, pred_vae_only [T, C, H, W] in physical units, times, channels) becomes
-<out_dir>/<model>_<sid>.mp4 (one row per channel: ground truth | prediction | signed error), plus with --vae_only
+<out_dir>/<model>_<sid>.mp4 (one row per channel: ground truth | prediction | |error| in magma, signed with --signed_error), plus with --vae_only
 <out_dir>/<model>-vae_only_<sid>.mp4 for the VAE reconstruction. The scales come only from the shared training
 statistics (--stats, written by compute_channel_stats.py --video-stats), never from the rollouts.
 
@@ -28,6 +28,8 @@ def main() -> None:
     ap.add_argument("--vae_only", action="store_true", help="also a video of the VAE reconstruction")
     ap.add_argument("--slowdown", type=float, default=8.0, help="video seconds per physical second")
     ap.add_argument("--json", action="store_true", help="also <video>.json with per-frame RMSE and fractions")
+    ap.add_argument("--signed_error", action="store_true",
+                    help="signed error (pred - truth) / std instead of the default |error| (spec: absolute, magma)")
     ap.add_argument("--per_channel", action="store_true", help="one video per channel instead of one row each")
     ap.add_argument("--frames", type=int, nargs="*", default=None,
                     help="also a png of these time steps (e.g. 25 50 75 96)")
@@ -62,13 +64,14 @@ def main() -> None:
                 stem = f"{model}_{sid}" + (f"_{sel[0]}" if args.per_channel else "")
                 out = args.out_dir / stem.replace(".", "p")  # video.py uses with_suffix: a "." would cut the name
                 gt, pred = data["gt"][:, idx], data[key][:, idx]
-                frames = write_video(gt, pred, data["times"], sel, stats, out, title, args.slowdown, args.json)
+                frames = write_video(gt, pred, data["times"], sel, stats, out, title, args.slowdown, args.json,
+                                     args.signed_error)
                 rmse = np.array([[f[c]["rmse"] if f[c]["rmse"] is not None else np.nan for c in sel] for f in frames])
                 print(f"{out}.mp4  {len(frames)} frames, mean RMSE "
                       + "  ".join(f"{c} {v:.4g}" for c, v in zip(sel, np.nanmean(rmse, axis=0))))
                 for t in args.frames or []:
                     write_frame(gt[t], pred[t], float(data["times"][t]), sel, stats,
-                                out.with_name(f"{out.name}_t{t}.png"), title)
+                                out.with_name(f"{out.name}_t{t}.png"), title, args.signed_error)
 
 
 if __name__ == "__main__":

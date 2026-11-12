@@ -41,6 +41,7 @@
 # rollout of n gamma-spread sims (with SIM_IDS: of every one) to ROLLOUT_DIR (default
 # scratch rollouts/<run>_<job>); with VIDEO_STATS=<stats json> they are then rendered by
 # scripts/make_rollout_videos.py into <OUT_DIR>/spec_videos (VIDEO_MODEL: name, default the run).
+# VIDEO_SIGNED_ERROR=1: signed error panel instead of the spec default |error| (magma).
 #
 # Results: logs/jupiter/eval_dit_vrmse/<job>/vrmse_summary.json (tracked);
 # panels there are gitignored, npz figure fields go to scratch.
@@ -147,5 +148,6 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$(date -Is)" "${SLURM_JOB_ID}" "${SLURM_JOB_NAME}
 
 if [[ -n "${SAVE_ROLLOUTS:-}" && -n "${VIDEO_STATS:-}" ]]; then
     "${PYTHON}" scripts/make_rollout_videos.py "${ROLLOUT_DIR}" "${VIDEO_STATS}" "${OUT_DIR}/spec_videos" \
-        --model "${VIDEO_MODEL:-${RUN}}" --vae_only --json --frames 25 50 75 96
+        --model "${VIDEO_MODEL:-${RUN}}" --vae_only --json --frames 25 50 75 96 \
+        ${VIDEO_SIGNED_ERROR:+--signed_error}
 fi

@@ -1,6 +1,6 @@
 # Standardized CFD Rollout Video Specification
 
-★ = changed against the first version. Reference implementation: `cfd_video.py` (its ★ comments mark the same changes).
+★ = changed against the first version. Reference implementation: `windinet/video.py` (its ★ comments mark the same changes).
 
 **★ Changes and why**
 
@@ -9,10 +9,11 @@
   and looked flat.
 - ★ **asinh linear width 0.1σ for the fields (was σ).** Fronts and vortices differ by 0.1–0.5σ; the narrower width
   gives them contrast.
-- ★ **Signed error (prediction − truth)/σ on ±2σ, asinh width 0.05σ, diverging colormap (was |error| up to
-  (max − min)/σ, width 1, inferno).** Typical errors are 0.01–0.5σ: on the old scale they sat in the bottom few percent
-  of the colormap and the panel was black, so models looked better than they are. The sign shows whether a prediction
-  is too high or too low, and whether a front is ahead or behind.
+- ★ **Error |prediction − truth|/σ shown 0..2σ with asinh width 0.05σ, colormap `magma` (was up to (max − min)/σ,
+  width 1, inferno).** Typical errors are 0.01–0.5σ: on the old scale they sat in the bottom few percent of the
+  colormap and the panel was black, so models looked better than they are. Optional (`--signed-error`): the signed
+  error (prediction − truth)/σ on ±2σ with `RdBu_r`, which shows whether a prediction is too high or too low and
+  whether a front is ahead or behind.
 - ★ **Signed channels (momentum) diverging around physical 0** with symmetric bounds, as a fixed channel policy (the
   spec already allowed it), set by `"signed": true` in the shared statistics so every collaborator draws it the same.
 - ★ **One row per channel in one video** (all fields side by side, e.g. density and pressure fronts together);
@@ -34,7 +35,7 @@ For every dataset, test trajectory and output time, ★ one row per physical cha
 
 | Column 1 | Column 2 | Column 3 |
 |---|---|---|
-| Ground truth | Model prediction | ★ Signed pointwise error |
+| Ground truth | Model prediction | Pointwise absolute error (★ signed on request) |
 
 All three panels must display the **same physical time and spatial region**. Use the same panel dimensions, spatial
 orientation, aspect ratio, ★ slowdown, and channel units across collaborators.
@@ -63,7 +64,7 @@ statistics from test trajectories or model predictions.
 ★ Display range and mapping, the same for ground truth and prediction:
 
 $$
-\mathrm{lo}_c=\max(\mu_c-2\sigma_c,\ a_c),\qquad \mathrm{hi}_c=\mu_c+2\sigma_c,
+\mathrm{lo}_c=\max(\mu_c-2\sigma_c,\ a_c),\qquad \mathrm{hi}_c=\min(\mu_c+2\sigma_c,\ b_c),
 $$
 
 $$
@@ -78,13 +79,14 @@ so $\Phi_c(\mathrm{lo}_c)=0$ and $\Phi_c(\mathrm{hi}_c)=1$. In Matplotlib:
 clipped in the data**; they are drawn cyan (below) or magenta (above) and counted.
 
 Colormap `viridis`. ★ Signed channels (`"signed": true`): `RdBu_r` centred at physical 0, bounds
-$\pm(|\mu_c|+2\sigma_c)$.
+$\pm\min(|\mu_c|+2\sigma_c,\ \max(|a_c|, |b_c|))$.
 
-## 4. Column 3: signed pointwise error
+## 4. Column 3: pointwise error
 
-★ $$e_c=\frac{\hat u_c-u_c}{\sigma_c}$$ (was $|\hat u_c-u_c|/\sigma_c$), shown on $[-2, 2]$ with
-`AsinhNorm(linear_width=0.05, vmin=-2, vmax=2)` and `RdBu_r` (0 = white). Errors beyond ±2σ are drawn cyan/magenta and
-counted, never removed. The error is always normalized by the training $\sigma_c$, never by a model's own errors.
+$$e_c=\frac{|\hat u_c-u_c|}{\sigma_c},$$ ★ shown on $[0, 2]$ with `AsinhNorm(linear_width=0.05, vmin=0, vmax=2)` and
+`magma`; errors beyond 2σ are drawn cyan (magma itself contains magenta). ★ With `--signed-error`:
+$e_c=(\hat u_c-u_c)/\sigma_c$ on $[-2, 2]$, `AsinhNorm(linear_width=0.05, vmin=-2, vmax=2)`, `RdBu_r` (0 = white),
+beyond drawn cyan/magenta. Errors beyond the range are counted, never removed. The error is always normalized by the training $\sigma_c$, never by a model's own errors.
 
 ## 5. Frame annotations
 
@@ -101,7 +103,7 @@ video. RMSE and fractions are computed on the physical fields, never on plotted 
    step), so rollouts with different time steps play in step side by side.
 3. Fixed colorbars with physical tick labels.
 4. Per-frame RMSE in physical units; undefined (null) if any pixel is non-finite.
-5. Per-frame fractions of (i) predictions outside the display range, ★ (ii) errors beyond ±2σ, (iii) non-finite
+5. Per-frame fractions of (i) predictions outside the display range, ★ (ii) errors beyond 2σ, (iii) non-finite
    values.
 6. ★ Statistics, display ranges, mapping, frame size, fps and slowdown in the mp4's comment tag (`ffprobe` shows it);
    with `--json` also a `.json` with the per-frame numbers per channel.
@@ -112,22 +114,23 @@ already rendered RGB images.
 
 ## 7. Acceptance checks
 
-- A prediction equal to the ground truth gives a white (zero) error panel.
+- A prediction equal to the ground truth gives a zero error panel (black in magma; white when signed).
 - A physical value has the same color for every model, trajectory and frame.
-- $\Phi_c(\mathrm{lo}_c)=0$, $\Phi_c(\mathrm{hi}_c)=1$; the error maps $-2, 0, 2$ to $0, 0.5, 1$.
+- $\Phi_c(\mathrm{lo}_c)=0$, $\Phi_c(\mathrm{hi}_c)=1$; the error maps $0, 2$ to $0, 1$ (signed: $-2, 0, 2$ to $0, 0.5, 1$).
 - Values beyond a display bound and NaNs are visibly flagged and counted.
 - Frames and video have the same size for every collaborator with the same channels.
 
 ## Usage
 
 ```bash
-python cfd_video.py rollout.npz stats.json out/model_0456 --title "model, trajectory 0456"
-python cfd_video.py rollout.npz stats.json out/model_0456 --frame 40       # one png
-python cfd_video.py rollout.npz stats.json out/model_0456 --per-channel   # a video per channel
-python cfd_video.py rollout.npz stats.json out/model_0456 --json          # plus per-frame RMSE and fractions
+python -m windinet.video rollout.npz stats.json out/model_0456 --title "model, trajectory 0456"
+python -m windinet.video rollout.npz stats.json out/model_0456 --frame 40       # one png
+python -m windinet.video rollout.npz stats.json out/model_0456 --per-channel   # a video per channel
+python -m windinet.video rollout.npz stats.json out/model_0456 --json          # plus per-frame RMSE and fractions
+python -m windinet.video rollout.npz stats.json out/model_0456 --signed-error  # signed instead of absolute error
 ```
 
 `rollout.npz`: `gt`, `pred` [T, C, H, W] in physical units, `times` [T], `channels` [C]. `stats.json`:
 `{channel: {mean, std, min, max, p0_5, p99_5, unit, signed}}` (`signed: true` for momentum). `out` is the path
-without extension. Needs numpy, matplotlib and imageio-ffmpeg. From Python: `write_video(...)` for a video (returns
+without extension. Needs numpy, matplotlib and imageio-ffmpeg. From Python (`from windinet.video import write_video, write_frame`): `write_video(...)` for a video (returns
 the per-frame numbers), `write_frame(...)` for one png.
