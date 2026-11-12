@@ -105,6 +105,8 @@ done
 EXTRA_ARGS=()
 [[ "${TEST_H5}" != none ]] && EXTRA_ARGS+=(--test_h5 "${TEST_H5}")
 [[ -n "${NUM_INFERENCE_STEPS}" ]] && EXTRA_ARGS+=(--num_inference_steps "${NUM_INFERENCE_STEPS}")
+# INIT_NOISE=zeros: sampler starts from 0 instead of N(0, I) (deterministic rollout).
+[[ -n "${INIT_NOISE:-}" ]] && EXTRA_ARGS+=(--init_noise "${INIT_NOISE}")
 [[ -n "${SIM_IDS:-}" ]] && EXTRA_ARGS+=(--sim_ids ${SIM_IDS})
 # Benchmark block (Harish's cfd_bench scoring, the default since 2026-10-24): every
 # 10th frame from 40, prediction and target clamped to [-1, 1]. SCORE_FRAMES="..."

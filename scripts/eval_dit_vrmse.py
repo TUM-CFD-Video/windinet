@@ -331,6 +331,9 @@ def parse_args():
                      help="Override normalization source (a training_config.yaml or stats yaml) -- "
                           "point this at the VAE run's own training_config.yaml for that run's exact stats")
     ap.add_argument("--num_inference_steps", type=int, default=None, help="Override denoising steps")
+    ap.add_argument("--init_noise", choices=["random", "zeros"], default="random",
+                    help="Sampler start: N(0, I) per sim (seed + i, default) or all zeros (deterministic rollout, "
+                         "rbischof's fixed-noise idea; the DiT was trained on random noise)")
     ap.add_argument("--guidance_scale", type=float, default=None, help="Override guidance scale")
     ap.add_argument("--default_temb", type=float, default=0.0,
                      help="temb passed to the VAE-only decode pass (matches adapter.default_temb "
@@ -596,6 +599,7 @@ def main():
                 negative_prompt_embeds=torch.zeros_like(prompt_embeds),
                 negative_prompt_attention_mask=prompt_mask.clone(),
                 output_type="latent",
+                init_noise=args.init_noise,
             )
         # out.frames is the raw predicted latent, [B, C, F_lat, H_lat, W_lat],
         # in the SAME rescaled space vae_encode() returns (LTXConditionPipeline's
@@ -872,6 +876,7 @@ def main():
         "num_frames_generated": num_frames,
         "metric_frames": args.metric_frames,
         "num_inference_steps": num_inference_steps,
+        "init_noise": args.init_noise,
         "num_cond_frames": num_cond_frames,
         "vae_only_vrmse_per_channel": {name: sum_channel["vae_only"][c] / n for c, name in enumerate(channel_names)},
         "vae_dit_vrmse_per_channel": {name: sum_channel["vae_dit"][c] / n for c, name in enumerate(channel_names)},

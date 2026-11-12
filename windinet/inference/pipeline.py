@@ -691,13 +691,22 @@ class LTXConditionPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraL
         generator: Optional[torch.Generator] = None,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
+        init_noise: str = "random",
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
         num_latent_frames = (num_frames - 1) // self.vae_temporal_compression_ratio + 1
         latent_height = height // self.vae_spatial_compression_ratio
         latent_width = width // self.vae_spatial_compression_ratio
 
         shape = (batch_size, num_channels_latents, num_latent_frames, latent_height, latent_width)
-        latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+        if init_noise == "zeros":
+            # Deterministic start (rbischof 2026-11-09, "fix the noise seed"): the sampler starts from 0
+            # instead of N(0, I); with strength-1 conditions and image_cond_noise_scale 0 the whole
+            # rollout is then deterministic.
+            latents = torch.zeros(shape, device=device, dtype=dtype)
+        elif init_noise == "random":
+            latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+        else:
+            raise ValueError(f"init_noise must be 'random' or 'zeros', got {init_noise!r}")
 
         if len(conditions) > 0:
             condition_latent_frames_mask = torch.zeros(
@@ -866,6 +875,7 @@ class LTXConditionPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraL
         decode_noise_scale: Optional[Union[float, List[float]]] = None,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
+        init_noise: str = "random",
         attention_kwargs: Optional[Dict[str, Any]] = None,
         callback_on_step_end: Optional[Callable[[int, int, Dict], None]] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
@@ -1103,6 +1113,7 @@ class LTXConditionPipeline(DiffusionPipeline, FromSingleFileMixin, LTXVideoLoraL
             generator=generator,
             device=device,
             dtype=torch.float32,
+            init_noise=init_noise,
         )
 
         # 4.5. Process reference video (if provided) and concatenate at the beginning
