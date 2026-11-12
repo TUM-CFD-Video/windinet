@@ -380,6 +380,33 @@ class VaeDataConfig(ConfigBaseModel):
             "follow the VAE run."
         ),
     )
+    train_clip_frames: int | None = Field(
+        default=None,
+        ge=9,
+        description=(
+            "Train the VAE on random temporal clips of this many frames (8k+1, e.g. 33) instead of the "
+            "whole num_sim_frames sequence (Harish/rbischof 2026-11-10: the VAE's temporal receptive "
+            "field is ~30 frames, so longer clips only shrink the batch). Training only: validation, "
+            "test eval and DiT encoding keep the full sequence. None = no clipping."
+        ),
+    )
+    train_clip_start: Literal["aligned", "any"] = Field(
+        default="aligned",
+        description=(
+            "train_clip_frames only: where a clip may start. 'aligned' = multiples of 8 (0, 8, ..., "
+            "T - clip), so each clip latent covers the same frames as a latent of the full-sequence "
+            "encoding; 'any' = every frame 0..T - clip."
+        ),
+    )
+    clips_per_sim: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "train_clip_frames only: random clips drawn per simulation per epoch (the train set is "
+            "repeated this often, each item gets its own random start). With clip 33 of 97 frames, 3 "
+            "keeps the frames per epoch of the full-sequence baseline."
+        ),
+    )
     overfit_sims: int | None = Field(
         default=None,
         ge=1,
@@ -498,6 +525,17 @@ class VaeDataConfig(ConfigBaseModel):
         missing = sorted(set(self.log_transform_channels) - set(values))
         if missing:
             raise ValueError(f"log_transform_channels {missing} are not in channel_order={values}")
+        return self
+
+    @model_validator(mode="after")
+    def validate_train_clip(self):
+        n = self.train_clip_frames
+        if n is None:
+            return self
+        if (n - 1) % 8 != 0:
+            raise ValueError(f"train_clip_frames must be 8k+1 (the LTX VAE's frame grid), got {n}")
+        if self.num_sim_frames is not None and n > self.num_sim_frames:
+            raise ValueError(f"train_clip_frames {n} > num_sim_frames {self.num_sim_frames}")
         return self
 
     @model_validator(mode="after")

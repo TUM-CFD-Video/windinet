@@ -331,6 +331,40 @@ class ShockWaveDataset(Dataset):
 LOG_TRANSFORM_EPS = 1e-6
 
 
+class TemporalClipDataset(Dataset):
+    """Random temporal clips of a ShockWaveDataset (or a Subset of one), for VAE training.
+
+    Item i is a clip of `clip_frames` frames of simulation i // clips_per_sim, at a start drawn
+    afresh on every access: multiples of 8 for start="aligned" (each clip latent then covers the
+    same frames as a latent of the full-sequence encoding), any frame for start="any". Every
+    [T, H, W] channel tensor is cut the same way; meta and id pass through.
+    """
+
+    def __init__(self, base: Dataset, channels: list[str], clip_frames: int, clips_per_sim: int = 1,
+                 start: str = "aligned"):
+        if start not in ("aligned", "any"):
+            raise ValueError(f"start must be 'aligned' or 'any', got {start!r}")
+        self.base, self.channels = base, list(channels)
+        self.clip_frames, self.clips_per_sim, self.start = clip_frames, clips_per_sim, start
+
+    def __len__(self) -> int:
+        return len(self.base) * self.clips_per_sim
+
+    def __getitem__(self, idx):
+        sample = dict(self.base[idx // self.clips_per_sim])
+        num_frames = sample[self.channels[0]].shape[0]
+        last = num_frames - self.clip_frames
+        if last < 0:
+            raise ValueError(f"{sample.get('id')}: {num_frames} frames < clip of {self.clip_frames}")
+        step = 8 if self.start == "aligned" else 1
+        # torch RNG: DataLoader seeds every worker differently each epoch
+        t0 = step * int(torch.randint(0, last // step + 1, ()).item())
+        for name in self.channels:
+            sample[name] = sample[name][t0:t0 + self.clip_frames]
+        sample["clip_start"] = t0
+        return sample
+
+
 def build_shockwave_video(
     sample: dict[str, Tensor],
     device: torch.device,

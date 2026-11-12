@@ -67,7 +67,7 @@ from windinet.loss_weighting.utils import (
     compute_grad_norms,
 )
 
-from windinet.training.shockwave_data import DATASETS, ShockWaveDataset, build_shockwave_video
+from windinet.training.shockwave_data import DATASETS, ShockWaveDataset, TemporalClipDataset, build_shockwave_video
 from windinet.training.sds_loss import SdsDistillationLoss
 from windinet.training.vae_visualization import (
     denormalize_fields,
@@ -629,6 +629,21 @@ class VaeTrainer:
         else:
             train_set = Subset(full_dataset, perm[:n_train])
             eval_set = Subset(full_dataset, perm[n_train:n_train + n_eval])
+
+        if cfg.data.train_clip_frames is not None:
+            # Training only: eval_set keeps the full sequence, so val (and test / DiT encoding)
+            # stay comparable with the full-sequence runs.
+            train_set = TemporalClipDataset(
+                train_set,
+                channels=list(DATASETS[cfg.data.dataset].channels),
+                clip_frames=cfg.data.train_clip_frames,
+                clips_per_sim=cfg.data.clips_per_sim,
+                start=cfg.data.train_clip_start,
+            )
+            logger.info(
+                f"Training on {cfg.data.train_clip_frames}-frame clips ({cfg.data.train_clip_start} starts), "
+                f"{cfg.data.clips_per_sim} per sim per epoch: {len(train_set)} train items"
+            )
 
         train_loader = DataLoader(
             train_set,

@@ -1,0 +1,93 @@
+# 33-frame training clips (2026-11-12, Harish via WhatsApp 11-10: "please try this 30 frames for
+# LTX"; rbischof: the VAE's temporal receptive field is ~30 frames, more frames only shrink the
+# batch). finetune_vae_jupiter_baseline_s44_256res.yaml (test ch-mean 0.0805) with only the
+# training data clipped: random 33-frame clips (8k+1 closest to 30; 5 latent frames), aligned starts
+# (0, 8, ..., 64: clip latents line up with the full encoding's).
+# Same compute and frames per optimizer step as the baseline: 3 clips per sim per epoch and
+# gradient_accumulation_steps 16 -> 48, so 48 clips of 33 frames ~ 16 sims of 97 frames per step
+# and the same number of optimizer steps (LR schedule unchanged). Validation, test eval and DiT
+# encoding keep all 97 frames.
+# Launch: bash jobs/jupiter/submit_clip33.sh
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["density", "momentum_x", "momentum_y", "pressure"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/dss/dssfs02/pn82ku/pn82ku-dss-0000/neptuna_stuff/datasets/Euler_MQ/data/256x256_ds/train.h5"
+  normalization_stats_file: "configs/finetune_vae/euler_mq_256_only_train.yaml"
+  normalization_clip: 5.0
+  num_sim_frames: 97  # 8*12+1, no padding; val / test / encode use all of them
+  train_clip_frames: 33  # training only: random 33-frame clips
+  train_clip_start: "aligned"
+  clips_per_sim: 3  # 3 x 33 ~ 97 frames per sim per epoch
+  eval_sims: 500
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 20
+  batch_size: 1
+  gradient_accumulation_steps: 48  # 16 x 3 clips: same frames and optimizer steps as the baseline
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 1.0
+    h1: 50.0
+    ssim: 0.0
+    mlw: 0.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  epochs: [10, 20]   # mid-training and final; replaces interval_epochs
+  num_samples: 3     # gamma min / median / max of the val split
+  frame_numbers: [25, 50, 75, 97]
+  dpi: 150
+  save_video: true   # + GT/Prediction/Residual MP4 over all frames per sample
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse_chmean"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "shockwave-cfd", "jupiter", "clip33", "aligned", "s44", "rmse-h1", "256res", "eval500", "f97"]
+
+seed: 44
+output_dir: "finetune_vae_jupiter_clip33_aligned_s44_256res"
+clean_output_dir: true
