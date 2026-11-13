@@ -78,7 +78,7 @@ def check_load(run: dict, cfg: VaeStageConfig) -> None:
     if dataset != cfg.data.dataset:
         raise typer.BadParameter(f"load: {cfg.load} is a run on {dataset}, not {cfg.data.dataset}")
     # the inverse's clamp bounds follow the current config, the stats the run's
-    for key, missing in (("groups", None), ("log_fields", None), ("shared_vector_scale", False)):
+    for key, missing in (("groups", None), ("log_fields", None)):
         theirs, ours = run.get("adapter", {}).get(key, missing), getattr(cfg.adapter, key)
         if theirs != ours:
             raise typer.BadParameter(f"load: {cfg.load} has adapter.{key}={theirs}, this config {ours}")
@@ -88,7 +88,7 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
     """Adapter and VAEs with their weights (from `cfg.load`, else data-initialised; VAEs from `cfg.vae_load`)."""
     stats = load_field_stats(cfg.data.stats_json)
     a = cfg.adapter
-    adapter = GroupedAdapter(a.groups, stats, cfg.data.spec, a.log_fields, a.clip_quantile, a.shared_vector_scale)
+    adapter = GroupedAdapter(a.groups, stats, cfg.data.spec, a.log_fields, a.clip_quantile)
     adapter = adapter.to(device)
     adapter.requires_grad_(cfg.train.adapter_lr > 0)  # fixed adapter: no gradient through the encoder for it
     vaes = []

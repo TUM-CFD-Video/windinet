@@ -31,6 +31,7 @@ class Spec:
     vector: tuple[str, str] | None  # vector components along H (rows) and W (columns)
     groups: tuple[tuple[str, ...], ...]  # default adapter images
     log_fields: frozenset[str]  # default adapter log fields; also the loss space (base_norm)
+    shared_vector_scale: bool  # both vector components on one mean-free scale, so the 8 orientations share statistics
     scalars: Callable[[str], dict[str, float]]  # sim id -> condition; the first one orders the example sims
     val_per_cell: int  # >0: this many val sims per cell of equal scalars; 0: data.val_sims at random
     uniform_start: bool  # uniform before the shock arrives: short samples are scored over the trajectory's variance
@@ -48,6 +49,7 @@ EULERMQ = Spec(
     vector=("momentum_x", "momentum_y"),  # The Well: axis H = x
     groups=(("density", "pressure"), ("momentum_x", "momentum_y")),
     log_fields=frozenset({"density", "pressure"}),
+    shared_vector_scale=False,
     scalars=lambda sid: {"gamma": parse_gamma(sid)},
     val_per_cell=0,
     uniform_start=False,
@@ -67,6 +69,7 @@ SRBA_OOOO = Spec(
     vector=("velocityY", "velocityX"),  # rows are y, columns x; the shock runs in +x
     groups=(("log_density", "pressure"), ("velocityX", "velocityY")),
     log_fields=frozenset(),
+    shared_vector_scale=True,
     scalars=_srba_scalars,
     val_per_cell=2,
     uniform_start=True,

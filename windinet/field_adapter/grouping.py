@@ -51,7 +51,7 @@ def shared_vector_stats(stats: dict[str, dict], vector: tuple[str, str]) -> dict
 class GroupedAdapter(nn.Module):
     """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order; `channels` per image.
     The adapters log `log_fields` (None: the spec's); the loss space `base_norm` always logs the spec's.
-    `shared_vector_scale`: adapters and loss space take the vector's components on shared_vector_stats."""
+    With the spec's shared_vector_scale, adapters and loss space take the vector's components on shared_vector_stats."""
 
     def __init__(
         self,
@@ -60,7 +60,6 @@ class GroupedAdapter(nn.Module):
         spec: Spec,
         log_fields: list[str] | None = None,
         clip_quantile: float = 0.98,
-        shared_vector_scale: bool = False,
     ):
         super().__init__()
         self.groups = groups
@@ -68,9 +67,9 @@ class GroupedAdapter(nn.Module):
         self.fields = [n for n in spec.fields if any(n in g for g in groups)]
         self.channels = max(3, *map(len, groups))
         log = spec.log_fields if log_fields is None else set(log_fields)
-        if shared_vector_scale:
+        if spec.shared_vector_scale:
             if logged := set(spec.vector) & (log | spec.log_fields):
-                raise ValueError(f"shared_vector_scale: vector components {sorted(logged)} are log fields")
+                raise ValueError(f"{spec.name}: {sorted(logged)} share one vector scale and cannot be log fields")
             stats = shared_vector_stats(stats, spec.vector)
         self.base_norm = PreNorm(**_norm_args(self.fields, stats, spec.log_fields))
         self.adapters = nn.ModuleList(
@@ -116,7 +115,6 @@ def load_adapter(run: str | Path, device: torch.device | str) -> GroupedAdapter:
     spec = SPECS[cfg["data"].get("dataset", "eulermq")]
     stats = load_field_stats(cfg["data"]["stats_json"])
     a = cfg["adapter"]
-    shared = a.get("shared_vector_scale", False)
-    adapter = GroupedAdapter(a["groups"], stats, spec, a.get("log_fields"), shared_vector_scale=shared).to(device)
+    adapter = GroupedAdapter(a["groups"], stats, spec, a.get("log_fields")).to(device)
     adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
     return adapter

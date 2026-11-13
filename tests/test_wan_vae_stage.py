@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -198,7 +199,8 @@ SKEWED = SRBA_STATS | {  # srba_oooo-like: u large and one-signed, v small and c
 
 
 def _skewed(shared: bool) -> GroupedAdapter:
-    return GroupedAdapter([list(g) for g in SRBA_OOOO.groups], SKEWED, SRBA_OOOO, shared_vector_scale=shared)
+    spec = SRBA_OOOO if shared else dataclasses.replace(SRBA_OOOO, shared_vector_scale=False)
+    return GroupedAdapter([list(g) for g in spec.groups], SKEWED, spec)
 
 
 def test_shared_vector_scale_makes_the_normalisation_d4_equivariant():
@@ -271,7 +273,7 @@ def test_load_adapter_restores_the_shared_vector_scale(tmp_path):
         {"dataset": "srba_oooo"},
         SKEWED,
         _skewed(True),
-        {"groups": groups, "shared_vector_scale": True},
+        {"groups": groups},
     )
     loaded, fresh = load_adapter(run, "cpu"), _skewed(True)
     for a, b in zip(fresh.adapters, loaded.adapters, strict=True):
@@ -281,11 +283,8 @@ def test_load_adapter_restores_the_shared_vector_scale(tmp_path):
 
 
 def test_shared_vector_scale_refuses_log_components():
-    sets = [*NAMED, "adapter.log_fields=[velocityX]", "adapter.shared_vector_scale=true"]
-    with pytest.raises(ValueError, match="vector components"):
-        VaeStageConfig(**load_config(Path("configs/wan/srba_oooo/vae.yaml"), sets))
     with pytest.raises(ValueError, match="log fields"):
-        GroupedAdapter([["velocityY", "velocityX"]], SKEWED, SRBA_OOOO, ["velocityX"], shared_vector_scale=True)
+        GroupedAdapter([["velocityY", "velocityX"]], SKEWED, SRBA_OOOO, ["velocityX"])
 
 
 def test_load_weights_without_adapter_takes_only_the_vae(tmp_path):
