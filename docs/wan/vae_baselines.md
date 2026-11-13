@@ -100,6 +100,10 @@ Decoders for the DiT line, the 512 data and rollouts, and the other image layout
 | res256/singles/decoders/stride1 | its round-trip floor at frame stride 1 | 0.044 |
 | res256/quad/full | four fields in one image, VAE widened to 4 channels, encoder + decoder | 0.200 |
 | res256/quad/full_io1e-4 | same, in/out convolutions at 1e-4 | 0.186 |
+| res256/quad/full9 | same idea on 9-frame clips, 16 per update, 8000 updates, bf16 | 0.179 |
+| res256/quad/full9/clip33 | + 1000 updates on 33-frame clips at 3e-6 | 0.164 |
+| res256/pairs/full/stage2/median | eval-only: per-sim median of pairs/full/stage2 (mean 0.080) | 0.055 |
+| res256/singles/decoders/median | eval-only: per-sim median of singles/decoders (mean 0.052) | 0.034 |
 
 The `*/diag` folders under `rollouts/` re-evaluate init, l1_gdl and rmse_h1 for the newer metrics (same VRMSE).
-Four fields in one image lose to two images of two fields (0.19–0.20 against 0.07–0.09).
+Four fields in one image lose to two images of two fields (0.16–0.20 against 0.07–0.09); details in [vae_quad.md](vae_quad.md).
