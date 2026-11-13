@@ -10,10 +10,13 @@
                    train_vae.py  stage 1: adapt the VAE to the 4 fields
     eval/          evaluate.py   test.h5: rollouts, VRMSE tables, figures, videos; archives the final models
                    report.py     plots, videos, tables
+                   sharpness.py  sharpness of saved rollouts (spectrum / gradient ratios), decoder sensitivity per latent channel
     utils/         runtime.py    multi-GPU setup, job timing, pre-flight checks
                    resume.py     exact resuming across 12 h jobs
                    download.py   fetch MAGI-1 4.5B weights;  channel_stats.py  normalization stats of the train split
-    tests/         test_attention.py, test_changes.py (run via jobs/jupiter/magi1/quick_test.sbatch)
+    tests/         test_attention.py, test_changes.py, test_speed.py (run via jobs/jupiter/magi1/quick_test.sbatch)
+
+Notes (sampling steps, metrics, speed options, budget): README.md.
 
 Entry points are run as modules from the repo root, e.g. python -m magi_finetuning.train.finetune; the
 sbatch files in jobs/jupiter/magi1/ do this.

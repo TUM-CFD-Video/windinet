@@ -6,7 +6,7 @@
 #
 #   bash jobs/jupiter/magi1/magi1_dit_experiment.sh --name <run> --vae-ckpt <vae_best.safetensors> [--n-dit 5] \
 #       [--clean-chunks] [--init-from <ckpt>] [--steps N] [--train-shift S] [--save-every N] [--lr LR] \
-#       [--warmup N] [--lr-min LR] [--context-noise S] [--dry-run]
+#       [--warmup N] [--lr-min LR] [--context-noise S] [--tf32] [--compile] [--checkpoint-layers N] [--latents DIR] [--latent-prior STATS_JSON] [--dry-run]
 #     --clean-chunks  MAGI-1's video-continuation samples in training: some samples start with clean chunks
 #                     (no loss on them), as the 4-chunk sampler meets them (dit.sample_num_clean_chunks)
 #     --init-from     start from another run's weights (resume.pt or full_stepNNNNNN.safetensors) with a fresh
@@ -19,6 +19,11 @@
 #     --lr-min        end of the cosine (default settings.FULL_FT eta_min: 1e-8)
 #     --context-noise with --clean-chunks: clean context chunks get sigma * std(z) noise, sigma ~ U(0, S),
 #                     timestep left at clean_t (train_full.make_noisy_input)
+#     --tf32 / --compile / --checkpoint-layers N   speed options (dit.set_fp32_matmul, dit.compile_layers,
+#                     dit.enable_gradient_checkpointing); checked by magi_finetuning/tests/test_speed.py
+#     --latents       pre-computed latents (utils/precompute_latents.py): no VAE encoding during training
+#     --latent-prior  standardized latent space (dit.LatentPrior): noise with the latents' per-channel mean / std
+#                     from <latents>/stats.json, loss / std^2; the evaluation samples with the same prior
 #
 # Checkpoints (bf16 every 1000 steps + resume state): $MAGI1_SCRATCH/magi1_dit_<run>/
 # Args/logs: $MAGI1_OUTPUTS/dit_experiments/<run>/        results: .../<run>/eval/results.md
@@ -49,6 +54,11 @@ while [[ $# -gt 0 ]]; do
         --warmup)     TRAIN_ARGS+=(--warmup "$2"); shift 2 ;;
         --lr-min)     TRAIN_ARGS+=(--lr-min "$2"); shift 2 ;;
         --context-noise) TRAIN_ARGS+=(--context-noise "$2"); shift 2 ;;
+        --tf32)       TRAIN_ARGS+=(--tf32); shift ;;
+        --compile)    TRAIN_ARGS+=(--compile); shift ;;
+        --checkpoint-layers) TRAIN_ARGS+=(--checkpoint-layers "$2"); shift 2 ;;
+        --latent-prior) [[ -f "$2" ]] || { echo "--latent-prior: no file $2" >&2; exit 1; }; TRAIN_ARGS+=(--latent-prior "$2"); shift 2 ;;
+        --latents)    [[ -f "$2/stats.json" ]] || { echo "--latents: no stats.json in $2" >&2; exit 1; }; TRAIN_ARGS+=(--latents "$2"); shift 2 ;;
         --dry-run)  DRY_RUN=1; shift ;;
         *) echo "unknown option: $1 (see the header of $0)" >&2; exit 1 ;;
     esac

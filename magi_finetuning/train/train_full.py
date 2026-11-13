@@ -21,9 +21,10 @@ from accelerate.utils import DistributedDataParallelKwargs, set_seed
 from safetensors.torch import save_file
 
 import magi_finetuning.compat as compat
-from magi_finetuning.data import Normalization, batch_to_latents, make_loader
-from magi_finetuning.dit import (Model, add_noise, enable_gradient_checkpointing, gamma_embedding, keep_image_clean,
-                                 load_dit, sample_chunk_t, sample_num_clean_chunks, velocity_loss)
+from magi_finetuning.data import Normalization, batch_to_latents, cached_batch_to_latents, make_loader
+from magi_finetuning.dit import (LatentPrior, Model, add_noise, compile_layers, enable_gradient_checkpointing, gamma_embedding,
+                                 keep_image_clean, load_dit, sample_chunk_t, sample_num_clean_chunks, set_fp32_matmul,
+                                 velocity_loss)
 from magi_finetuning.settings import CHUNK_WIDTH, FULL_FT
 from magi_finetuning.utils.resume import batches_from, restore_rng_states, save_rng_states
 from magi_finetuning.utils.runtime import JobTimer, check_adamw8bit, check_ckpt_dir, init_distributed, shutdown
@@ -49,10 +50,14 @@ def run(args):
     num_params = sum(p.numel() for p in trainable_params)
     accelerator.print(f"trainable params: {num_params:,} (all DiT + gamma embedding)")
     checkpoint_dir = prepare_checkpoint_dir(args, accelerator, num_params)  # None with --no-save
-    vae_encoder = load_vae_encoder(args.vae_ckpt)
+    vae_encoder = None if args.latents else load_vae_encoder(args.vae_ckpt)  # --latents: already encoded
     normalization = Normalization.of_vae_checkpoint(args.vae_ckpt)  # the one the VAE was trained with
     accelerator.print(f"normalization: {normalization.describe()}")
     loader, sampler = make_loader(args, seed=FULL_FT["seed"])
+    prior = LatentPrior(args.latent_prior, magi_config.runtime_config.scale_factor) if args.latent_prior else None
+    if prior is not None:
+        accelerator.print(f"latent prior from {args.latent_prior}: noise std per channel "
+                          f"{prior.std.min().item():.2f}..{prior.std.max().item():.2f}, |mean| up to {prior.mean.abs().max().item():.2f}")
 
     # 4. Optimizer and learning-rate schedule (optional linear warmup, then cosine to --lr-min)
     optimizer = make_adamw8bit(trainable_params, args.lr)
@@ -86,15 +91,17 @@ def run(args):
     for batch in batches:
         micro_batches_done += 1
         # frame 0 -> clean image latent; frames 1..F -> body latents (data.build_latent_sequence)
-        clean_latents, gamma, num_body, num_chunks, tokens_per_chunk = batch_to_latents(
-            batch, vae_encoder, normalization, magi_config.runtime_config.scale_factor
-        )
+        scale = magi_config.runtime_config.scale_factor
+        clean_latents, gamma, num_body, num_chunks, tokens_per_chunk = (
+            cached_batch_to_latents(batch, scale) if args.latents
+            else batch_to_latents(batch, vae_encoder, normalization, scale))
         noisy_latents, chunk_times, noise, num_clean = make_noisy_input(
-            clean_latents, num_chunks, num_body, args, magi_config.runtime_config.clean_t)
+            clean_latents, num_chunks, num_body, args, magi_config.runtime_config.clean_t, prior)
 
         loss, grad_norm = training_micro_step(
             accelerator, model, optimizer, trainable_params,
             noisy_latents, chunk_times, gamma, num_chunks, tokens_per_chunk, clean_latents, noise, num_body, num_clean,
+            channel_weight=None if prior is None else prior.loss_weight,
         )
         recent_losses.append(loss)
 
@@ -170,7 +177,10 @@ def build_full_model(args):
     dit, magi_config = load_dit()
     compat.set_inference_kv_range(magi_config, args.inference_kv_range)  # only recorded, used when sampling
     dit = dit.float().requires_grad_(True)  # fp32 "master" weights so small updates aren't lost to bf16 rounding
-    enable_gradient_checkpointing(dit)      # saves GPU memory: recompute activations in backward
+    set_fp32_matmul(args.tf32)
+    if args.compile:
+        compile_layers(dit)
+    enable_gradient_checkpointing(dit, args.checkpoint_layers)  # saves GPU memory: recompute activations in backward
     model = Model(dit, gamma_embedding())
     trainable_params = [p for p in model.parameters() if p.requires_grad]
     return model, magi_config, trainable_params
@@ -212,7 +222,7 @@ def make_scheduler(optimizer, args):
     return torch.optim.lr_scheduler.SequentialLR(optimizer, [ramp, cosine], milestones=[args.warmup])
 
 
-def make_noisy_input(clean_latents, num_chunks, num_body: int, args, clean_t: float):
+def make_noisy_input(clean_latents, num_chunks, num_body: int, args, clean_t: float, prior=None):
     """Noise every chunk to its own random level t (0 = pure noise, 1 = clean); earlier chunks cleaner.
     With --clean-chunks the first few chunks may be clean context (dit.sample_num_clean_chunks).
     With --context-noise those context chunks are instead set up like the rollout's finished chunks: timestep
@@ -228,6 +238,8 @@ def make_noisy_input(clean_latents, num_chunks, num_body: int, args, clean_t: fl
     if args.context_noise and num_clean:
         chunk_times[:, :num_clean] = clean_t
     noise = torch.randn_like(clean_latents)
+    if prior is not None:  # --latent-prior: per-channel mean and std of the latents (dit.LatentPrior)
+        noise = prior.noise(noise)
     noisy_latents = add_noise(clean_latents, chunk_times, noise)
     if args.context_noise and num_clean:
         context = slice(0, num_clean * CHUNK_WIDTH)  # latent 0 is reset to clean below
@@ -241,7 +253,7 @@ def make_noisy_input(clean_latents, num_chunks, num_body: int, args, clean_t: fl
 
 def training_micro_step(accelerator, model, optimizer, trainable_params,
                         noisy_latents, chunk_times, gamma, num_chunks, tokens_per_chunk,
-                        clean_latents, noise, num_body: int, num_clean: int):
+                        clean_latents, noise, num_body: int, num_clean: int, channel_weight=None):
     """Forward (in bf16) + backward on one sample. The optimizer only actually steps every grad_accum calls.
 
     Returns (loss tensor, gradient norm or None). The gradient norm exists only on real optimizer steps.
@@ -254,7 +266,7 @@ def training_micro_step(accelerator, model, optimizer, trainable_params,
             predicted_velocity = model(noisy_latents, chunk_times, gamma, num_chunks, tokens_per_chunk)
         # Target is (clean - noise), scored on frames 1..F of the noisy chunks only (not the given image,
         # not the padding, not clean context chunks).
-        loss = velocity_loss(predicted_velocity, clean_latents, noise, num_body, num_clean)
+        loss = velocity_loss(predicted_velocity, clean_latents, noise, num_body, num_clean, channel_weight)
         accelerator.backward(loss)
 
         if accelerator.sync_gradients:

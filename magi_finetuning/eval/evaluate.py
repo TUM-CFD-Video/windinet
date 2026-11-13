@@ -8,10 +8,10 @@ Benchmark (first table in results.md): Harish's cfd_bench metrics -- RMSE, VRMSE
 
 For 3 test cases chosen by gamma (lowest, closest to the mean, highest):
     visualizations/panels/<case>/   GT | prediction | residual at selected frames (physical units)
-    videos/<case>_<channel>.mp4     frame 0 (given) + frames 1..F, one video per channel in the standardized
-                                    format shared with LTX / Wan (rollout_video.py): GT | prediction | |error| / sigma
-                                    with the training-set colour limits of --video-stats; <video>.json per-frame numbers
-    videos/<case>_vae_<channel>.mp4 the same for the VAE round trip (encode -> decode the true frames)
+    videos/<case>.mp4               frame 0 (given) + frames 1..F, one row per channel, in the standardized format
+                                    shared with LTX / Wan (windinet/video.py, docs/video_spec.md): GT | prediction |
+                                    |error| / sigma on the fixed scales of --video-stats; <case>.json per-frame numbers
+    videos/<case>_vae.mp4           the same for the VAE round trip (encode -> decode the true frames)
     error_over_time.png             error per generated frame
 For --metric-sims test simulations (default: all 500), VRMSE mean ± std over frames 1..F of
     VAE round trip vs dataset      (encode -> decode the ground truth: the VAE's own error)
@@ -48,13 +48,14 @@ import yaml
 from magi_finetuning.data import Normalization, build_latent_sequence, encode_image, stratified_subset
 from magi_finetuning.eval.report import (BENCHMARK_METRICS, benchmark_metrics, inference_summary, save_case_panels,
                                          save_error_over_time, vrmse, vrmse_per_frame, write_tables)
-from magi_finetuning.eval.rollout_video import STATS_FILE, load_stats, save_rollout_videos
 from magi_finetuning.settings import CHUNK_WIDTH, DEFAULT_FRAMES, FINAL_MODELS, OUTPUTS, SAMPLER_WINDOW, TEST_DATA
 from magi_finetuning.utils.runtime import summarize
 from windinet.losses import SSIMLoss
 from windinet.training.shockwave_data import CHANNEL_NAMES, ShockWaveDataset, parse_gamma
+from windinet.video import scale, write_video
 
 COMPARISONS = ("VAE round trip vs dataset", "DiT rollout vs dataset", "DiT rollout vs VAE round trip")
+FRAME_DT = 0.015  # physical seconds per frame (The Well's euler_multi_quadrants; the h5 files store no times)
 SEED = 42  # sim i is sampled with seed 42 + i (Weihao's convention)
 
 
@@ -69,12 +70,15 @@ def parse_args():
     p.add_argument("--video-sims", nargs="+", default=None, metavar="SIM_ID",
                    help="only these test sims, each with videos + panels (e.g. 0456_gamma1.7599999905), "
                         "instead of the 3 gamma cases and --metric-sims")
+    p.add_argument("--case-sims", nargs="+", default=None, metavar="SIM_ID",
+                   help="these test sims (videos + panels) instead of the 3 gamma cases, still with --metric-sims "
+                        "for the table, e.g. the standard trajectory 0456_gamma1.7599999905")
     p.add_argument("--num-steps", type=int, default=64, help="Euler steps per chunk (MAGI-1 uses 64)")
     p.add_argument("--shift", type=float, default=3.0, help="time-schedule shift, same as training")
     p.add_argument("--window", type=int, default=SAMPLER_WINDOW,
                    help="chunks denoised at once (MAGI-1's pipeline: 4; 1 = one chunk at a time, as before 2026-10-28)")
-    p.add_argument("--video-fps", type=int, default=8)
-    p.add_argument("--video-stats", default=str(STATS_FILE),
+    p.add_argument("--video-slowdown", type=float, default=8.0, help="video seconds per physical second")
+    p.add_argument("--video-stats", default=str(OUTPUTS / "rollout_video_stats.json"),
                    help="training-set channel statistics fixing the video colour limits (utils/rollout_video_stats.py)")
     p.add_argument("--score-frames", type=int, nargs="+", default=list(range(10, 91, 10)),
                    help="trajectory frames of the benchmark table (Harish's cfd_bench, dev-hr); default 10, 20, ..., 90")
@@ -99,20 +103,23 @@ def run(args):
     (output_dir / "scores").mkdir(parents=True, exist_ok=True)
     (output_dir / "videos").mkdir(parents=True, exist_ok=True)
     if not args.report_only:
-        load_stats(args.video_stats)  # fail now, not after the first rollout, if the video statistics are missing
+        load_video_stats(args.video_stats)  # fail now, not after the first rollout, if they are missing or invalid
     if args.save_rollouts:
         (output_dir / "rollouts").mkdir(parents=True, exist_ok=True)
 
     # 1. Which test simulations: 3 showcase cases + an even spread over gammas for the table
     test_set = ShockWaveDataset(args.test_data, num_sim_frames=1 + args.frames)  # frame 0 + frames 1..F
+    if args.video_sims and args.case_sims:
+        raise ValueError("--video-sims and --case-sims exclude each other")
+    chosen = args.video_sims or args.case_sims
+    unknown = [sim_id for sim_id in chosen or [] if sim_id not in test_set.ids]
+    if unknown:
+        raise ValueError(f"not in {args.test_data}: {unknown}")
     if args.video_sims:
-        unknown = [sim_id for sim_id in args.video_sims if sim_id not in test_set.ids]
-        if unknown:
-            raise ValueError(f"not in {args.test_data}: {unknown}")
         cases = {sim_id: sim_id for sim_id in args.video_sims}  # each its own case, named after the sim
         metric_ids = sorted(args.video_sims)
     else:
-        cases = pick_cases_by_gamma(test_set.ids)
+        cases = {sim_id: sim_id for sim_id in args.case_sims} if args.case_sims else pick_cases_by_gamma(test_set.ids)
         # Sorted by id (fully deterministic): every shard process must build the SAME list, or the shards
         # overlap and miss sims. (Sorting by gamma alone left ties in set order, which differs per process.)
         metric_ids = sorted(set(stratified_subset(test_set.ids, args.metric_sims)) | set(cases.values()))
@@ -130,7 +137,7 @@ def run(args):
 
 def score_shard(args, test_set, cases, metric_ids, output_dir: Path) -> None:
     """Rolls out this shard's sims (every num_shards-th), writes scores/<sim>.json, figures for the cases."""
-    from magi_finetuning.dit import load_magi_config, load_trained_dit, rollout  # GPU imports only where needed
+    from magi_finetuning.dit import LatentPrior, load_magi_config, load_trained_dit, rollout  # GPU imports only where needed
     from magi_finetuning.utils.runtime import init_magi_parallel_state
     from magi_finetuning.vae import load_vae
 
@@ -144,6 +151,9 @@ def score_shard(args, test_set, cases, metric_ids, output_dir: Path) -> None:
         magi_config = load_magi_config()  # only for the latent scale factor
     else:
         model, magi_config, is_full_finetune = load_trained_dit(args.dit_ckpt)
+    prior = LatentPrior(args.latent_prior, magi_config.runtime_config.scale_factor) if args.latent_prior else None
+    if prior is not None:
+        print(f"latent prior of the training run: {args.latent_prior}", flush=True)
     case_names = {sim_id: name for name, sim_id in cases.items()}
     ssim_fn = SSIMLoss(channels=len(CHANNEL_NAMES)).cuda()  # for the benchmark (1 - SSIM)
 
@@ -157,7 +167,7 @@ def score_shard(args, test_set, cases, metric_ids, output_dir: Path) -> None:
         truth_physical = load_physical_fields(test_set, sim_id)  # raw dataset values, frames 0..F
         truth = normalization.apply(truth_physical)
         vae_round_trip, generated, inference_seconds = predict(vae, model, magi_config, truth, parse_gamma(sim_id),
-                                                               args, is_full_finetune, rollout)  # frames 1..F
+                                                               args, is_full_finetune, rollout, prior)  # frames 1..F
         if args.save_rollouts and generated is not None:
             torch.save(generated.half().cpu(), output_dir / "rollouts" / f"{sim_id}.pt")  # normalized frames 1..F
         to_physical = normalization.invert
@@ -189,7 +199,7 @@ def score_shard(args, test_set, cases, metric_ids, output_dir: Path) -> None:
               f"{np.mean(scores['normalized'][headline]):.4f}", flush=True)
 
 
-def predict(vae, model, magi_config, truth, gamma, args, is_full_finetune, rollout):
+def predict(vae, model, magi_config, truth, gamma, args, is_full_finetune, rollout, prior=None):
     """truth: normalized frames 0..F. Returns (VAE round trip, DiT rollout, inference seconds): both fields
     normalized frames 1..F; the rollout and its time are None without a DiT (--vae-only).
 
@@ -211,7 +221,7 @@ def predict(vae, model, magi_config, truth, gamma, args, is_full_finetune, rollo
     generated = rollout(
         model, image_latent, torch.tensor([[gamma]], device="cuda"), num_chunks, tokens_per_chunk,
         num_steps=args.num_steps, shift=args.shift, clean_t=magi_config.runtime_config.clean_t,
-        window=args.window, use_autocast=is_full_finetune,
+        window=args.window, use_autocast=is_full_finetune, prior=prior,
     )
     fields = decode_body(vae, generated / scale, num_body, num_frames)
     torch.cuda.synchronize()
@@ -257,15 +267,26 @@ def benchmark(truth, vae_round_trip, rollout_fields, score_frames, ssim_fn) -> d
 
 def make_case_figures(rollout_physical, truth_physical, case_name, model, sim_id, output_dir, args) -> None:
     """rollout (or VAE round trip): frames 1..F; truth: frames 0..F (physical units).
-    Panels at frames 1, 25, 50, 75 and F; per channel a standardized video of frame 0 (given, same in both)
-    followed by frames 1..F."""
+    Panels at frames 1, 25, 50, 75 and F; a standardized video (windinet/video.py) of frame 0 (given, same in
+    both) followed by frames 1..F."""
     num_frames = rollout_physical.shape[2]
     panel_frames = sorted({1, *range(25, num_frames, 25), num_frames})
     save_case_panels(rollout_physical, truth_physical[:, :, 1:], case_name, panel_frames, output_dir)
     prediction_with_given = torch.cat([truth_physical[:, :, :1], rollout_physical], dim=2)
-    save_rollout_videos(prediction_with_given, truth_physical, CHANNEL_NAMES, load_stats(args.video_stats),
-                        output_dir / "videos", trajectory=sim_id, model=model, name=case_name, fps=args.video_fps,
-                        dataset=args.test_data)
+    truth, prediction = (x[0].permute(1, 0, 2, 3).float().cpu().numpy() for x in (truth_physical, prediction_with_given))
+    write_video(truth, prediction, FRAME_DT * np.arange(len(truth)), list(CHANNEL_NAMES),
+                load_video_stats(args.video_stats),
+                output_dir / "videos" / case_name.replace(".", "_"),  # write_video takes what follows a "." as the suffix
+                title=f"{model}, {sim_id}", slowdown=args.video_slowdown, save_json=True)
+
+
+def load_video_stats(path) -> list:
+    """Per channel (order of CHANNEL_NAMES) the shared training statistics; video.scale rejects invalid ones."""
+    stats = json.loads(Path(path).read_text())
+    channels = [stats[name] for name in CHANNEL_NAMES]
+    for channel in channels:
+        scale(channel)
+    return channels
 
 
 def model_name(args, output_dir: Path) -> str:
@@ -366,6 +387,7 @@ def fill_defaults_from_training_run(args) -> None:
         if not args.out:
             raise ValueError("--vae-only needs --out")
         args.frames = args.frames or DEFAULT_FRAMES
+        args.latent_prior = None
         return
     ckpt = Path(args.dit_ckpt)
     run_dir = ckpt.parent.parent if ckpt.parent.name == "checkpoints" else ckpt.parent
@@ -376,6 +398,7 @@ def fill_defaults_from_training_run(args) -> None:
         args.vae_ckpt = train_args.get("vae_ckpt")
     if args.frames is None:
         args.frames = train_args.get("frames", DEFAULT_FRAMES)
+    args.latent_prior = train_args.get("latent_prior")  # the model must be sampled with the noise it was trained with
     if max(args.score_frames) > args.frames or min(args.score_frames) < 1:
         raise ValueError(f"--score-frames must lie in 1..{args.frames} (frame 0 is given, not generated)")
     if args.frames % 4 or not 4 <= args.frames <= 100:

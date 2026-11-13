@@ -357,9 +357,102 @@ def test_context_noise_and_schedule() -> None:
           f"lr at 0 / 50 / 100 / 1050 / 1999: {w[0]:.3g} {w[50]:.3g} {w[100]:.3g} {w[1050]:.3g} {w[-1]:.3g}")
 
 
+def test_latent_prior() -> None:
+    """--latent-prior: noise with the latents' per-channel mean / std in training and at the start of sampling,
+    the same random draws as without it, loss weights 1 / std^2 with mean 1."""
+    from types import SimpleNamespace
+
+    from magi_finetuning.dit import LatentPrior, rollout, velocity_loss
+    from magi_finetuning.settings import SCRATCH
+    from magi_finetuning.train.train_full import make_noisy_input
+
+    prior = LatentPrior(str(SCRATCH / "magi1_latents_F3" / "stats.json"), 0.18215)
+    check("latent prior: mean(std^2) = 1 and mean loss weight = 1",
+          abs(prior.std.pow(2).mean().item() - 1) < 1e-5 and abs(prior.loss_weight.mean().item() - 1) < 1e-5,
+          f"std {prior.std.min().item():.2f}..{prior.std.max().item():.2f}")
+    args = SimpleNamespace(clean_chunks=False, shift=3.0, context_noise=0.0)
+    x1 = torch.randn(1, 16, 30, 32, 32, device="cuda")
+    torch.manual_seed(5)
+    plain_noisy, plain_t, plain_noise, _ = make_noisy_input(x1, 5, 25, args, 0.9999)
+    torch.manual_seed(5)
+    noisy, t, noise, _ = make_noisy_input(x1, 5, 25, args, 0.9999, prior)
+    tf = t.repeat_interleave(6, dim=1)[:, None, :, None, None]
+    check("latent prior: same t and random draws as without it, noise = mean + std * eps, x_t = t x + (1 - t) noise",
+          torch.equal(t, plain_t) and torch.allclose(noise, prior.noise(plain_noise))
+          and torch.allclose(noisy[:, :, 1:], (tf * x1 + (1 - tf) * noise)[:, :, 1:]) and torch.equal(noisy[:, :, :1], x1[:, :, :1]))
+    v = torch.randn_like(x1)
+    weighted = velocity_loss(v, x1, noise, 25, 0, prior.loss_weight).item()
+    manual = (((v - (x1 - noise))[:, :, 1:26] ** 2) / prior.std ** 2).mean().item() / prior.std.pow(-2).mean().item()
+    check("latent prior: loss = squared error / std^2 (weights scaled to mean 1)", abs(weighted - manual) < 1e-4 * manual)
+    still = lambda x, times, gamma, chunks, tokens: torch.zeros_like(x)  # zero velocity: the output is the starting noise
+    image = torch.full((1, 16, 1, 32, 32), 7.0, device="cuda")
+    start = rollout(still, image, None, 5, 1536, num_steps=4, prior=prior)[:, :, 1:]
+    check("latent prior: the sampler starts every chunk from the prior's noise",
+          (start.mean(dim=(0, 2, 3, 4)) - prior.mean.flatten()).abs().max().item() < 0.05
+          and (start.std(dim=(0, 2, 3, 4)) - prior.std.flatten()).abs().max().item() < 0.05)
+
+
+def test_standard_video(out_dir) -> None:
+    """Acceptance checks of docs/video_spec.md on windinet/video.py with the shared statistics."""
+    import json
+    import subprocess
+    from pathlib import Path
+
+    import imageio_ffmpeg
+    import numpy as np
+
+    from magi_finetuning.settings import OUTPUTS
+    from windinet.video import RolloutFigure, scale, write_video
+
+    stats = json.loads((OUTPUTS / "rollout_video_stats.json").read_text())
+    names = list(stats)
+    channels = [stats[c] for c in names]
+    check("video stats: signed exactly for momentum", [c.get("signed", False) for c in channels] == [False, True, True, False])
+    density, momentum = scale(stats["density"]), scale(stats["momentum_x"])
+    check("video scale: density mean +- 2 std, not below min; viridis",
+          abs(density.lo - max(stats["density"]["mean"] - 2 * stats["density"]["std"], stats["density"]["min"])) < 1e-9
+          and abs(density.hi - (stats["density"]["mean"] + 2 * stats["density"]["std"])) < 1e-9 and density.cmap == "viridis",
+          f"lo {density.lo:.3f} hi {density.hi:.3f}")
+    check("video scale: momentum symmetric around 0; RdBu_r",
+          momentum.lo == -momentum.hi and momentum.centre == 0.0 and momentum.cmap == "RdBu_r", f"+-{momentum.hi:.3f}")
+
+    rng = np.random.default_rng(0)
+    t, h = 5, 32
+    gt = np.stack([stats[c]["mean"] + stats[c]["std"] * rng.standard_normal((t, h, h)) for c in names], axis=1).astype("float32")
+    times = 0.015 * np.arange(t)
+    figure = RolloutFigure(names, channels, (h, h), "test")
+    same, numbers = figure.frame(0.0, gt[0], gt[0])
+    panel = np.asarray(figure.images[0][2].get_array())
+    check("video: prediction = truth gives a zero error panel, RMSE 0", bool((panel == 0).all()) and numbers[0]["rmse"] == 0)
+    check("video frame: 960 x 1090 px for 4 channels", same.shape == (1090, 960, 3), f"{same.shape}")
+    bad = gt[1].copy()
+    bad[0, 0, 0] = np.nan
+    bad[1, 0, 1] = 1e4
+    _, numbers = figure.frame(0.015, gt[1], bad)
+    check("video: non-finite counted and RMSE undefined, out-of-range counted",
+          numbers[0]["rmse"] is None and numbers[0]["fraction_nonfinite"] == 1 / h ** 2
+          and numbers[1]["fraction_error_beyond"] >= 1 / h ** 2 and numbers[1]["fraction_prediction_beyond"] >= 1 / h ** 2)
+    import matplotlib.pyplot as plt
+    plt.close(figure.fig)
+
+    path = Path(out_dir) / "video_check"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pred = gt + 0.1 * np.array([stats[c]["std"] for c in names], dtype="float32")[None, :, None, None]
+    frames = write_video(gt, pred, times, names, channels, path, title="test", save_json=True)
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    info = subprocess.run([ffmpeg, "-i", str(path.with_suffix(".mp4"))], capture_output=True, text=True).stderr
+    # ffmpeg -i prints only the first 255 characters of a tag: read the whole comment
+    comment = subprocess.run([ffmpeg, "-loglevel", "error", "-i", str(path.with_suffix(".mp4")), "-f", "ffmetadata", "-"],
+                             capture_output=True, text=True).stdout
+    check("video file: 960x1090, slowdown 8 -> 8.33 fps, stats in the mp4 comment, json per frame",
+          "960x1090" in info and "8.33 fps" in info and "momentum_x" in comment and "AsinhNorm" in comment and len(frames) == t
+          and len(json.loads(path.with_suffix(".json").read_text())["frames"]) == t, info[-300:] if "8.33 fps" not in info else "")
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--old-vae", default=None, help="a VAE checkpoint from before the metadata existed")
+    p.add_argument("--video-out", default="/tmp/standard_video_check", help="folder for the short test video")
     args = p.parse_args()
     test_normalization()
     test_resumable_order()
@@ -368,4 +461,6 @@ if __name__ == "__main__":
     test_windowed_sampler()
     test_clean_chunk_training()
     test_context_noise_and_schedule()
+    test_latent_prior()
+    test_standard_video(args.video_out)
     print(f"\n{sum(RESULTS)}/{len(RESULTS)} checks passed -> {'ALL PASS' if all(RESULTS) else 'FAILURES'}", flush=True)

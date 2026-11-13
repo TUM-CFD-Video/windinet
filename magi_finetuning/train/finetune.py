@@ -54,6 +54,22 @@ def parse_args():
                    help="full FT: a new run (step 0, fresh optimizer and lr schedule) from another run's weights: "
                         "its resume.pt (fp32) or a full_stepNNNNNN.safetensors (bf16). Ignored once this run's "
                         "own resume.pt exists (later jobs of the chain continue it)")
+    # speed (full FT): defaults = the behaviour of every run before 2026-11-10
+    p.add_argument("--tf32", action="store_true",
+                   help="full FT: MAGI's fp32 matmuls (attention output projection etc.) on TF32 tensor cores (dit.set_fp32_matmul)")
+    p.add_argument("--compile", action="store_true",
+                   help="full FT: torch.compile the attention-free parts of every layer (dit.compile_layers)")
+    p.add_argument("--checkpoint-layers", type=int, default=None,
+                   help="full FT: recompute only the first N of the 34 layers in backward (default: all; fewer = "
+                        "faster, more memory)")
+    p.add_argument("--latents", default=None,
+                   help="full FT: folder of pre-computed latents (utils/precompute_latents.py, e.g. "
+                        "$SCRATCH/magi1_latents_F3): training reads them instead of encoding every sample with the "
+                        "VAE. Same data order; needs --frames 100 and the VAE they were encoded with")
+    p.add_argument("--latent-prior", default=None, metavar="STATS_JSON",
+                   help="full FT: flow matching in the standardized latent space (dit.LatentPrior): noise with the "
+                        "latents' per-channel mean and std, loss / std^2. The file is <latents>/stats.json of "
+                        "utils/precompute_latents.py; evaluation reads it back from the run's args.yaml")
     p.add_argument("--inference-kv-range", choices=["block_causal", "noise2clean"], default="block_causal",
                    help="recorded for sampling: cross-chunk attention at inference (training is block-causal)")
     args = p.parse_args()
@@ -66,6 +82,9 @@ def parse_args():
         args.lr_min = FULL_FT["eta_min"]
     if args.context_noise and not (args.full_finetune and args.clean_chunks):
         raise ValueError("--context-noise needs --full-finetune and --clean-chunks (it noises the clean context chunks)")
+    if not args.full_finetune and (args.tf32 or args.compile or args.checkpoint_layers is not None or args.latents
+                                   or args.latent_prior):
+        raise ValueError("--tf32, --compile, --checkpoint-layers, --latents and --latent-prior are full-FT options")
     if args.full_finetune and args.warmup >= args.steps:
         raise ValueError("--warmup must be shorter than --steps")
     if args.frames % 4 or not 4 <= args.frames <= 100:

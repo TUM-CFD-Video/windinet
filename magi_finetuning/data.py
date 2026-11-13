@@ -19,11 +19,12 @@ import csv
 import json
 from dataclasses import dataclass
 from functools import cached_property
+from pathlib import Path
 
 import torch
 import yaml
 from inference.model.vae import DiagonalGaussianDistribution
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Dataset, Subset
 
 from magi_finetuning.settings import CHUNK_WIDTH, NORMALIZATION_CLIP, NORMALIZATION_STATS, SPLIT_FILE
 from magi_finetuning.utils.resume import EpochShuffle
@@ -158,11 +159,38 @@ def make_loader(args, seed: int):
     --max-samples takes an even spread over all gammas. The order is an EpochShuffle (exactly
     rebuildable after a resume; resume.batches_from moves it to the next epoch).
     Returns (loader, sampler)."""
-    ds = ShockWaveDataset(args.data, num_sim_frames=1 + args.frames)  # frame 0 (given) + frames 1..F
     train_ids = stratified_subset(load_split()["train"], args.max_samples)
-    ds = Subset(ds, indices_of(ds, train_ids))
+    if getattr(args, "latents", None):  # same sims in the same order, so --latents never changes the data order
+        ds = CachedLatents(args.latents, "train", train_ids, args.frames, args.vae_ckpt)
+    else:
+        ds = ShockWaveDataset(args.data, num_sim_frames=1 + args.frames)  # frame 0 (given) + frames 1..F
+        ds = Subset(ds, indices_of(ds, train_ids))
     sampler = EpochShuffle(len(ds), seed)
     return DataLoader(ds, batch_size=1, sampler=sampler, num_workers=4, drop_last=True), sampler
+
+
+class CachedLatents(Dataset):
+    """The latents utils/precompute_latents.py stored for these sims (in this order): exactly what
+    build_latent_sequence gives for 100 frames, unscaled bf16 (16, 30, 32, 32), so training can skip the VAE
+    encoder and the h5 frames. Only valid for the VAE they were encoded with and for --frames 100."""
+
+    def __init__(self, folder, split: str, sim_ids, frames: int, vae_ckpt: str | None):
+        self.folder, self.sim_ids = Path(folder) / split, list(sim_ids)
+        stats = json.loads((Path(folder) / "stats.json").read_text())
+        if not vae_ckpt or Path(stats["vae_ckpt"]).resolve() != Path(vae_ckpt).resolve():
+            raise ValueError(f"{folder} was encoded with {stats['vae_ckpt']}, not with --vae-ckpt {vae_ckpt}")
+        if frames != 100:
+            raise ValueError("cached latents exist for --frames 100 only")
+        missing = [sim_id for sim_id in self.sim_ids if not (self.folder / f"{sim_id}.pt").is_file()]
+        if missing:
+            raise FileNotFoundError(f"{len(missing)} sims have no latents in {self.folder}, e.g. {missing[0]}")
+
+    def __len__(self) -> int:
+        return len(self.sim_ids)
+
+    def __getitem__(self, index: int) -> dict:
+        entry = torch.load(self.folder / f"{self.sim_ids[index]}.pt")
+        return {"latents": entry["latents"], "num_body": entry["num_body"], "gamma": entry["gamma"]}
 
 
 # ---------------------------------------------------------------- latent layout (frozen VAE encoder -> DiT input)
@@ -218,3 +246,12 @@ def batch_to_latents(batch, enc, normalization, scale):
     num_chunks = latents.shape[2] // CHUNK_WIDTH
     tokens_per_chunk = CHUNK_WIDTH * (latents.shape[3] // 2) * (latents.shape[4] // 2)
     return latents, gamma, num_body, num_chunks, tokens_per_chunk
+
+
+def cached_batch_to_latents(batch, scale):
+    """batch_to_latents for a CachedLatents batch: the same five values, without the VAE."""
+    latents = batch["latents"].float() * scale  # the stored bf16 is exact; x scale in fp32 as build_latent_sequence
+    gamma = batch["gamma"].float()[:, None]
+    num_chunks = latents.shape[2] // CHUNK_WIDTH
+    tokens_per_chunk = CHUNK_WIDTH * (latents.shape[3] // 2) * (latents.shape[4] // 2)
+    return latents, gamma, int(batch["num_body"]), num_chunks, tokens_per_chunk
