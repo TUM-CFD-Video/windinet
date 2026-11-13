@@ -33,8 +33,8 @@ import typer
 import yaml
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-from windinet.data.frames import FrameSampler, endless, parse_gamma
-from windinet.experiment.config import start_run
+from windinet.data.frames import FrameSampler, endless
+from windinet.experiment.config import load_config, start_run
 from windinet.experiment.distributed import all_mean, all_sum, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress
 from windinet.experiment.optim import EMA, adamw
@@ -51,6 +51,7 @@ from windinet.wan.dit.model import WanDiT, autocast
 from windinet.wan.dit.prune import calibrate, choose, compose, importance, shrink
 from windinet.wan.dit.rollout import noise_seeds, rollout
 from windinet.wan.figures import save_dit_curves, save_examples
+from windinet.wan.vae.config import DataConfig
 from windinet.wan.vae.loss import pixel_loss
 from windinet.wan.vae.model import WanVAE
 from windinet.wan.weights import load_weights, save_state
@@ -76,8 +77,9 @@ def eval_loaders(
     """The latents (first frame + gamma) and the simulations (ground truth) of this rank's sims, same order."""
     ids = shard(ids) if sharded else ids
     latents = LatentDataset(cfg.latents.dir, split, ids, cfg.latents.frames)
-    fields = FrameSampler(h5, ids, None, 0, stride=cfg.data.frame_stride)  # whole trajectories; evaluate() truncates
-    batch, workers = cfg.sampling.batch, cfg.data.num_workers
+    d = cfg.data
+    fields = FrameSampler(h5, ids, None, 0, stride=d.frame_stride, spec=d.spec)  # whole trajectories; evaluate() cuts
+    batch, workers = cfg.sampling.batch, d.num_workers
     return DataLoader(latents, batch, num_workers=workers), DataLoader(fields, batch, num_workers=workers)
 
 
@@ -344,6 +346,10 @@ def main(
     overwrite: bool = typer.Option(False, help="replace an existing run folder of the same name"),
 ) -> None:
     started = time.time()
+    # before start_run: a refused run leaves no folder that blocks its name
+    dataset = DataConfig(**load_config(config_path, set_).get("data", {})).dataset
+    if dataset != "eulermq":  # latents, conditioning and detail masks still assume gamma and its fields
+        raise typer.BadParameter(f"not yet supported on {dataset}")
     cfg, run_dir, device = start_run(DitStageConfig, config_path, name, desc, set_, overwrite)
 
     sets = cfg.data.splits()
@@ -352,7 +358,7 @@ def main(
     train_eval_ids = train_ids[: cfg.data.eval_sims // 2]  # one per GCD at 8 ranks: costs as much time as a single sim
     if min(len(eval_ids), len(train_eval_ids), len(test_ids)) < world:
         raise typer.BadParameter(f"every one of the {world} processes needs a sim to evaluate: raise data.eval_sims")
-    gammas = sorted({round(parse_gamma(sid), 3) for sid in eval_ids + test_ids + train_eval_ids})
+    gammas = sorted({round(cfg.data.spec.scalars(sid)["gamma"], 3) for sid in eval_ids + test_ids + train_eval_ids})
     batches = endless(train_loader(cfg, train_ids))
     val_loaders = eval_loaders(cfg, "val", val_h5, eval_ids)
     train_eval_loaders = eval_loaders(cfg, "train", train_h5, train_eval_ids)
@@ -492,9 +498,7 @@ def main(
         loaders = eval_loaders(cfg, "test", test_h5, list(picks.values()), sharded=False)
         sims = render(dit, cond, adapter, vaes, loaders, cfg)
         examples |= {k: sims[sid] for k, sid in picks.items()}
-    save_examples(
-        examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, "rollout", cfg.data.frame_stride
-    )
+    save_examples(examples, adapter.fields, cfg.data, run_dir, cfg.weights_dir, "rollout")
     save_dit_curves(steps, history, final, adapter.fields, run_dir / "curves.png")
     if cfg.train.steps:
         save_run(run_dir, dit, cond, cfg.weights_dir)

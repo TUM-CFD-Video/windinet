@@ -22,8 +22,9 @@ import typer
 import yaml
 from torch.utils.data import DataLoader
 
-from windinet.data.frames import FIELDS, load_field_stats
-from windinet.experiment.config import start_run
+from windinet.data.frames import load_field_stats
+from windinet.data.specs import EULERMQ
+from windinet.experiment.config import load_config, start_run
 from windinet.experiment.distributed import all_mean, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress
 from windinet.experiment.metrics import vrmse
@@ -35,6 +36,7 @@ from windinet.wan.corrector.evaluate import evaluate
 from windinet.wan.corrector.model import Corrector, rollout, teacher_forced
 from windinet.wan.dit.latents import encode_info
 from windinet.wan.figures import save_dit_curves, save_examples
+from windinet.wan.vae.config import DataConfig
 from windinet.wan.weights import save_state
 
 
@@ -104,6 +106,10 @@ def main(
     overwrite: bool = typer.Option(False, help="replace an existing run folder of the same name"),
 ) -> None:
     started = time.time()
+    # before start_run: a refused run leaves no folder that blocks its name
+    dataset = DataConfig(**load_config(config_path, set_).get("data", {})).dataset
+    if dataset != "eulermq":  # the rollouts and the model assume eulermq's fields and gamma
+        raise typer.BadParameter(f"not yet supported on {dataset}")
     cfg, run_dir, device = start_run(CorrectorStageConfig, config_path, name, desc, set_, overwrite)
     stride, batch = cfg.data.frame_stride, max(1, cfg.train.batch_sims // world)
 
@@ -165,8 +171,9 @@ def main(
     log_metrics(f"test {len(test_ids)} sims", final, elapsed=time.time() - t0)
     if rank != 0:
         return
-    save_examples(examples, FIELDS, cfg.data.stats_json, run_dir, cfg.weights_dir, "rollout", cfg.data.frame_stride)
-    save_dit_curves(steps, history, final, FIELDS, run_dir / "curves.png")
+    fields = list(EULERMQ.fields)
+    save_examples(examples, fields, cfg.data, run_dir, cfg.weights_dir, "rollout")
+    save_dit_curves(steps, history, final, fields, run_dir / "curves.png")
     if cfg.train.steps:
         save_state(run_dir, "corrector.pt", model.state_dict(), cfg.weights_dir)
     record = {

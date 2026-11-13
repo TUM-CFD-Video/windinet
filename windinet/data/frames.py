@@ -1,22 +1,21 @@
-"""Frame-level access to euler_mq simulations: field names, train/val/test splits and frame or trajectory samplers."""
+"""Frame-level access to the datasets in `specs`: train/val/test splits, frame or trajectory samplers, symmetries."""
 
 from __future__ import annotations
 
 import json
 import random
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 
 import h5py
 import numpy as np
 import torch
 
-from windinet.training.shockwave_data import CHANNEL_NAMES, ShockWaveDataset, parse_gamma
+from windinet.data.specs import EULERMQ, Spec
+from windinet.training.shockwave_data import ShockWaveDataset
 
-FIELDS = CHANNEL_NAMES  # dataset order: density, momentum_x, momentum_y, pressure
-SYMBOLS = {"density": "ρ", "momentum_x": "m_x", "momentum_y": "m_y", "pressure": "p"}
-SYMMETRIES = 8  # the square's symmetry group D4: exact symmetries of this dataset (outflow on every side), `symmetry`
-FRAME_DT = 0.015  # time between stored frames (The Well: t = 0 .. 1.5 over 101 frames)
+SYMMETRIES = 8  # D4: symmetries of the equations and the open boundaries of both datasets, `symmetry`
 
 
 def sim_ids(h5_path: str | Path) -> list[str]:
@@ -29,7 +28,7 @@ def split_ids(ids: list[str], test_every: int = 5, test_gamma: float | None = No
     """Every `test_every`-th simulation of each gamma goes to test; with `test_gamma`, that gamma is the test set."""
     by_gamma: dict[float, list[str]] = defaultdict(list)
     for sid in sorted(ids):
-        by_gamma[round(parse_gamma(sid), 3)].append(sid)
+        by_gamma[round(EULERMQ.scalars(sid)["gamma"], 3)].append(sid)
     if test_gamma is not None:
         test = by_gamma.pop(round(test_gamma, 3))
         return [sid for sims in by_gamma.values() for sid in sims], test
@@ -47,7 +46,20 @@ def val_split(ids: list[str], n_val: int = 500, seed: int = 42) -> tuple[list[st
     return [ids[i] for i in perm[:-n_val]], [ids[i] for i in perm[-n_val:]]
 
 
+def val_cells(
+    ids: list[str], per_cell: int, seed: int, scalars: Callable[[str], dict[str, float]]
+) -> tuple[list[str], list[str]]:
+    """`per_cell` random validation sims from each cell of equal scalars, the rest train; both sorted."""
+    cells: dict[tuple, list[str]] = defaultdict(list)
+    for sid in sorted(ids):
+        cells[tuple(scalars(sid).values())].append(sid)
+    rng = random.Random(seed)
+    val = {sid for key in sorted(cells) for sid in rng.sample(cells[key], per_cell)}
+    return sorted(set(ids) - val), sorted(val)
+
+
 def splits(
+    spec: Spec,
     h5_path: str,
     test_h5: str | None = None,
     val_sims: int = 500,
@@ -56,17 +68,30 @@ def splits(
     test_gamma: float | None = None,
 ) -> dict[str, tuple[str, list[str]]]:
     """{'train' | 'val' | 'test': (h5 file, sim ids)}. With `test_h5` the LTX protocol: validation sims held out of
-    the training file, the test file whole; else one file split by `split_ids`, and val = test."""
+    the training file (per cell if the spec says so), the test file whole; else (eulermq only) one file split by
+    `split_ids`, and val = test."""
     ids = sim_ids(h5_path)
     if test_h5:
-        train, val = val_split(ids, val_sims, split_seed)
+        if spec.val_per_cell:
+            train, val = val_cells(ids, spec.val_per_cell, split_seed, spec.scalars)
+        else:
+            train, val = val_split(ids, val_sims, split_seed)
         return {"train": (h5_path, train), "val": (h5_path, val), "test": (test_h5, sim_ids(test_h5))}
+    if spec is not EULERMQ:
+        raise ValueError(f"{spec.name} needs data.test_h5")
     train, held_out = split_ids(ids, test_every, test_gamma)
     return {"train": (h5_path, train), "val": (h5_path, held_out), "test": (h5_path, held_out)}
 
 
+def read_field(group: h5py.Group, name: str, frames) -> np.ndarray:
+    """A stored field; log_<f> as ln of the stored f, in float64 before the cast."""
+    x = group[name.removeprefix("log_")][frames, 0]
+    return np.log(x) if name.startswith("log_") else x
+
+
 class FrameSampler(ShockWaveDataset):
-    """One item = `frames_per_item` frames of one simulation, fields [k, 4, H, W] in physical units, plus gamma.
+    """One item = `frames_per_item` frames of one simulation, fields [k, C, H, W] in `spec.fields` order and physical
+    units, plus its scalars [S].
 
     Only the chosen frames are read from HDF5. `seed` None: random frames per access (training), else fixed
     (evaluation). `consecutive`: a clip (every `stride`-th frame) instead of frames spread over the trajectory.
@@ -82,6 +107,8 @@ class FrameSampler(ShockWaveDataset):
         consecutive: bool = False,
         stride: int = 1,
         augment: bool = False,
+        *,
+        spec: Spec,
     ):
         super().__init__(h5_path)
         self.ids = list(ids)
@@ -90,12 +117,13 @@ class FrameSampler(ShockWaveDataset):
         self.consecutive = consecutive
         self.stride = stride
         self.augment = augment
+        self.spec = spec
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, float]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         self._init_file()
         sid = self.ids[idx]
         group = self._get_group(sid)
-        n_frames = group[CHANNEL_NAMES[0]].shape[0]
+        n_frames = group[self.spec.fields[0].removeprefix("log_")].shape[0]
         if self.k is None:  # the whole trajectory, every stride-th frame, 4k + 1 of them (what Wan's VAE takes)
             strided = range(0, n_frames, self.stride)
             frames = list(strided)[: (len(strided) - 1) // 4 * 4 + 1]
@@ -110,31 +138,35 @@ class FrameSampler(ShockWaveDataset):
                 frames = sorted(rng.sample(range(n_frames), k))
         fields = self.read(idx, frames)
         if self.augment:
-            fields = symmetry(fields, random.randrange(SYMMETRIES))
-        return fields, parse_gamma(sid)
+            fields = symmetry(fields, random.randrange(SYMMETRIES), self.spec)
+        return fields, torch.tensor(list(self.spec.scalars(sid).values()), dtype=torch.float32)
 
     def read(self, idx: int, frames: list[int]) -> torch.Tensor:
-        """Fields [len(frames), 4, H, W] of sim idx at these (increasing) frames, physical units."""
+        """Fields [len(frames), C, H, W] of sim idx at these (increasing) frames, physical units."""
         self._init_file()
         group = self._get_group(self.ids[idx])
-        return torch.from_numpy(np.stack([group[name][frames, 0] for name in CHANNEL_NAMES], axis=1)).float()
+        return torch.from_numpy(np.stack([read_field(group, n, frames) for n in self.spec.fields], axis=1)).float()
 
 
-def symmetry(fields: torch.Tensor, k: int) -> torch.Tensor:
-    """Element k (0..7) of the square's symmetry group D4 on fields [..., 4, H, W] (axis H = x): bit 0 swaps the axes,
-    bits 1 and 2 flip x and y. Momentum is a vector: its components swap and change sign with the axes."""
-    mx, my = FIELDS.index("momentum_x"), FIELDS.index("momentum_y")
+def symmetry(fields: torch.Tensor, k: int, spec: Spec) -> torch.Tensor:
+    """Element k (0..7) of D4 on fields [..., C, H, W] in `spec.fields` order, as `turn` on the grid; the vector's
+    components swap and change sign with the axes."""
     fields = turn(fields, k)
+    if spec.vector is None:
+        return fields
+    h, w = (spec.fields.index(n) for n in spec.vector)
     if k & 1:
-        fields = fields[..., [0, my, mx, 3], :, :]
-    for bit, c in ((2, mx), (4, my)):
+        order = list(range(fields.shape[-3]))
+        order[h], order[w] = w, h
+        fields = fields[..., order, :, :]
+    for bit, c in ((2, h), (4, w)):
         if k & bit:  # turn flipped a copy, so the sign change leaves the input alone
             fields[..., c, :, :] = -fields[..., c, :, :]
     return fields
 
 
 def turn(x: torch.Tensor, k: int) -> torch.Tensor:
-    """Element k of D4 on the grid alone [..., H, W], as in `symmetry`; for scalar maps."""
+    """Element k of D4 on the grid alone [..., H, W]: bit 0 swaps the axes, bits 1 and 2 flip H and W."""
     if k & 1:
         x = x.transpose(-2, -1)
     for bit, dim in ((2, -2), (4, -1)):
@@ -150,5 +182,5 @@ def endless(loader):
 
 
 def load_field_stats(stats_json: str | Path) -> dict[str, dict]:
-    """scripts/compute_channel_stats.py output: {field or log_field: {mean, std, min, max}}."""
+    """scripts/wan/field_stats.py output: {field or log_field: {mean, std, min, max, ...}}."""
     return json.loads(Path(stats_json).read_text())["data_normalization_stats"]

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import torch
 
-from windinet.data.frames import SYMBOLS
+from windinet.data.specs import SPECS
 from windinet.experiment.metrics import BINS
+
+SYMBOLS = {f: s for spec in SPECS.values() for f, s in spec.display.symbols.items()}  # shared fields share a symbol
 
 
 def hours(seconds: float) -> str:
@@ -32,7 +34,8 @@ def log_metrics(tag: str, metrics: dict[str, float], loss: float | None = None, 
     if elapsed is not None:
         head += f" | {hours(elapsed)}"
     pad = " " * len(tag)
-    per_field = "  ".join(f"{SYMBOLS[f]} {metrics[f'vrmse_{f}']:.3f}" for f in SYMBOLS if f"vrmse_{f}" in metrics)
+    fields = [k[6:] for k in metrics if k.startswith("vrmse_") and k[6:] in SYMBOLS]  # the run's dataset order
+    per_field = "  ".join(f"{SYMBOLS[f]} {metrics[f'vrmse_{f}']:.3f}" for f in fields)
     lines = [f"{tag} | {head}", f"{pad} | per field  {per_field}"]
     if windows := _windows(metrics):
         lines.append(f"{pad} | per frame  {windows}")

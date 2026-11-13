@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from windinet.wan.vae.config import DataConfig, _Base
+from windinet.wan.vae.config import DataConfig, _Base, _Stage
 
 
 class CorrectorModelConfig(_Base):
@@ -52,7 +52,8 @@ class CorrectorTrainConfig(_Base):
     seed: int = Field(default=0, description="torch and window seed (+ rank under torchrun)")
 
 
-class CorrectorStageConfig(_Base):
+class CorrectorStageConfig(_Stage):
+    stage = "dit/corrector"
     name: str = Field(description="short run name: the results folder")
     description: str = Field(min_length=1, description="one sentence: what this run tests; shown in the results index")
     model: CorrectorModelConfig = CorrectorModelConfig()
@@ -63,8 +64,8 @@ class CorrectorStageConfig(_Base):
         description="decoded Wan rollouts (decode_rollouts.py), one folder per sampling seed; the first is evaluated",
     )
     load: str | None = Field(default=None, description="corrector run folder to evaluate or continue (corrector.pt)")
-    results_dir: str = Field(
-        default="results/wan/eulermq/dit/corrector", description="one folder per run is created here"
+    results_dir: str | None = Field(
+        default=None, description="one folder per run is created here; None = results/wan/<data.dataset>/dit/corrector"
     )
     weights_dir: str | None = Field(
         default=None, description="where corrector.pt and the mp4 go, symlinked from the run; None = the run folder"

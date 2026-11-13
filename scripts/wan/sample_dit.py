@@ -18,8 +18,9 @@ import torch
 import typer
 
 from windinet.data.frames import FrameSampler
+from windinet.data.specs import SPECS
 from windinet.experiment.config import start_run
-from windinet.experiment.runs import provenance
+from windinet.experiment.runs import provenance, run_dataset
 from windinet.field_adapter import load_adapter
 from windinet.wan.dit.conditioning import TextTokens
 from windinet.wan.dit.config import SampleConfig
@@ -45,7 +46,8 @@ def main(
     if cfg.source:  # the simulation as the adapter's first image, through the encoder
         h5, sid = cfg.source.rsplit(":", 1)
         adapter = load_adapter(cfg.adapter, device)
-        frames, _ = FrameSampler(h5, [sid], None, 0, consecutive=True)[0]
+        spec = SPECS[run_dataset(cfg.adapter)]
+        frames, _ = FrameSampler(h5, [sid], None, 0, consecutive=True, spec=spec)[0]
         init = vae.encode(adapter(adapter.select(frames.to(device)))[0].movedim(0, 1)[None])
     shape = init.shape if init is not None else (1, 16, (cfg.frames - 1) // 4 + 1, cfg.height // 8, cfg.width // 8)
     dit = WanDiT(device, load=Path(cfg.load) / "dit.pt" if cfg.load else None)

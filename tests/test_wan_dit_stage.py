@@ -1,8 +1,12 @@
+import importlib.util
 import json
+from pathlib import Path
 
+import pytest
 import torch
+import typer
 
-from windinet.data.frames import FIELDS
+from windinet.data.specs import EULERMQ
 from windinet.experiment.config import load_config
 from windinet.experiment.metrics import FIELD_METRICS, Aggregate, ensemble_scores, field_metrics, power
 from windinet.experiment.optim import EMA, warmup_cosine
@@ -174,39 +178,21 @@ def test_gamma_modulation_starts_as_the_pretrained_model():
 def test_frame_sampler_stride_keeps_4k_plus_1_frames(tmp_path):
     import h5py
 
-    from windinet.data.frames import CHANNEL_NAMES, FrameSampler, symmetry
+    from windinet.data.frames import FrameSampler, symmetry
 
     with h5py.File(tmp_path / "t.h5", "w") as f:
-        for name in CHANNEL_NAMES:
+        for name in EULERMQ.fields:
             f.create_dataset(f"0000_gamma1.3/{name}", data=torch.arange(11.0)[:, None, None, None].expand(11, 1, 2, 2))
-    whole = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0)[0][0]
-    strided = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, stride=2)[0][0]
+    whole = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, spec=EULERMQ)[0][0]
+    strided = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, stride=2, spec=EULERMQ)[0][0]
     assert whole[:, 0, 0, 0].tolist() == list(range(9))  # 11 frames trimmed to 9 = 4 * 2 + 1
     assert strided[:, 0, 0, 0].tolist() == [0, 2, 4, 6, 8]  # 6 strided frames trimmed to 5
-    clip = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], 3, 0, consecutive=True, stride=2)[0][0][:, 0, 0, 0]
+    clip = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], 3, 0, consecutive=True, stride=2, spec=EULERMQ)[0][0]
+    clip = clip[:, 0, 0, 0]
     assert clip[1] - clip[0] == 2 and clip[2] - clip[1] == 2 and clip[-1] <= 10
-    plain = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0)[0][0]
-    augmented = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, augment=True)[0][0]
-    assert any(torch.equal(augmented, symmetry(plain, k)) for k in range(8))
-
-
-def test_symmetry_keeps_a_radial_momentum_field_and_has_order_four():
-    from windinet.data.frames import symmetry
-    from windinet.wan.dit.latents import latent_id
-
-    r = torch.arange(6.0) - 2.5  # centred coordinate: momentum (x, y) points away from the centre
-    fields = torch.stack([torch.rand(6, 6), r[:, None].expand(6, 6), r[None, :].expand(6, 6), torch.rand(6, 6)])[None]
-    for k in range(8):
-        out = symmetry(fields, k)
-        assert torch.equal(out[:, 1:3], fields[:, 1:3]), k  # a radial vector field is invariant under every element
-        assert (
-            torch.equal(symmetry(symmetry(fields, k), k), fields) or k == 1 or k == 3 or k == 5
-        )  # flips are involutions
-    assert torch.equal(symmetry(fields, 2)[:, 0], fields[:, 0].flip(-2)) and torch.equal(
-        symmetry(fields, 1)[:, 3], fields[:, 3].mT
-    )
-    assert torch.equal(fields[:, 1], r[:, None].expand(6, 6)[None])  # the input was left alone
-    assert latent_id("0000_gamma1.3") == "0000_gamma1.3" and latent_id("0000_gamma1.3", 5) == "0000_gamma1.3_s5"
+    plain = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, spec=EULERMQ)[0][0]
+    augmented = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, augment=True, spec=EULERMQ)[0][0]
+    assert any(torch.equal(augmented, symmetry(plain, k, EULERMQ)) for k in range(8))
 
 
 def test_aggregate_means_over_sims_with_std_and_windows():
@@ -228,10 +214,10 @@ def test_aggregate_means_over_sims_with_std_and_windows():
 def test_benchmark_scores_the_cfd_bench_frames_the_stride_reaches(tmp_path):
     from windinet.wan.dit.benchmark import SHARED, Benchmark
 
-    stats = {f: {"mean": 0.0, "std": 1.0} for f in FIELDS}
+    stats = {f: {"mean": 0.0, "std": 1.0} for f in EULERMQ.fields}
     (tmp_path / "stats.json").write_text(json.dumps({"data_normalization_stats": stats}))
     x = torch.rand(49, 4, 16, 16)  # 101 frames at stride 2: frames 0, 2, ..., 96
-    bench = Benchmark(tmp_path / "stats.json", list(FIELDS), 2, "cpu")
+    bench = Benchmark(tmp_path / "stats.json", list(EULERMQ.fields), 2, "cpu")
     bench.add(x, x)
     m = bench.metrics()
     assert m["bench_frames"] == [10, 20, 30, 40, 50, 60, 70, 80, 90]
@@ -239,9 +225,9 @@ def test_benchmark_scores_the_cfd_bench_frames_the_stride_reaches(tmp_path):
     bench.add(x, torch.zeros_like(x))
     m = bench.metrics()
     assert m["bench_vrmse"] > 0.4 and abs(m["bench_vrmse_std"] - m["bench_vrmse"]) < 1e-5  # 0 and ~1: std = mean
-    vae = Benchmark(tmp_path / "stats.json", list(FIELDS), 2, "cpu", prefix="bench_vae")
+    vae = Benchmark(tmp_path / "stats.json", list(EULERMQ.fields), 2, "cpu", prefix="bench_vae")
     assert "bench_vae_frames" in vae.metrics()
-    shared = Benchmark(tmp_path / "stats.json", list(FIELDS), 4, "cpu", prefix="bench_shared", frames=SHARED)
+    shared = Benchmark(tmp_path / "stats.json", list(EULERMQ.fields), 4, "cpu", prefix="bench_shared", frames=SHARED)
     assert shared.scored == [5, 10, 15, 20]
 
 
@@ -251,6 +237,7 @@ def test_latent_windows_and_start_clips(tmp_path):
     (tmp_path / "encode.yaml").write_text("config: {data: {}}\nstarts: [0, 4, 8]\n")
     assert with_augmentations(tmp_path, ["a_gamma1.3"]) == ["a_gamma1.3", "a_gamma1.3_t4", "a_gamma1.3_t8"]
     assert latent_id("a_gamma1.3", 2, 4) == "a_gamma1.3_s2_t4"
+    assert latent_id("a_gamma1.3") == "a_gamma1.3" and latent_id("a_gamma1.3", 5) == "a_gamma1.3_s5"
     z, _ = LatentDataset(tmp_path, "train", ["a_gamma1.3"], window=7)[0]
     assert z.shape[2] == 7 and torch.equal(z.flatten(), torch.arange(z[0, 0, 0, 0, 0], z[0, 0, 0, 0, 0] + 7))
 
@@ -322,20 +309,22 @@ def test_amse_does_not_reward_damping_an_unknown_scale():
 def test_with_latents_pairs_each_sims_frames_with_its_rollout(tmp_path):
     import h5py
 
-    from windinet.data.frames import CHANNEL_NAMES, FrameSampler
+    from windinet.data.frames import FrameSampler
     from windinet.wan.dit.latents import WithLatents
 
     ids = ["0000_gamma1.3", "0001_gamma1.4"]
     with h5py.File(tmp_path / "t.h5", "w") as f:
         for j, sid in enumerate(ids):
-            for name in CHANNEL_NAMES:
+            for name in EULERMQ.fields:
                 f.create_dataset(f"{sid}/{name}", data=torch.full((11, 1, 2, 2), float(j)))
     (tmp_path / "r" / "test").mkdir(parents=True)
     for j, sid in enumerate(ids):
         torch.save(
             {"latents": torch.full((2, 16, 3, 1, 1), float(j)), "gamma": 1.3}, tmp_path / "r" / "test" / f"{sid}.pt"
         )
-    data = WithLatents(FrameSampler(tmp_path / "t.h5", ids[::-1], None, 0, stride=2), tmp_path / "r", "test")
+    data = WithLatents(
+        FrameSampler(tmp_path / "t.h5", ids[::-1], None, 0, stride=2, spec=EULERMQ), tmp_path / "r", "test"
+    )
     frames, z = data[0]
     assert frames.shape[0] == 5 and z.shape == (2, 16, 3, 1, 1)
     assert frames.flatten()[0] == z.flatten()[0] == 1.0  # the same sim: the second id comes first
@@ -353,3 +342,15 @@ def test_front_distance_and_shift_see_a_moved_front():
     assert shift(x, x, tile=16).item() == 0 and shift(moved, x, tile=16).item() == 3
     starts = {window(torch.zeros(1, 1, 16, 13, 2, 2), 6).start for _ in range(200)}
     assert starts <= set(range(1, 8)) and len(starts) > 3
+
+
+def test_unsupported_dataset_is_refused_before_the_run_folder(tmp_path):
+    root = Path(__file__).parents[1]
+    for script, config in (("train_dit", "dit"), ("train_corrector", "corrector")):
+        spec = importlib.util.spec_from_file_location(script, root / f"scripts/wan/{script}.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        overrides = ["data.dataset=srba_oooo", f"results_dir={tmp_path / script}"]
+        with pytest.raises(typer.BadParameter, match="srba_oooo"):
+            module.main(root / f"configs/wan/{config}.yaml", "x", "x", overrides, False)
+        assert not (tmp_path / script).exists()

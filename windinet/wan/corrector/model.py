@@ -6,7 +6,7 @@ import torch
 from diffusers import UNet2DModel
 from torch import nn
 
-from windinet.data.frames import FIELDS
+from windinet.data.specs import EULERMQ
 from windinet.wan.corrector.config import CorrectorModelConfig
 from windinet.wan.dit.model import autocast
 
@@ -36,8 +36,8 @@ class Corrector(nn.Module):
                 m.padding_mode = "replicate"  # outflow on every side: zero padding would read as a wall
         nn.init.zeros_(self.unet.conv_out.weight)  # starts as Wan alone
         nn.init.zeros_(self.unet.conv_out.bias)
-        self.register_buffer("mean", torch.tensor([stats[f]["mean"] for f in FIELDS]).view(4, 1, 1))
-        self.register_buffer("std", torch.tensor([stats[f]["std"] for f in FIELDS]).view(4, 1, 1))
+        self.register_buffer("mean", torch.tensor([stats[f]["mean"] for f in EULERMQ.fields]).view(4, 1, 1))
+        self.register_buffer("std", torch.tensor([stats[f]["std"] for f in EULERMQ.fields]).view(4, 1, 1))
 
     def forward(self, past: torch.Tensor, wan: torch.Tensor, t: int, gamma: torch.Tensor) -> torch.Tensor:
         """C(t) [B, 4, H, W] from `past` [B, n, 4, H, W] (the true frame 0, then up to the last `history` of C(1..t-1))

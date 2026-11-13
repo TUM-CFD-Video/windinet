@@ -8,7 +8,8 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset
 
-from windinet.data.frames import SYMMETRIES, FrameSampler, parse_gamma, symmetry
+from windinet.data.frames import SYMMETRIES, FrameSampler, symmetry
+from windinet.data.specs import EULERMQ
 
 
 class RolloutFields(Dataset):
@@ -19,7 +20,7 @@ class RolloutFields(Dataset):
         held = [{p.stem for p in d.glob("*.pt")} for d in dirs]
         self.folders = {sid: [d for d, h in zip(dirs, held, strict=True) if sid in h] for sid in ids}
         self.ids = [sid for sid in ids if self.folders[sid]]
-        self.sims = FrameSampler(h5, self.ids, None, stride=stride)
+        self.sims = FrameSampler(h5, self.ids, None, stride=stride, spec=EULERMQ)
         self.stride, self.augment = stride, augment
         self.frames = len(self.load(0)) if self.ids else 0  # from the rollout file: the h5 stays closed before the fork
 
@@ -42,8 +43,8 @@ class RolloutFields(Dataset):
         truth = self.sims.read(i, list(range(0, end * self.stride, self.stride)))
         if self.augment:
             k = random.randrange(SYMMETRIES)
-            wan, truth = symmetry(wan, k), symmetry(truth, k)
-        return wan, truth, parse_gamma(self.ids[i])
+            wan, truth = symmetry(wan, k, EULERMQ), symmetry(truth, k, EULERMQ)
+        return wan, truth, EULERMQ.scalars(self.ids[i])["gamma"]
 
 
 class Windows:

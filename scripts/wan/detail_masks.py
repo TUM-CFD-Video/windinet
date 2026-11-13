@@ -1,5 +1,6 @@
 """Detail shares per latent cell (windinet.wan.dit.detail) of every simulation in an h5 file: <out>/<sim id>.pt
-[F', h, w] float16, for train.detail_masks. Under torchrun the sims are split over ranks."""
+[F', h, w] float16, for train.detail_masks. Under torchrun the sims are split over ranks. euler_mq only: the
+criteria need its density, momentum and pressure."""
 
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ import numpy as np
 import torch
 import typer
 
-from windinet.data.frames import FIELDS
+from windinet.data.specs import EULERMQ
 from windinet.experiment.distributed import rank, shard
 from windinet.wan.dit.detail import detail_share
 
@@ -31,7 +32,7 @@ def main(
         (out / "masks.json").write_text(json.dumps(settings))
     with h5py.File(h5, "r") as f:
         for sid in shard(sorted(f)):
-            x = torch.from_numpy(np.stack([f[sid][k][:frames:stride, 0] for k in FIELDS], 1)).to(device)
+            x = torch.from_numpy(np.stack([f[sid][k][:frames:stride, 0] for k in EULERMQ.fields], 1)).to(device)
             torch.save(detail_share(x, threshold, q_threshold).half().cpu(), out / f"{sid}.pt")
 
 

@@ -30,6 +30,7 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")  # 
 
 import torch
 import typer
+import yaml
 from torch.utils.data import DataLoader
 
 from windinet.data.frames import FrameSampler, endless, load_field_stats
@@ -39,12 +40,13 @@ from windinet.experiment.log import log_metrics, log_progress
 from windinet.experiment.optim import adamw, rel_change
 from windinet.experiment.runs import provenance, write_index
 from windinet.field_adapter import GroupedAdapter, group_tag
+from windinet.wan.dit.benchmark import Benchmark
 from windinet.wan.dit.latents import WithLatents
 from windinet.wan.figures import save_adapter_rgb, save_examples, save_panel, save_vae_curves
 from windinet.wan.vae.config import TrainConfig, VaeStageConfig
 from windinet.wan.vae.evaluate import evaluate, latent_stats
 from windinet.wan.vae.loss import loss_terms
-from windinet.wan.weights import load_weights, save_weights
+from windinet.wan.weights import load_weights, save_weights, vae_file
 
 
 def loader(cfg: VaeStageConfig, h5: str, sims: list[str], frames: int | None, train: bool, split: str) -> DataLoader:
@@ -53,10 +55,12 @@ def loader(cfg: VaeStageConfig, h5: str, sims: list[str], frames: int | None, tr
     d = cfg.data
     if d.latents:
         sims = [s for s in sims if (Path(d.latents) / split / f"{s}.pt").exists()]
-        sampler = WithLatents(FrameSampler(h5, shard(sims), None, 0, stride=d.frame_stride), d.latents, split)
+        sampler = WithLatents(
+            FrameSampler(h5, shard(sims), None, 0, stride=d.frame_stride, spec=d.spec), d.latents, split
+        )
     else:
         sampler = FrameSampler(
-            h5, shard(sims), frames, None if train else 0, d.clip, d.frame_stride, train and d.augment
+            h5, shard(sims), frames, None if train else 0, d.clip, d.frame_stride, train and d.augment, spec=d.spec
         )
     batch = max(1, cfg.train.batch_sims // world) if train else 1  # max: an eval-only run never draws a batch
     return DataLoader(
@@ -68,10 +72,22 @@ def loader(cfg: VaeStageConfig, h5: str, sims: list[str], frames: int | None, tr
     )
 
 
+def check_load(run: dict, cfg: VaeStageConfig) -> None:
+    """Refuse a `load` run whose dataset or adapter layout differs: same shapes, so it would load silently wrong."""
+    dataset = run.get("data", {}).get("dataset", "eulermq")  # runs before the field are eulermq
+    if dataset != cfg.data.dataset:
+        raise typer.BadParameter(f"load: {cfg.load} is a run on {dataset}, not {cfg.data.dataset}")
+    for key in ("groups", "log_fields"):  # the inverse's clamp bounds follow the current config, the stats the run's
+        theirs, ours = run.get("adapter", {}).get(key), getattr(cfg.adapter, key)
+        if theirs != ours:
+            raise typer.BadParameter(f"load: {cfg.load} has adapter.{key}={theirs}, this config {ours}")
+
+
 def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tuple[GroupedAdapter, list]:
-    """Adapter and VAEs with their weights (from `cfg.load`, else data-initialised)."""
+    """Adapter and VAEs with their weights (from `cfg.load`, else data-initialised; VAEs from `cfg.vae_load`)."""
     stats = load_field_stats(cfg.data.stats_json)
-    adapter = GroupedAdapter(cfg.adapter.groups, stats).to(device)
+    a = cfg.adapter
+    adapter = GroupedAdapter(a.groups, stats, cfg.data.spec, a.log_fields, a.clip_quantile).to(device)
     adapter.requires_grad_(cfg.train.adapter_lr > 0)  # fixed adapter: no gradient through the encoder for it
     vaes = []
     if cfg.vae == "wan":
@@ -87,10 +103,17 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
             for _ in range(n_vaes)
         ]
     if cfg.load:
-        load_weights(Path(cfg.load), adapter, vaes, device)
+        check_load(yaml.safe_load((Path(cfg.load) / "config.yaml").read_text()), cfg)
+        load_weights(Path(cfg.load), adapter, [] if cfg.vae_load else vaes, device)
     else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw
-        probe = FrameSampler(cfg.data.h5_path, train_ids[:: max(1, len(train_ids) // 100)][:100], 2, seed=0)
+        ids = train_ids[:: max(1, len(train_ids) // 100)][:100]
+        probe = FrameSampler(cfg.data.h5_path, ids, 2, seed=0, spec=cfg.data.spec)
         adapter.init_from_data(adapter.select(torch.cat([probe[i][0] for i in range(len(probe))])).to(device))
+    if cfg.vae_load:  # VAE i takes vae_<i-th letter>.pt, else vae.pt: groups are matched by position, not by name
+        run, n = Path(cfg.vae_load), len(vaes)
+        if not n or not all((run / vae_file(i, n)).exists() or (run / "vae.pt").exists() for i in range(n)):
+            raise typer.BadParameter(f"vae_load: {run} has no weights for {len(vaes)} VAE(s)")
+        load_weights(run, None, vaes, device)
     sync(adapter)  # the init subsamples at random: every rank takes rank 0's
     return adapter, vaes
 
@@ -157,10 +180,10 @@ def write_outputs(
     cfg: VaeStageConfig, run_dir: Path, adapter, vaes, record: dict, drift: dict, rgbs: list, examples: dict
 ) -> None:
     """Figures, videos, weights, metrics.json and the results index."""
-    save_panel(examples, adapter.fields, cfg.data.stats_json, cfg.data.frame_stride, run_dir / "panel.png")
+    save_panel(examples, adapter.fields, cfg.data, run_dir / "panel.png")
     save_adapter_rgb(rgbs, run_dir / "adapter_rgb.png")
     kind = "rollout" if cfg.data.latents else "recon"
-    save_examples(examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, kind, cfg.data.frame_stride)
+    save_examples(examples, adapter.fields, cfg.data, run_dir, cfg.weights_dir, kind)
     save_vae_curves(record["steps"], record["history"], adapter.fields, run_dir / "curves.png", drift)
     save_weights(run_dir, adapter, vaes, cfg.weights_dir)
     (run_dir / "metrics.json").write_text(json.dumps(record, indent=1))
@@ -191,10 +214,10 @@ def main(
 
     adapter, vaes = build(cfg, train_ids, device)
     start_vaes = start_copies(vaes, adapter.channels, device)
-    clip = cfg.data.clip_len
+    clip, spec = cfg.data.clip_len, cfg.data.spec
     rollouts = bool(cfg.data.latents)
     val_args = (None, cfg.data.frame_stride, True) if rollouts else (clip,)  # rollouts: whole trajectories
-    init, *_ = evaluate(adapter, val_loader, vaes, *val_args)
+    init, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec)
     log_metrics("init", init)
 
     vae_params = [p for vae in vaes for p in vae.trainable_params]
@@ -227,7 +250,7 @@ def main(
                 f"{sum(s['seconds'] for s in recent) / len(recent):.2f} s/update",
             )
         if step % cfg.train.eval_every == 0 or step == cfg.train.steps:
-            metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args)
+            metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec)
             if w0:
                 metrics["vae_drift"] = rel_change(vae_params, w0)
             history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1", "latent")}, **metrics})
@@ -237,7 +260,9 @@ def main(
                 save_weights(run_dir, adapter, vaes, cfg.weights_dir)  # a killed run keeps its last evaluated weights
                 (run_dir / "history.json").write_text(json.dumps(history, indent=1))  # and its curve so far
 
-    final, rgbs, examples = evaluate(adapter, test_loader, vaes, None, cfg.data.frame_stride, rollouts)
+    stride = cfg.data.frame_stride
+    bench = None if rollouts else Benchmark(cfg.data.stats_json, adapter.fields, stride, device, "bench_vae")
+    final, rgbs, examples = evaluate(adapter, test_loader, vaes, None, stride, rollouts, spec=spec, bench=bench)
     log_metrics(f"test {len(test_ids)} sims, whole trajectories", final, elapsed=time.time() - t0)
     medians = "  ".join(f"{f} {final[f'vrmse_median_{f}']:.3f}" for f in adapter.fields)
     print(f"median over sims: VRMSE {final['vrmse_median_mean']:.3f} | {medians}")

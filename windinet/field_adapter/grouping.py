@@ -1,8 +1,8 @@
 """Which fields each colour image carries, and how the images are merged back to fields.
 
 A group is a list of field names; each group gets its own FieldAdapter and its own VAE pass. Up to three fields
-make a colour image; a larger group widens the VAE to as many channels. Default (ablations, experiment 3): (rho, p)
-and (m_x, m_y).
+make a colour image; a larger group widens the VAE to as many channels. Default: the dataset spec's groups (eulermq,
+ablations experiment 3: (rho, p) and (m_x, m_y)).
 A field in no group is dropped; a field in several groups is averaged on the way back.
 """
 
@@ -15,11 +15,10 @@ import torch
 import yaml
 from torch import nn
 
-from windinet.data.frames import FIELDS, load_field_stats
+from windinet.data.frames import load_field_stats
+from windinet.data.specs import SPECS, Spec
 
 from .bijections import FieldAdapter, PreNorm
-
-LOG_FIELDS = {"density", "pressure"}
 
 
 def group_tag(i: int) -> str:
@@ -27,31 +26,46 @@ def group_tag(i: int) -> str:
     return string.ascii_uppercase[i]
 
 
-def _norm_args(names: list[str], stats: dict[str, dict]) -> dict:
-    keys = [f"log_{n}" if n in LOG_FIELDS else n for n in names]
+def _norm_args(names: list[str], stats: dict[str, dict], log: set[str] | frozenset[str]) -> dict:
+    keys = [f"log_{n}" if n in log else n for n in names]
+    if missing := [k for k in keys if k not in stats]:
+        raise KeyError(f"stats_json has no {', '.join(missing)}: recompute it with scripts/wan/field_stats.py")
     return {
         "mean": [stats[k]["mean"] for k in keys],
         "std": [stats[k]["std"] for k in keys],
         "lo": [stats[k]["min"] for k in keys],
         "hi": [stats[k]["max"] for k in keys],
-        "log_channels": [n in LOG_FIELDS for n in names],
+        "log_channels": [n in log for n in names],
     }
 
 
 class GroupedAdapter(nn.Module):
-    """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order; `channels` per image."""
+    """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order; `channels` per image.
+    The adapters log `log_fields` (None: the spec's); the loss space `base_norm` always logs the spec's."""
 
-    def __init__(self, groups: list[list[str]], stats: dict[str, dict]):
+    def __init__(
+        self,
+        groups: list[list[str]],
+        stats: dict[str, dict],
+        spec: Spec,
+        log_fields: list[str] | None = None,
+        clip_quantile: float = 0.98,
+    ):
         super().__init__()
         self.groups = groups
-        self.fields = [n for n in FIELDS if any(n in g for g in groups)]
+        self.dataset_fields = spec.fields
+        self.fields = [n for n in spec.fields if any(n in g for g in groups)]
         self.channels = max(3, *map(len, groups))
-        self.base_norm = PreNorm(**_norm_args(self.fields, stats))
-        self.adapters = nn.ModuleList(FieldAdapter(**_norm_args(g, stats), channels=self.channels) for g in groups)
+        log = spec.log_fields if log_fields is None else set(log_fields)
+        self.base_norm = PreNorm(**_norm_args(self.fields, stats, spec.log_fields))
+        self.adapters = nn.ModuleList(
+            FieldAdapter(**_norm_args(g, stats, log), channels=self.channels, clip_quantile=clip_quantile)
+            for g in groups
+        )
 
     def select(self, x: torch.Tensor) -> torch.Tensor:
-        """Dataset fields [B, 4, ...] -> the grouped ones [B, len(fields), ...]."""
-        return x[:, [FIELDS.index(n) for n in self.fields]]
+        """Dataset fields [B, C, ...] -> the grouped ones [B, len(fields), ...]."""
+        return x[:, [self.dataset_fields.index(n) for n in self.fields]]
 
     def _inputs(self, x: torch.Tensor) -> list[torch.Tensor]:
         fields = dict(zip(self.fields, x.unbind(1), strict=True))
@@ -80,9 +94,12 @@ class GroupedAdapter(nn.Module):
 
 
 def load_adapter(run: str | Path, device: torch.device | str) -> GroupedAdapter:
-    """The trained adapter of a VAE-stage run folder: groups and stats from its config.yaml, weights from adapter.pt."""
+    """The trained adapter of a VAE-stage run folder: groups, dataset and stats from its config.yaml, weights from
+    adapter.pt (clip_quantile only sets an init, so the default stands in)."""
     run = Path(run)
     cfg = yaml.safe_load((run / "config.yaml").read_text())
-    adapter = GroupedAdapter(cfg["adapter"]["groups"], load_field_stats(cfg["data"]["stats_json"])).to(device)
+    spec = SPECS[cfg["data"].get("dataset", "eulermq")]
+    stats = load_field_stats(cfg["data"]["stats_json"])
+    adapter = GroupedAdapter(cfg["adapter"]["groups"], stats, spec, cfg["adapter"].get("log_fields")).to(device)
     adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
     return adapter

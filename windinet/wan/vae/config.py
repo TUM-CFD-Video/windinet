@@ -2,30 +2,52 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from windinet.data import frames
+from windinet.data.specs import SPECS, Dataset, Spec
 
 
 class _Base(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class _Stage(_Base):
+    """A stage's config: `results_dir` None becomes results/wan/<data.dataset>/<stage>."""
+
+    stage: ClassVar[str]
+
+    @model_validator(mode="after")
+    def _results_dir(self):
+        self.results_dir = self.results_dir or f"results/wan/{self.data.dataset}/{self.stage}"
+        return self
+
+
 class DataConfig(_Base):
+    dataset: Dataset = Field(
+        default="eulermq", description="which dataset (data.specs): fields, groups, splits, display"
+    )
     h5_path: str = Field(description="training file; also the evaluation file unless test_h5 is set")
     test_h5: str | None = Field(
         default=None, description="separate test file; the training file is then split into train + val"
     )
-    stats_json: str = Field(description="output of scripts/compute_channel_stats.py: field means, stds and ranges")
-    val_sims: int = Field(default=500, description="with test_h5: sims held out of the training file for validation")
+    stats_json: str = Field(
+        description="field means, stds and ranges (scripts/compute_channel_stats.py, scripts/wan/field_stats.py)"
+    )
+    val_sims: int = Field(
+        default=500, description="with test_h5, eulermq: sims held out of the training file for validation"
+    )
     split_seed: int = Field(default=42, description="with test_h5: seed of the train/val shuffle; 42 = LTX baseline")
     eval_sims: int = Field(default=100, description="validation sims evaluated mid-run (the first n)")
     test_sims: int | None = Field(default=None, description="test sims in the final eval (the first n); None = all")
-    test_every: int = Field(default=5, description="without test_h5: every n-th sim per gamma is held out")
+    test_every: int = Field(
+        default=5, description="without test_h5 (eulermq only): every n-th sim per gamma is held out"
+    )
     test_gamma: float | None = Field(
-        default=None, description="without test_h5: hold out this whole gamma instead (extrapolation test)"
+        default=None,
+        description="without test_h5 (eulermq only): hold out this whole gamma instead (extrapolation test)",
     )
     frames_per_sim: int = Field(
         default=2,
@@ -53,6 +75,10 @@ class DataConfig(_Base):
     )
 
     @property
+    def spec(self) -> Spec:
+        return SPECS[self.dataset]
+
+    @property
     def clip_len(self) -> int:
         """Frames per VAE pass in training: the clip, or 1 for single frames."""
         return self.frames_per_sim if self.clip else 1
@@ -60,15 +86,26 @@ class DataConfig(_Base):
     def splits(self) -> dict[str, tuple[str, list[str]]]:
         """{'train' | 'val' | 'test': (h5 file, sim ids)}, see data.frames.splits."""
         return frames.splits(
-            self.h5_path, self.test_h5, self.val_sims, self.split_seed, self.test_every, self.test_gamma
+            self.spec, self.h5_path, self.test_h5, self.val_sims, self.split_seed, self.test_every, self.test_gamma
         )
 
 
 class AdapterConfig(_Base):
-    groups: list[list[str]] = Field(
-        default=[["density", "pressure"], ["momentum_x", "momentum_y"]],
+    groups: list[list[str]] | None = Field(
+        default=None,
         description="field names per image (up to three: a colour image; more widen the VAE's in and out convolutions "
-        "to that many channels); one VAE pass per group; other fields dropped",
+        "to that many channels); one VAE pass per group; other fields dropped; None = the dataset's groups",
+    )
+    log_fields: list[str] | None = Field(
+        default=None,
+        description="fields the adapter takes the log of before normalising; None = the dataset's (eulermq: density, "
+        "pressure); the loss space keeps the dataset's either way",
+    )
+    clip_quantile: float = Field(
+        default=0.98,
+        gt=0,
+        lt=1,
+        description="SoftClip init: this quantile of each channel's |value| lands at 0.9 of the range",
     )
 
 
@@ -122,7 +159,8 @@ class TrainConfig(_Base):
     seed: int = Field(default=0, description="torch and frame-sampling seed (+ rank under torchrun)")
 
 
-class VaeStageConfig(_Base):
+class VaeStageConfig(_Stage):
+    stage = "vae"
     name: str = Field(description="short run name: the results folder")
     description: str = Field(min_length=1, description="one sentence: what this run tests; shown in the results index")
     vae: Literal["none", "wan"] = Field(default="wan", description="'none' skips the VAE: adapter round trip only")
@@ -134,8 +172,26 @@ class VaeStageConfig(_Base):
         default=None,
         description="run folder to continue from: its adapter.pt and, if present, vae.pt or one vae_<group>.pt per VAE",
     )
-    results_dir: str = Field(default="results/wan/eulermq/vae", description="one folder per run is created here")
+    vae_load: str | None = Field(
+        default=None,
+        description="VAE-stage run folder (any dataset) whose vae.pt or vae_<group>.pt the VAEs take instead of those "
+        "in `load`; the adapter still comes from `load`",
+    )
+    results_dir: str | None = Field(
+        default=None, description="one folder per run is created here; None = results/wan/<data.dataset>/vae"
+    )
     weights_dir: str | None = Field(
         default=None,
         description="where vae.pt (280+ MB) is written, with a symlink in the run folder; None = the run folder itself",
     )
+
+    @model_validator(mode="after")
+    def _groups(self):
+        if self.adapter.groups is None:
+            self.adapter.groups = [list(g) for g in self.data.spec.groups]
+        named = {n for g in self.adapter.groups for n in g} | set(self.adapter.log_fields or [])
+        if unknown := sorted(named - set(self.data.spec.fields)):
+            raise ValueError(f"adapter fields {unknown} not in dataset {self.data.dataset}")
+        if logs := [n for n in self.adapter.log_fields or [] if n.startswith("log_")]:
+            raise ValueError(f"adapter.log_fields {logs} are already logs in dataset {self.data.dataset}")
+        return self

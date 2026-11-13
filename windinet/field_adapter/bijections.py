@@ -60,7 +60,8 @@ class PreNorm(nn.Module):
     def inverse(self, z: torch.Tensor) -> torch.Tensor:
         x = z * _per_channel(self.std, z) + _per_channel(self.mean, z)
         x = torch.maximum(torch.minimum(x, _per_channel(self.hi, x)), _per_channel(self.lo, x))
-        return torch.where(_per_channel(self.log_mask, x), x.exp(), x)
+        log = _per_channel(self.log_mask, x)
+        return torch.where(log, x.masked_fill(~log, 0).exp(), x)  # exp of a linear field (p ~ 1e5) is inf: NaN grads
 
 
 class Mix(nn.Module):
@@ -112,11 +113,20 @@ class SoftClip(nn.Module):
 class FieldAdapter(nn.Module):
     """The full chain; ``forward`` fields -> rgb, ``inverse`` rgb -> fields."""
 
-    def __init__(self, mean: list[float], std: list[float], log_channels: list[bool], lo=None, hi=None, channels=3):
+    def __init__(
+        self,
+        mean: list[float],
+        std: list[float],
+        log_channels: list[bool],
+        lo=None,
+        hi=None,
+        channels=3,
+        clip_quantile=0.98,
+    ):
         super().__init__()
         self.prenorm = PreNorm(mean, std, log_channels, lo, hi)
         self.mix = Mix(len(mean), channels)
-        self.clip = SoftClip(channels)
+        self.clip = SoftClip(channels, clip_quantile)
         self.stages = [self.prenorm, self.mix, self.clip]
 
     @torch.no_grad()

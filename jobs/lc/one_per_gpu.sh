@@ -11,10 +11,16 @@ mkdir -p "${log_dir}"
 n=$(grep -c -v -E '^(#|$)' "${commands}")
 export OMP_NUM_THREADS=$(( ${SLURM_CPUS_PER_TASK:-$(nproc)} / n ))  # else every process starts one thread per core
 gpu=0
+pids=()
 while IFS= read -r command; do
     [[ -z "${command}" || "${command}" == \#* ]] && continue
     echo "gpu ${gpu}: ${command}"
     CUDA_VISIBLE_DEVICES=${gpu} bash -c "${command}" > "${log_dir}/gpu${gpu}.log" 2>&1 &
+    pids+=($!)
     gpu=$((gpu + 1))
 done < "${commands}"
-wait
+failed=0
+for pid in "${pids[@]}"; do  # a bare wait returns 0, so afterok would fire on a failed command
+    wait "${pid}" || failed=1
+done
+exit "${failed}"

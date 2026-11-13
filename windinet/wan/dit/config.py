@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from windinet.wan import REPO
-from windinet.wan.vae.config import DataConfig, _Base
+from windinet.wan.vae.config import DataConfig, _Base, _Stage
 
 
 class EncodeConfig(_Base):
@@ -275,7 +275,8 @@ class DistillConfig(_Base):
     probe_sims: int = Field(default=8, description="val sims of the fixed batch on which the closeness is tracked")
 
 
-class DitStageConfig(_Base):
+class DitStageConfig(_Stage):
+    stage = "dit"
     name: str = Field(description="short run name: the results folder")
     description: str = Field(min_length=1, description="one sentence: what this run tests; shown in the results index")
     model: ModelConfig = ModelConfig()
@@ -318,7 +319,9 @@ class DitStageConfig(_Base):
         description="write the rollout latents of every train sim and of the evaluated val and test sims to "
         "<this>/<split>/<sim id>.pt (the latent folder layout) and stop: the VAE stage's data.latents",
     )
-    results_dir: str = Field(default="results/wan/eulermq/dit", description="one folder per run is created here")
+    results_dir: str | None = Field(
+        default=None, description="one folder per run is created here; None = results/wan/<data.dataset>/dit"
+    )
     weights_dir: str | None = Field(
         default=None,
         description="where dit.pt (5.7 GB), cond.pt and the mp4 go (the results tree mirrored), symlinked from the "

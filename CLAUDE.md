@@ -46,7 +46,7 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
   writes `config.yaml`, `metrics.json` with provenance, figures and `adapter.pt`; `vae.pt` is not in git.
 - The `README.md` index of a results folder is generated (`scripts/wan/index_runs.py`); do not edit.
 - A run folder stays only if a number in a document under `docs/` comes from it; every table there has a `run`
-  column. Unused runs are deleted. New VAE-stage runs go to `results/wan/eulermq/vae`; `results/field_adapter` is the
+  column. Unused runs are deleted. New VAE-stage runs go to `results/wan/<dataset>/vae`; `results/field_adapter` is the
   finished adapter study.
 - Settings live in the pydantic schema with defaults; a YAML names only what differs, a run variant is a `--set`.
 - Documents are short: numbers in tables, one claim per sentence, no filler.

@@ -6,7 +6,9 @@ from pathlib import Path
 
 import torch
 
+from windinet.data.specs import Spec
 from windinet.field_adapter import group_tag
+from windinet.wan.vae.config import DataConfig
 
 
 def to_uint8(video: torch.Tensor) -> torch.Tensor:
@@ -58,43 +60,43 @@ def save_strip(video: torch.Tensor, path: Path, reference: torch.Tensor | None =
     plt.close(fig)
 
 
-def _shown(stats_json: str, fields: list[str]) -> list[dict]:
-    """The train-set statistics per field as windinet/video.py takes them."""
+def _shown(data: DataConfig, fields: list[str]) -> list[dict]:
+    """The train-set statistics per field as windinet/video.py takes them, with the dataset's display bounds."""
     from windinet.data.frames import load_field_stats
 
-    stats = load_field_stats(stats_json)
-    return [{**stats[n], "signed": n.startswith("momentum")} for n in fields]
+    stats, spec = load_field_stats(data.stats_json), data.spec
+    widths, shown = spec.display.widths, []
+    for n in fields:
+        s, signed = stats[n], n in (spec.vector or ())
+        if widths is not None:
+            half = max(abs(s["p0_1"]), abs(s["p99_9"]))
+            bounds = {"lo": -half, "hi": half} if signed else {"lo": s["min"], "hi": s["p99_9"], "centre": s["min"]}
+            s = s | bounds | {"width": widths.get(n, 100.0)}  # 100σ: linear
+        shown.append({**s, "signed": signed})
+    return shown
 
 
-def _title(sid: str, label) -> str:
-    from windinet.data.frames import parse_gamma
-
+def _title(sid: str, label, spec: Spec) -> str:
     tail = f", {label}" if isinstance(label, str) else ""
-    return f"sim {sid.split('_')[0]} (γ {round(parse_gamma(sid), 3):g}){tail}"
+    return f"sim {sid.split('_')[0]} ({spec.display.condition(spec.scalars(sid))}){tail}"
 
 
 def save_examples(
-    examples: dict,
-    fields: list[str],
-    stats_json: str,
-    run_dir: Path,
-    weights_dir: str | None,
-    kind: str,
-    frame_stride: int,
+    examples: dict, fields: list[str], data: DataConfig, run_dir: Path, weights_dir: str | None, kind: str
 ) -> None:
     """<kind>_<label>.mp4 (windinet/video.py: truth, prediction, |error| per field on train-stat scales) and
     example_<label>.pt of the examples {label: (sim id, truth, pred)}, [F, C, H, W] physical fields; a float label is
-    a gamma (gamma<g>), a str one is used as it is (worst, best)."""
-    from windinet.data.frames import FRAME_DT
+    the first scalar of the dataset (gamma<g>, mach<m>), a str one is used as it is (worst, best)."""
     from windinet.video import write_video
     from windinet.wan.weights import big_file
 
-    shown = _shown(stats_json, fields)
+    spec, d, shown = data.spec, data.spec.display, _shown(data, fields)
     for label, (sid, truth, pred) in examples.items():
-        name = label if isinstance(label, str) else f"gamma{label:g}"
-        times = [FRAME_DT * frame_stride * i for i in range(len(truth))]
+        name = label if isinstance(label, str) else f"{next(iter(spec.scalars(sid)))}{label:g}"
+        times = [d.frame_dt * data.frame_stride * i for i in range(len(truth))]
         path = big_file(run_dir, f"{kind}_{name}.mp4", weights_dir)
-        write_video(truth.numpy(), pred.numpy(), times, fields, shown, path, _title(sid, label))
+        args = (fields, shown, path, _title(sid, label, spec), d.slowdown)
+        write_video(truth.numpy(), pred.numpy(), times, *args, origin=d.origin, time_unit=d.time_unit)
         torch.save({"id": sid, "truth": truth, "pred": pred}, big_file(run_dir, f"example_{name}.pt", weights_dir))
 
 
@@ -208,14 +210,15 @@ def save_vae_curves(
     _save(fig, path)
 
 
-def save_panel(examples: dict, fields: list[str], stats_json: str, frame_stride: int, path: Path) -> None:
-    """The last frame of the lowest-gamma example in the video's format (windinet/video.py) as a png."""
-    from windinet.data.frames import FRAME_DT
+def save_panel(examples: dict, fields: list[str], data: DataConfig, path: Path) -> None:
+    """The last frame of the example at the lowest first scalar in the video's format (windinet/video.py) as a png."""
     from windinet.video import write_frame
 
     sid, truth, pred = examples[min(examples)]
-    t = FRAME_DT * frame_stride * (len(truth) - 1)
-    write_frame(truth[-1].numpy(), pred[-1].numpy(), t, fields, _shown(stats_json, fields), path, _title(sid, None))
+    d = data.spec.display
+    t = d.frame_dt * data.frame_stride * (len(truth) - 1)
+    args = (fields, _shown(data, fields), path, _title(sid, None, data.spec))
+    write_frame(truth[-1].numpy(), pred[-1].numpy(), t, *args, origin=d.origin, time_unit=d.time_unit)
 
 
 def save_adapter_rgb(rgbs: list, path: Path) -> None:

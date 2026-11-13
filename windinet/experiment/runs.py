@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from windinet.data.frames import FIELDS, SYMBOLS
+from windinet.data.specs import EULERMQ, SPECS, Spec
 
 
 def provenance(started: float, world: int = 1) -> dict:
@@ -50,6 +50,12 @@ def write_config(cfg: dict, path: Path) -> None:
     path.write_text(head + yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True, width=200))
 
 
+def run_dataset(run: str | Path) -> str:
+    """The dataset of a run folder, from its config.yaml (runs before the field are eulermq)."""
+    cfg = yaml.safe_load((Path(run) / "config.yaml").read_text())
+    return cfg.get("data", {}).get("dataset", "eulermq")
+
+
 def settings(cfg: dict) -> str:
     """One phrase per run: from what and how long it was trained; the stage's choices are in its config.yaml."""
     train, load = cfg.get("train", {}), cfg.get("load")
@@ -62,7 +68,7 @@ def settings(cfg: dict) -> str:
     return ", ".join(parts)
 
 
-def run_row(run_dir: Path, label: str) -> list[str] | None:
+def run_row(run_dir: Path, label: str, spec: Spec = EULERMQ) -> list[str] | None:
     """One index row of a run (or of a stage nested in a run: `label` is its path from the stage dir)."""
     metrics_path = run_dir / "metrics.json"
     if not metrics_path.exists():
@@ -71,7 +77,7 @@ def run_row(run_dir: Path, label: str) -> list[str] | None:
     config_path = run_dir / "config.yaml"
     cfg = yaml.safe_load(config_path.read_text()) if config_path.exists() else metrics["config"]
     final = metrics["final"]
-    vrmse = [final.get(f"vrmse_{f}") for f in FIELDS]  # None for a field the run's groups drop
+    vrmse = [final.get(f"vrmse_{f}") for f in spec.fields]  # None for a field the run's groups drop
     present = [v for v in vrmse if v is not None]
     prov = metrics.get("provenance", {})
     return [
@@ -86,17 +92,21 @@ def run_row(run_dir: Path, label: str) -> list[str] | None:
     ]
 
 
-def run_rows(stage_dir: Path, folder: Path) -> list[list[str]]:
+def run_rows(stage_dir: Path, folder: Path, spec: Spec = EULERMQ) -> list[list[str]]:
     """Index rows of `folder` and every folder below it, labelled by the path from the stage dir."""
-    rows = [r] if (r := run_row(folder, str(folder.relative_to(stage_dir)))) else []
-    return rows + [row for d in sorted(p for p in folder.iterdir() if p.is_dir()) for row in run_rows(stage_dir, d)]
+    rows = [r] if (r := run_row(folder, str(folder.relative_to(stage_dir)), spec)) else []
+    subs = sorted(p for p in folder.iterdir() if p.is_dir())
+    return rows + [row for d in subs for row in run_rows(stage_dir, d, spec)]
 
 
 def write_index(stage_dir: Path) -> Path:
     """README.md of a stage: one row per run folder at any depth, from config.yaml + metrics.json (families like
-    `pairs/2dec`, continuations and evaluations like `run/stage` follow their parent)."""
-    rows = [row for d in sorted(p for p in stage_dir.iterdir() if p.is_dir()) for row in run_rows(stage_dir, d)]
-    head = ["run", "description", "settings", *SYMBOLS.values(), "mean ± std over sims", "H1", "SSIM", "commit"]
+    `pairs/2dec`, continuations and evaluations like `run/stage` follow their parent). The dataset's columns come
+    from the stage path (results/wan/<dataset>/...), eulermq when it names none."""
+    spec = next((s for s in SPECS.values() if s.name in stage_dir.parts), EULERMQ)
+    rows = [row for d in sorted(p for p in stage_dir.iterdir() if p.is_dir()) for row in run_rows(stage_dir, d, spec)]
+    symbols = [spec.display.symbols[f] for f in spec.fields]
+    head = ["run", "description", "settings", *symbols, "mean ± std over sims", "H1", "SSIM", "commit"]
     lines = [
         f"# Runs in `{stage_dir}`",
         "",

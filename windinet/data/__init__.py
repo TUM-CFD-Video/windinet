@@ -1,1 +1,1 @@
-"""euler_mq dataset access: splits, frame and trajectory sampling."""
+"""Dataset access: the dataset specs, splits, frame and trajectory sampling."""

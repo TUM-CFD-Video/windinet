@@ -39,9 +39,11 @@ def save_weights(run_dir: Path, adapter: GroupedAdapter, vaes: list, weights_dir
             save_state(run_dir, vae_file(i, len(vaes)), state, weights_dir)
 
 
-def load_weights(run: Path, adapter: GroupedAdapter, vaes: list, device: torch.device) -> None:
-    """A VAE takes its own vae_<group>.pt, else the run's shared vae.pt, else stays pretrained."""
-    adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
+def load_weights(run: Path, adapter: GroupedAdapter | None, vaes: list, device: torch.device) -> None:
+    """adapter.pt unless `adapter` is None; a VAE takes its own vae_<group>.pt, else the run's shared vae.pt, else
+    stays pretrained."""
+    if adapter is not None:
+        adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
     for i, vae in enumerate(vaes):
         for name in (vae_file(i, len(vaes)), "vae.pt"):
             if (run / name).exists():

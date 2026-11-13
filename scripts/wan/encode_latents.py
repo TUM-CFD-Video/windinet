@@ -42,12 +42,12 @@ def latent_files(out_dir: Path, split: str, sid: str, augment: bool, starts: lis
 
 
 @torch.no_grad()
-def encode_sim(adapter, vae: WanVAE, frames: torch.Tensor, gamma: float, files: dict, device) -> None:
+def encode_sim(adapter, vae: WanVAE, frames: torch.Tensor, gamma: float, files: dict, spec, device) -> None:
     """Writes the missing files of one simulation: `frames` [F, 4, H, W] from frame t on, under symmetry k, one clip."""
     for path, (k, t) in files.items():
         if path.exists():
             continue
-        x = adapter.select(symmetry(frames[t:], k).to(device))  # [F - t, C, H, W]
+        x = adapter.select(symmetry(frames[t:], k, spec).to(device))  # [F - t, C, H, W]
         z, _ = encode(adapter, x, [vae], len(x))  # [1, G, 16, F', h, w]
         torch.save({"latents": z[0].cpu(), "gamma": gamma}, path)
 
@@ -63,14 +63,16 @@ def main(
     started = time.time()
     data = load_config(config_path, set_)["data"]
     cfg = EncodeConfig(data=data, load=load, out=out, sims=sims, all_starts=all_starts)
-    run, out_dir = Path(cfg.load), Path(cfg.out)
+    if cfg.data.dataset != "eulermq":  # the latent files store gamma, not the dataset's scalars
+        raise typer.BadParameter(f"not yet supported on {cfg.data.dataset}")
+    run, out_dir, spec, stride = Path(cfg.load), Path(cfg.out), cfg.data.spec, cfg.data.frame_stride
     setup()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     adapter = load_adapter(run, device)
     vae = WanVAE(device=device, channels=adapter.channels)
     sets = {k: (h5, ids[: cfg.sims]) for k, (h5, ids) in cfg.data.splits().items()}
     h5, ids = sets["train"]
-    n_frames = len(FrameSampler(h5, ids[:1], None, 0, stride=cfg.data.frame_stride)[0][0])  # 4k + 1 per trajectory
+    n_frames = len(FrameSampler(h5, ids[:1], None, 0, stride=stride, spec=spec)[0][0])  # 4k + 1 per trajectory
     starts = list(range(0, n_frames // 2 + 1, 4)) if cfg.all_starts else [0]
     if rank == 0:
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -81,10 +83,10 @@ def main(
         (out_dir / split).mkdir(parents=True, exist_ok=True)  # every rank: rank 0 may not have made out_dir yet
         files = {sid: latent_files(out_dir, split, sid, cfg.data.augment, starts) for sid in shard(ids)}
         todo = [sid for sid, paths in files.items() if not all(p.exists() for p in paths)]
-        loader = DataLoader(FrameSampler(h5, todo, None, 0, stride=cfg.data.frame_stride), num_workers=2)
+        loader = DataLoader(FrameSampler(h5, todo, None, 0, stride=stride, spec=spec), num_workers=2)
         t0 = time.time()
         for i, (sid, (frames, gamma)) in enumerate(zip(todo, loader, strict=True), 1):
-            encode_sim(adapter, vae, frames[0], float(gamma), files[sid], device)
+            encode_sim(adapter, vae, frames[0], float(gamma), files[sid], spec, device)
             if i % 50 == 0 or i == len(todo):
                 per_sim, left = (time.time() - t0) / i, len(todo) - i
                 print(f"{split}: {i}/{len(todo)} sims per rank, {per_sim:.1f} s/sim, eta {per_sim * left / 60:.0f} min")

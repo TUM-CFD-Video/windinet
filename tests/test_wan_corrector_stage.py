@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch import nn
 
-from windinet.data.frames import FIELDS
+from windinet.data.specs import EULERMQ
 from windinet.wan.corrector.config import CorrectorModelConfig
 from windinet.wan.corrector.data import Windows
 from windinet.wan.corrector.model import Corrector, rollout, teacher_forced
@@ -10,7 +10,7 @@ from windinet.wan.corrector.model import Corrector, rollout, teacher_forced
 
 @pytest.mark.parametrize("history,first_frame", [(0, False), (1, False), (4, True)])
 def test_corrector_starts_as_wan_with_replicate_padding(history, first_frame):
-    stats = {f: {"mean": 1.0, "std": 2.0} for f in FIELDS}
+    stats = {f: {"mean": 1.0, "std": 2.0} for f in EULERMQ.fields}
     cfg = CorrectorModelConfig(channels=(32, 32), layers_per_block=1, history=history, first_frame=first_frame)
     model = Corrector(cfg, stats)
     wan, gamma = torch.randn(2, 5, 4, 16, 16), torch.tensor([1.13, 1.76])
