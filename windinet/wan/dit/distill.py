@@ -58,8 +58,8 @@ class Teacher:
             self.its = Features(dit.transformer, matching_blocks(spec, len(dit.transformer.blocks)))
 
     @torch.no_grad()
-    def velocity(self, x: torch.Tensor, sigma: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
-        return self.dit.velocity(x, sigma * 1000, self.cond(gamma))
+    def velocity(self, x: torch.Tensor, sigma: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
+        return self.dit.velocity(x, sigma * 1000, self.cond(c))
 
     def feature_loss(self) -> torch.Tensor:
         """Of the last student and teacher forwards."""

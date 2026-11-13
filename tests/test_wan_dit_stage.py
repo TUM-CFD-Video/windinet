@@ -6,14 +6,16 @@ import pytest
 import torch
 import typer
 
-from windinet.data.specs import EULERMQ
+from windinet.data.specs import EULERMQ, SRBA_OOOO
 from windinet.experiment.config import load_config
 from windinet.experiment.metrics import FIELD_METRICS, Aggregate, ensemble_scores, field_metrics, power
 from windinet.experiment.optim import EMA, warmup_cosine
 from windinet.experiment.runs import settings
-from windinet.wan.dit.conditioning import GammaModulation, GammaTokens
+from windinet.wan.dit import evaluate
+from windinet.wan.dit.conditioning import GammaModulation, ScalarTokens, build
+from windinet.wan.dit.config import CondConfig, DitStageConfig
 from windinet.wan.dit.flow import clean_estimate, draw_sigmas, frame_sigmas, gated, noised, velocity_target
-from windinet.wan.dit.latents import LatentDataset, latent_id, with_augmentations
+from windinet.wan.dit.latents import LatentDataset, condition, latent_id, with_augmentations
 from windinet.wan.dit.model import Modulation, widen_patchify
 from windinet.wan.dit.rollout import rollout
 from windinet.wan.figures import save_dit_curves
@@ -38,15 +40,57 @@ def test_latent_dataset_reads_files_and_truncates(tmp_path):
             tmp_path / "val" / f"{sid}.pt",
         )
     data = LatentDataset(tmp_path, "val", frames=2)
-    assert data.ids == ["a_gamma1.13", "b_gamma1.4"] and data[1][0].shape == (1, 16, 2, 2, 2) and data[1][1] == 1.4
+    assert data.ids == ["a_gamma1.13", "b_gamma1.4"] and data[1][0].shape == (1, 16, 2, 2, 2)
+    assert torch.equal(data[1][1], torch.tensor([1.4]))  # a file before the scalars: gamma alone
     (tmp_path / "encode.yaml").write_text("config: {data: {augment: true}}\n")
     assert with_augmentations(tmp_path, ["a_gamma1.13"]) == ["a_gamma1.13"] + [f"a_gamma1.13_s{k}" for k in range(1, 8)]
 
 
-def test_gamma_tokens_shape_and_uncond():
-    cond = GammaTokens(tokens=4, gamma_range=(1.0, 2.0))
-    gamma = torch.tensor([1.13, 1.76])
-    assert cond(gamma).shape == (2, 4, 4096) and torch.equal(cond.uncond(gamma), torch.zeros(2, 4, 4096))
+def test_latent_files_keep_the_scalars_and_the_turned_direction(tmp_path):
+    sid = "005_Mas1.30_sb1_x"
+    assert condition(SRBA_OOOO, sid, 3) == {"scalars": {"mach": 1.3, "bubbles": 1.0}, "direction": (-1.0, 0.0)}
+    assert condition(EULERMQ, "0001_gamma1.4") == {"scalars": {"gamma": 1.4}}
+    (tmp_path / "val").mkdir()
+    item = {"latents": torch.zeros(1, 16, 2, 1, 1), "scalars": {"mach": 1.3, "bubbles": 2.0}, "direction": (1.0, 0.0)}
+    torch.save(item, tmp_path / "val" / f"{sid}.pt")
+    c = LatentDataset(tmp_path, "val")[0][1]
+    assert c.dtype == torch.float32 and torch.equal(c, torch.tensor([1.3, 2.0, 1.0, 0.0]))
+
+
+def test_one_scalar_keeps_the_gamma_tokens_of_old_runs():
+    from windinet.config import ScalarConditioningConfig
+    from windinet.scalar_embeddings import ScalarEmbedding
+
+    torch.manual_seed(0)
+    cond = ScalarTokens(4, EULERMQ.ranges)
+    mlp = [f"embed.mlp.{i}.{p}" for i in (0, 1, 4, 5, 8) for p in ("weight", "bias")]
+    assert list(cond.state_dict()) == ["embed.ranges_min", "embed.ranges_max", "embed.fourier.frequencies", *mlp]
+    torch.manual_seed(0)
+    old = ScalarEmbedding(
+        ScalarConditioningConfig(
+            enabled=True, scalar_names=["gamma"], scalar_ranges={"gamma": (1.0, 2.0)}, num_tokens_per_scalar=4
+        )
+    )
+    gamma = torch.tensor([[1.13], [1.76]])
+    assert torch.equal(cond(gamma), old(gamma))
+
+
+def test_scalar_tokens_tell_the_inputs_apart():
+    torch.manual_seed(0)
+    cond = build(CondConfig(), SRBA_OOOO, torch.device("cpu"))
+    c = torch.tensor([[1.3, 2.0, 0.0, 1.0], [1.8, 4.0, 1.0, 0.0]])
+    out = cond(c)
+    assert out.shape == (2, 16, 4096) and torch.equal(cond.uncond(c), torch.zeros(2, 16, 4096))
+    assert not torch.allclose(cond(c[:, [0, 1, 3, 2]]), out)  # dir_h and dir_w swapped
+    with pytest.raises(ValueError, match="srba_oooo"):
+        build(CondConfig(kind="gamma_adaln"), SRBA_OOOO, torch.device("cpu"))
+
+
+def test_old_dit_run_configs_with_gamma_range_load():
+    run = "results/wan/eulermq/dit/res256/pairs/unrolled/unrolled2"
+    assert "gamma_range" in load_config(Path(run) / "config.yaml", [])["cond"]
+    assert DitStageConfig(**load_config(Path(run) / "config.yaml", [])).cond == CondConfig()
+    assert DitStageConfig(**load_config(Path("configs/wan/dit_eval.yaml"), [f"load={run}"])).train.steps == 0
 
 
 def test_settings_phrase_for_a_dit_run():
@@ -105,9 +149,10 @@ def test_ema_warmed_up_decay_and_swap():
 
 
 def test_curves_of_an_eval_only_run(tmp_path):
-    final = {"vrmse_per_frame": [0.0] + [0.3] * 100, "vrmse_mean_gamma1.13": 0.4, "vrmse_mean_gamma1.76": 0.5}
-    save_dit_curves([], [], final, ["rho"], tmp_path / "curves.png")
-    assert (tmp_path / "curves.png").exists()
+    for i, values in enumerate(({"gamma1.13": 0.4, "gamma1.76": 0.5}, {"mach1.3": 0.2, "bubbles2": 0.3})):
+        final = {"vrmse_per_frame": [0.0] + [0.3] * 100} | {f"vrmse_mean_{k}": v for k, v in values.items()}
+        save_dit_curves([], [], final, ["rho"], tmp_path / f"curves{i}.png")
+        assert (tmp_path / f"curves{i}.png").exists()
 
 
 def test_field_metrics_of_identity_and_of_a_flat_prediction():
@@ -164,7 +209,7 @@ def test_gamma_modulation_starts_as_the_pretrained_model():
     net.condition_embedder.time_embedder.register_forward_hook(modulation)
     cond = GammaModulation((1.0, 2.0), net.condition_embedder)
     x, t, tokens = torch.randn(2, 4, 2, 4, 4), torch.tensor([500.0, 20.0]), torch.zeros(2, 1, 12)
-    gamma = torch.tensor([1.13, 1.76])
+    gamma = torch.tensor([[1.13], [1.76]])
     with torch.no_grad():
         plain = net(x, t, tokens, return_dict=False)[0]
         modulation.offset = cond(gamma)  # zero-initialised last layer: no change yet
@@ -344,13 +389,64 @@ def test_front_distance_and_shift_see_a_moved_front():
     assert starts <= set(range(1, 8)) and len(starts) > 3
 
 
-def test_unsupported_dataset_is_refused_before_the_run_folder(tmp_path):
-    root = Path(__file__).parents[1]
-    for script, config in (("train_dit", "dit"), ("train_corrector", "corrector")):
+def test_only_the_corrector_refuses_srba_oooo(monkeypatch, tmp_path):
+    root, overrides = Path(__file__).parents[1], ["data.dataset=srba_oooo", f"results_dir={tmp_path}"]
+    modules = {}
+    for script in ("train_dit", "train_corrector"):
         spec = importlib.util.spec_from_file_location(script, root / f"scripts/wan/{script}.py")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        overrides = ["data.dataset=srba_oooo", f"results_dir={tmp_path / script}"]
-        with pytest.raises(typer.BadParameter, match="srba_oooo"):
-            module.main(root / f"configs/wan/{config}.yaml", "x", "x", overrides, False)
-        assert not (tmp_path / script).exists()
+        modules[script] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modules[script])
+    with pytest.raises(typer.BadParameter, match="srba_oooo"):  # before start_run: no folder blocks the name
+        modules["train_corrector"].main(root / "configs/wan/corrector.yaml", "x", "x", overrides, False)
+    assert not (tmp_path / "x").exists()
+
+    def started(*args):
+        raise RuntimeError("started")
+
+    monkeypatch.setattr(modules["train_dit"], "start_run", started)
+    with pytest.raises(RuntimeError, match="started"):
+        modules["train_dit"].main(root / "configs/wan/dit.yaml", "x", "x", overrides, False)
+
+
+def stand_in_evaluation(monkeypatch, module, spec, ids, truth, tmp_path, labels):
+    """`module.evaluate` of sims `ids` with fields `truth` [B, F, C, H, W], without Wan: the latents are the fields
+    as [B, 1, C, F, H, W], decode undoes that and the DiT returns them plus seeded noise; two samples, cfd_bench on."""
+    from types import SimpleNamespace as NS
+
+    from torch.utils.data import DataLoader, TensorDataset
+
+    latents = truth.transpose(1, 2)[:, None]
+
+    def sample(c, u, shape, steps, guidance, seeds, **kwargs):
+        noise = torch.stack([torch.randn(shape[1:], generator=torch.Generator().manual_seed(s)) for s in seeds])
+        return latents.flatten(1, 2) + 0.1 * noise  # all sims in one batch
+
+    def cond(c):
+        return c
+
+    cond.uncond = cond
+    monkeypatch.setattr(module, "decode", lambda adapter, z, vaes: z[:, 0].transpose(1, 2))
+    stats = {f: {"mean": 0.0, "std": 1.0} for f in spec.fields}
+    (tmp_path / "stats.json").write_text(json.dumps({"data_normalization_stats": stats}))
+    sampling = NS(samples=2, seed=0, steps=1, guidance=1.0, chunk=None, history_noise=0.0, stochastic=0.0)
+    data = NS(spec=spec, frame_stride=1, stats_json=tmp_path / "stats.json")
+    cfg = NS(cond=NS(context=1), data=data, sampling=sampling, score_from=2, benchmark=True, model=NS(precision="fp32"))
+    conditions = TensorDataset(latents, torch.tensor([list(spec.scalars(i).values()) for i in ids]))
+    conditions.ids = ids
+    loaders = DataLoader(conditions, len(ids)), DataLoader(TensorDataset(truth, truth), len(ids))
+    dit = NS(device=torch.device("cpu"), sample=sample, delta_scale=None)
+    adapter = NS(fields=list(spec.fields), select=lambda x: x)
+    return module.evaluate(dit, cond, adapter, [], loaders, labels, cfg)
+
+
+def test_dit_evaluation_of_a_uniform_start_per_scalar(monkeypatch, tmp_path):
+    cells = ((1.3, 1), (1.3, 2), (1.7, 1), (2.1, 3))
+    ids = [f"{i:03d}_Mas{m:.2f}_sb{b}_Ax0.0129_Ay0.0081_Ar0.0035_BxNaN_ByNaN_BrNaN" for i, (m, b) in enumerate(cells)]
+    truth = torch.randn(len(ids), 21, 4, 16, 16)
+    truth[:, :6, SRBA_OOOO.fields.index("velocityY")] = 0  # before the shock: a frame's own variance would be ~0
+    metrics, examples = stand_in_evaluation(monkeypatch, evaluate, SRBA_OOOO, ids, truth, tmp_path, (1.3, 2.1))
+    curve = torch.tensor(metrics["vrmse_per_frame"])
+    assert curve.isfinite().all() and curve.max() < 1 and set(examples) == {1.3, 2.1}
+    for name, counts in (("mach", {1.3: 2, 1.7: 1, 2.1: 1}), ("bubbles", {1: 2, 2: 1, 3: 1})):
+        means = sum(n * metrics[f"vrmse_mean_{name}{v:g}"] for v, n in counts.items()) / len(ids)
+        assert means == pytest.approx(metrics["vrmse_mean"], rel=1e-6)

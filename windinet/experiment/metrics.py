@@ -239,3 +239,12 @@ class Aggregate:
             windows = well_windows(scored, stride).items()
             out |= {f"vrmse_frames_{w}": c.nanmean().item() for w, c in windows if not c.isnan().all()}
         return out
+
+
+def by_scalar(per_sim: list[torch.Tensor], scalars: list[dict[str, float]]) -> dict[str, float]:
+    """vrmse_mean_<scalar><value>: the mean over the sims of each value of their VRMSE, mean over fields."""
+    groups: dict[str, dict[float, list[float]]] = {}
+    for v, sim in zip(per_sim, scalars, strict=True):
+        for name, value in sim.items():
+            groups.setdefault(name, {}).setdefault(round(value, 3), []).append(v.mean().item())
+    return {f"vrmse_mean_{n}{x:g}": sum(v) / len(v) for n, values in groups.items() for x, v in sorted(values.items())}

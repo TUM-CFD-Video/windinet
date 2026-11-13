@@ -156,8 +156,8 @@ def _lr_and_gain(ax_loss, ax_val, steps: list[dict], history: list[dict], fields
 
 
 def save_dit_curves(steps: list[dict], history: list[dict], final: dict, fields: list[str], path: Path) -> None:
-    """The shared top row, then the VRMSE per frame (last validation, else the test) and per gamma (last validation
-    and test)."""
+    """The shared top row, then the VRMSE per frame (last validation, else the test) and per scalar value (last
+    validation and test)."""
     fig, ax = _curves(steps, history, fields)
     if steps and "lr" in steps[0]:
         _lr_and_gain(ax[0, 0], ax[0, 1], steps, history, fields)
@@ -166,12 +166,12 @@ def save_dit_curves(steps: list[dict], history: list[dict], final: dict, fields:
     curve = last["vrmse_per_frame"]
     ax[1, 0].plot(range(1, len(curve)), curve[1:], "k")  # frame 0 is the given frame: left out
     ax[1, 0].set(title=f"VRMSE per frame ({what})", xlabel="frame", ylim=(0, None))
-    gammas = [k[len("vrmse_mean_gamma") :] for k in final if k.startswith("vrmse_mean_gamma")]
-    x = torch.arange(len(gammas))
+    values = [k[len("vrmse_mean_") :] for k in final if k.startswith("vrmse_mean_")]  # <scalar><value>
+    x = torch.arange(len(values))
     if history:
-        ax[1, 1].bar(x - 0.2, [last.get(f"vrmse_mean_gamma{g}", 0) for g in gammas], 0.4, label="validation")
-    ax[1, 1].bar(x + 0.2 if history else x, [final[f"vrmse_mean_gamma{g}"] for g in gammas], 0.4, label="test")
-    ax[1, 1].set(title="VRMSE per gamma, last evaluation", xticks=x, xticklabels=gammas, ylim=(0, None))
+        ax[1, 1].bar(x - 0.2, [last.get(f"vrmse_mean_{v}", 0) for v in values], 0.4, label="validation")
+    ax[1, 1].bar(x + 0.2 if history else x, [final[f"vrmse_mean_{v}"] for v in values], 0.4, label="test")
+    ax[1, 1].set(title="VRMSE per scalar value, last evaluation", xticks=x, xticklabels=values, ylim=(0, None))
     ax[1, 1].tick_params(axis="x", labelsize=8)
     ax[1, 1].legend(fontsize=8)
     _save(fig, path)

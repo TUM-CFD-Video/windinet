@@ -6,10 +6,10 @@
 
 Takes the VAE-stage YAML for the data files and the split, the adapter from `--load`. Writes
 <out>/<train|val|test>/<sim id>.pt = {"latents": [groups, 16, F/4 + 1, H/8, W/8] fp32 normalised Wan latents
-(posterior mean, the whole trajectory as one clip), "gamma"} and <out>/encode.yaml (what produced them). With
-data.augment every train sim is also encoded under the dataset's other symmetries (<sim id>_s<k>.pt), with
---all-starts also from every chunk boundary of its first half (<sim id>_t<frame>.pt).
-Sharded over torchrun ranks; existing files are skipped, so a killed job resumes.
+(posterior mean, the whole trajectory as one clip), "scalars"[, "direction" in the file's orientation]} and
+<out>/encode.yaml (what produced them). With data.augment every train sim is also encoded under the dataset's other
+symmetries (<sim id>_s<k>.pt), with --all-starts also from every chunk boundary of its first half
+(<sim id>_t<frame>.pt). Sharded over torchrun ranks; existing files are skipped, so a killed job resumes.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from windinet.experiment.distributed import rank, setup, shard, world
 from windinet.experiment.runs import provenance
 from windinet.field_adapter import load_adapter
 from windinet.wan.dit.config import EncodeConfig
-from windinet.wan.dit.latents import latent_id
+from windinet.wan.dit.latents import condition, latent_id
 from windinet.wan.vae.model import WanVAE
 from windinet.wan.vae.roundtrip import encode
 
@@ -42,14 +42,14 @@ def latent_files(out_dir: Path, split: str, sid: str, augment: bool, starts: lis
 
 
 @torch.no_grad()
-def encode_sim(adapter, vae: WanVAE, frames: torch.Tensor, gamma: float, files: dict, spec, device) -> None:
+def encode_sim(adapter, vae: WanVAE, frames: torch.Tensor, sid: str, files: dict, spec, device) -> None:
     """Writes the missing files of one simulation: `frames` [F, 4, H, W] from frame t on, under symmetry k, one clip."""
     for path, (k, t) in files.items():
         if path.exists():
             continue
         x = adapter.select(symmetry(frames[t:], k, spec).to(device))  # [F - t, C, H, W]
         z, _ = encode(adapter, x, [vae], len(x))  # [1, G, 16, F', h, w]
-        torch.save({"latents": z[0].cpu(), "gamma": gamma}, path)
+        torch.save({"latents": z[0].cpu(), **condition(spec, sid, k)}, path)
 
 
 def main(
@@ -63,8 +63,6 @@ def main(
     started = time.time()
     data = load_config(config_path, set_)["data"]
     cfg = EncodeConfig(data=data, load=load, out=out, sims=sims, all_starts=all_starts)
-    if cfg.data.dataset != "eulermq":  # the latent files store gamma, not the dataset's scalars
-        raise typer.BadParameter(f"not yet supported on {cfg.data.dataset}")
     run, out_dir, spec, stride = Path(cfg.load), Path(cfg.out), cfg.data.spec, cfg.data.frame_stride
     setup()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -85,8 +83,8 @@ def main(
         todo = [sid for sid, paths in files.items() if not all(p.exists() for p in paths)]
         loader = DataLoader(FrameSampler(h5, todo, None, 0, stride=stride, spec=spec), num_workers=2)
         t0 = time.time()
-        for i, (sid, (frames, gamma)) in enumerate(zip(todo, loader, strict=True), 1):
-            encode_sim(adapter, vae, frames[0], float(gamma), files[sid], spec, device)
+        for i, (sid, (frames, _)) in enumerate(zip(todo, loader, strict=True), 1):
+            encode_sim(adapter, vae, frames[0], sid, files[sid], spec, device)
             if i % 50 == 0 or i == len(todo):
                 per_sim, left = (time.time() - t0) / i, len(todo) - i
                 print(f"{split}: {i}/{len(todo)} sims per rank, {per_sim:.1f} s/sim, eta {per_sim * left / 60:.0f} min")

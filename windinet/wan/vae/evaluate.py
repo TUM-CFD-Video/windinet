@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 
 from windinet.data.specs import Spec
 from windinet.experiment.distributed import all_sum, gather, world
-from windinet.experiment.metrics import Aggregate
+from windinet.experiment.metrics import Aggregate, by_scalar
 from windinet.field_adapter import GroupedAdapter
 from windinet.wan.dit.benchmark import Benchmark
 from windinet.wan.vae.roundtrip import decode, encode, round_trip
@@ -39,7 +39,7 @@ def evaluate(
     aggregate = Aggregate(adapter.fields, device, trajectory=clip is None, given=int(latents))
     first_rgbs, examples = None, {}
     ids = loader.dataset.ids
-    first = {s: round(next(iter(spec.scalars(s).values())), 3) for s in ids}
+    first = {s: spec.first(s) for s in ids}
     ends = {min(first.values()), max(first.values())}  # as the DiT's videos: the same sims
     for sid, (frames, z) in zip(ids, loader, strict=True):
         x = adapter.select(frames.flatten(0, 1).to(device))
@@ -65,16 +65,6 @@ def evaluate(
     if clip is None:
         metrics |= by_scalar(aggregate.per_sim, [s for part in gather([spec.scalars(i) for i in ids]) for s in part])
     return metrics | (bench.metrics() if bench else {}), first_rgbs, examples
-
-
-def by_scalar(per_sim: list[torch.Tensor], scalars: list[dict[str, float]]) -> dict[str, float]:
-    """vrmse_mean_<scalar><value> (as the DiT's per gamma): the mean over the sims of each value of their VRMSE, mean
-    over fields."""
-    groups: dict[str, dict[float, list[float]]] = {}
-    for v, sim in zip(per_sim, scalars, strict=True):
-        for name, value in sim.items():
-            groups.setdefault(name, {}).setdefault(round(value, 3), []).append(v.mean().item())
-    return {f"vrmse_mean_{n}{x:g}": sum(v) / len(v) for n, values in groups.items() for x, v in sorted(values.items())}
 
 
 @torch.no_grad()

@@ -29,13 +29,19 @@ class Spec:
     name: str
     fields: tuple[str, ...]  # FrameSampler's channel order
     vector: tuple[str, str] | None  # vector components along H (rows) and W (columns)
+    direction: tuple[float, float] | None  # (H, W) unit vector of the flow, a DiT condition turned by `symmetry`
     groups: tuple[tuple[str, ...], ...]  # default adapter images
     log_fields: frozenset[str]  # default adapter log fields; also the loss space (base_norm)
     shared_vector_scale: bool  # both vector components on one mean-free scale, so the 8 orientations share statistics
     scalars: Callable[[str], dict[str, float]]  # sim id -> condition; the first one orders the example sims
+    ranges: dict[str, tuple[float, float]]  # per scalar, in `scalars` order: the DiT's conditioning maps it to [0, 1]
     val_per_cell: int  # >0: this many val sims per cell of equal scalars; 0: data.val_sims at random
     uniform_start: bool  # uniform before the shock arrives: short samples are scored over the trajectory's variance
     display: Display
+
+    def first(self, sid: str) -> float:
+        """The first scalar of sim `sid`, rounded to 3 digits."""
+        return round(next(iter(self.scalars(sid).values())), 3)
 
 
 def _srba_scalars(sid: str) -> dict[str, float]:
@@ -47,10 +53,12 @@ EULERMQ = Spec(
     name="eulermq",
     fields=("density", "momentum_x", "momentum_y", "pressure"),
     vector=("momentum_x", "momentum_y"),  # The Well: axis H = x
+    direction=None,
     groups=(("density", "pressure"), ("momentum_x", "momentum_y")),
     log_fields=frozenset({"density", "pressure"}),
     shared_vector_scale=False,
     scalars=lambda sid: {"gamma": parse_gamma(sid)},
+    ranges={"gamma": (1.0, 2.0)},  # with margin around the data (1.13-1.76); every eulermq run used it
     val_per_cell=0,
     uniform_start=False,
     display=Display(
@@ -67,10 +75,12 @@ SRBA_OOOO = Spec(
     name="srba_oooo",
     fields=("pressure", "velocityX", "velocityY", "log_density"),
     vector=("velocityY", "velocityX"),  # rows are y, columns x; the shock runs in +x
+    direction=(0.0, 1.0),  # +x = +W
     groups=(("log_density", "pressure"), ("velocityX", "velocityY")),
     log_fields=frozenset(),
     shared_vector_scale=True,
     scalars=_srba_scalars,
+    ranges={"mach": (1.0, 2.5), "bubbles": (0.0, 6.0)},  # with margin around the data (1.3-2.1, 1-5)
     val_per_cell=2,
     uniform_start=True,
     display=Display(

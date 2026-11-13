@@ -5,7 +5,7 @@
         --rollouts $WINDINET_WORK/latents/rollouts/stage3_d4_steps2_val500 \
         --vae results/wan/eulermq/vae/res256/pairs/2dec_clip33 --out $WINDINET_WORK/fields/stage3_d4_steps2_val500
 
-Writes <out>/<split>/<sim id>.pt = {"fields": [F, 4, H, W] fp16 in physical units, "gamma"} for every file of
+Writes <out>/<split>/<sim id>.pt = {"fields": [F, 4, H, W] fp16 in physical units, and the condition} for every file of
 <rollouts>/<split>/ and <out>/decode.yaml (what produced them). Sharded over torchrun ranks; existing files are
 skipped, so a killed job resumes.
 """
@@ -57,7 +57,7 @@ def main(
             item = torch.load(f)
             fields = decode(adapter, item["latents"][None].to(device), vaes)[0]  # [F, C, H, W]
             tmp = out / split / f"{f.stem}.tmp"  # renamed when complete: a killed job leaves no broken .pt
-            torch.save({"fields": fields.half().cpu(), "gamma": item["gamma"]}, tmp)
+            torch.save({"fields": fields.half().cpu(), **{k: v for k, v in item.items() if k != "latents"}}, tmp)
             tmp.rename(tmp.with_suffix(".pt"))
             if i % 50 == 0 or i == len(todo):
                 per_sim, left = (time.time() - t0) / i, len(todo) - i

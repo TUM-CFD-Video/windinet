@@ -1,0 +1,16 @@
+# DiT stage on 2D_SRBA_OOOO: as configs/wan/dit.yaml on the other dataset, with the eulermq recipe's choices named.
+extends: configs/wan/dit.yaml
+latents:
+  dir: /scratch/project_465003416/lc_work/latents/srba_oooo/pairs/stride2/d4
+vae: results/wan/srba_oooo/vae/res256/pairs/adapter_q999   # the adapter behind the latents: the chosen adapter run
+data:
+  dataset: srba_oooo
+  h5_path: datasets/srba_oooo/train.h5
+  test_h5: datasets/srba_oooo/test.h5
+  stats_json: results/wan/srba_oooo/stats/train_256.json
+  eval_sims: 30        # all validation sims (2 per Mach x bubbles cell); 15 train sims for the gap
+  frame_stride: 2
+score_from: 10
+benchmark: true
+sampling: {steps: 2}
+train: {lr: 1.0e-4, patchify_lr: 1.0e-4, warmup_steps: 100}

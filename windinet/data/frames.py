@@ -171,6 +171,12 @@ def symmetry(fields: torch.Tensor, k: int, spec: Spec) -> torch.Tensor:
     return fields
 
 
+def turn_vector(v: tuple[float, float], k: int) -> tuple[float, float]:
+    """Element k of D4 on a vector's (H, W) components, as `symmetry` turns the dataset's vector field."""
+    h, w = v[::-1] if k & 1 else v
+    return (-h if k & 2 else h, -w if k & 4 else w)
+
+
 def turn(x: torch.Tensor, k: int) -> torch.Tensor:
     """Element k of D4 on the grid alone [..., H, W]: bit 0 swaps the axes, bits 1 and 2 flip H and W."""
     if k & 1:

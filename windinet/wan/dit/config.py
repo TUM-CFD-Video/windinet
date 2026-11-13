@@ -70,8 +70,9 @@ class ModelConfig(_Base):
 class CondConfig(_Base):
     kind: Literal["gamma", "gamma_adaln", "text"] = Field(
         default="gamma",
-        description="gamma as cross-attention tokens (Li), gamma added to the time embedding that drives Wan's adaLN "
-        "(cross-attention gets one zero token), or a fixed text prompt",
+        description="gamma: the dataset's scalars (and direction) as cross-attention tokens (Li); gamma_adaln: its one "
+        "scalar added to the time embedding that drives Wan's adaLN (cross-attention gets one zero token); text: a "
+        "fixed text prompt",
     )
     context: int = Field(
         default=1,
@@ -79,10 +80,17 @@ class CondConfig(_Base):
         description="clean latent frames at the start (timestep 0, no loss) that condition the rest: k = pixel frames "
         "0 to 4 (k - 1) x stride; 1 = the first frame alone, 0 = none",
     )
-    tokens: int = Field(default=4, description="gamma: tokens produced by the embedding")
-    gamma_range: tuple[float, float] = Field(default=(1.0, 2.0), description="gamma: scaled to [0, 1] over this range")
+    tokens: int = Field(default=4, description="gamma: tokens per input")
     prompt: str = Field(default="", description="text: the prompt of every sample")
     negative_prompt: str = Field(default="", description="text: what guidance steers away from")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _range_is_a_dataset_fact(cls, data):
+        if isinstance(data, dict) and "gamma_range" in data:  # old run configs, always (1, 2): now data.specs' ranges
+            if list(data.pop("gamma_range")) != [1, 2]:
+                raise ValueError("cond.gamma_range is gone; the range is data.specs' (1, 2)")
+        return data
 
 
 class LatentConfig(_Base):
@@ -305,8 +313,8 @@ class DitStageConfig(_Stage):
     )
     examples: list[Literal["gamma", "worst", "best"]] = Field(
         default=["gamma", "worst", "best"],
-        description="test videos: the first sim at the lowest and the highest gamma, the sim with the highest and the "
-        "lowest VRMSE (mean over fields)",
+        description="test videos: the first sim at the lowest and the highest first scalar, the sim with the highest "
+        "and the lowest VRMSE (mean over fields)",
     )
     noise: Literal["random", "fixed", "learned"] = Field(
         default="random",

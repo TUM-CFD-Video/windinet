@@ -4,7 +4,7 @@ import pytest
 import torch
 from pydantic import BaseModel, ValidationError
 
-from windinet.data.frames import SYMMETRIES, FrameSampler, sim_ids, splits, symmetry, val_split
+from windinet.data.frames import SYMMETRIES, FrameSampler, sim_ids, splits, symmetry, turn_vector, val_split
 from windinet.data.specs import EULERMQ, SPECS, SRBA_OOOO, Dataset
 
 SRBA_ID = "005_Mas1.30_sb1_Ax0.0129_Ay0.0081_Ar0.0035_BxNaN_ByNaN_BrNaN"
@@ -16,6 +16,11 @@ def test_spec_names_refer_to_its_fields(spec):
     assert SPECS[spec.name] is spec and set(spec.vector) <= fields and spec.log_fields <= fields
     assert {f for g in spec.groups for f in g} <= fields and set(spec.display.symbols) == fields
     assert set(spec.display.widths or {}) <= fields
+
+
+@pytest.mark.parametrize("spec, sid", [(EULERMQ, "0001_gamma1.4"), (SRBA_OOOO, SRBA_ID)], ids=SPECS)
+def test_ranges_follow_the_scalars_order(spec, sid):
+    assert list(spec.ranges) == list(spec.scalars(sid))
 
 
 def test_dataset_literal_validates_the_spec_names():
@@ -89,3 +94,15 @@ def test_symmetry_is_d4_and_turns_the_vector(spec):
     along_w[:, w] = 1.0  # e.g. velocityX = 1: under the transpose it points along H
     swapped = symmetry(along_w, 1, spec)
     assert torch.equal(swapped[:, h], torch.ones(1, 6, 6)) and not swapped[:, w].any()
+
+
+def test_turn_vector_turns_the_flow_as_symmetry_turns_the_fields():
+    p, u, v = (SRBA_OOOO.fields.index(n) for n in ("pressure", "velocityX", "velocityY"))
+    fields = torch.zeros(1, 4, 8, 8)
+    fields[0, p], fields[0, u] = torch.arange(8.0), 1.0  # a pressure ramp along the flow, +W
+    table = [(0, 1), (1, 0), (0, 1), (-1, 0), (0, -1), (1, 0), (0, -1), (-1, 0)]
+    assert [turn_vector(SRBA_OOOO.direction, k) for k in range(SYMMETRIES)] == table
+    for k in range(SYMMETRIES):
+        t = symmetry(fields, k, SRBA_OOOO)[0]
+        assert (t[v, 0, 0].item(), t[u, 0, 0].item()) == table[k], k
+        assert (t[p].diff(dim=-2).mean().item(), t[p].diff(dim=-1).mean().item()) == table[k], k
