@@ -1,0 +1,56 @@
+# res256/pairs/adapter_q9999: (ln rho, p) + (u, v) on one shared scale, 8 orientations; adapter alone on the frozen VAE, 2000 steps of 2 single frames; SoftClip q 0.9999
+# Re-run: python scripts/wan/train_vae.py results/wan/srba_oooo/vae/res256/pairs/adapter_q9999/config.yaml --name <new name>
+name: res256/pairs/adapter_q9999
+description: (ln rho, p) + (u, v) on one shared scale, 8 orientations; adapter alone on the frozen VAE, 2000 steps of 2 single frames; SoftClip q 0.9999
+vae: wan
+data:
+  dataset: srba_oooo
+  h5_path: datasets/srba_oooo/train.h5
+  test_h5: datasets/srba_oooo/test.h5
+  stats_json: results/wan/srba_oooo/stats/train_256.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: 100
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 2
+  clip: false
+  frame_stride: 1
+  augment: true
+  num_workers: 2
+  latents: null
+adapter:
+  groups:
+  - - log_density
+    - pressure
+  - - velocityX
+    - velocityY
+  log_fields: null
+  clip_quantile: 0.9999
+loss:
+  rmse: 1.0
+  h1: 1.0
+  latent: 0.0
+  kind: rmse_h1
+train:
+  steps: 2000
+  batch_sims: 1
+  micro_batch: 6
+  adapter_lr: 0.003
+  vae_parts: none
+  precision: fp32
+  checkpointing: true
+  vae_per_group: false
+  vae_lr: 1.0e-06
+  io_lr: null
+  warmup_steps: 0
+  lr_floor: 0.02
+  max_grad_norm: 0.0
+  eval_every: 500
+  log_every: 10
+  seed: 0
+load: null
+vae_load: null
+results_dir: results/wan/srba_oooo/vae
+weights_dir: /scratch/project_465003416/lc_work/weights
