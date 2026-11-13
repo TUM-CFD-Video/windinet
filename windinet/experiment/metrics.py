@@ -11,13 +11,14 @@ import torch.nn.functional as F
 from windinet.experiment.distributed import all_sum, gather
 
 
-def vrmse(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+def vrmse(x_hat: torch.Tensor, x: torch.Tensor, var: torch.Tensor | None = None, eps: float = 1e-8) -> torch.Tensor:
     """Per field: sqrt(mean(err^2) / var(x)), population variance over frames and pixels (Li 2026, eq. 5.11).
 
     `x`, `x_hat`: [N, C, H, W] frames of ONE simulation, so the variance is that simulation's own. Scale-free:
-    physical units and z-scored fields give the same number. Returns [C]."""
+    physical units and z-scored fields give the same number. `var` [C]: a given normaliser instead. Returns [C]."""
     dims = (0, 2, 3)
-    return ((x_hat - x).square().mean(dims) / (x.var(dims, unbiased=False) + eps)).sqrt()
+    var = x.var(dims, unbiased=False) if var is None else var
+    return ((x_hat - x).square().mean(dims) / (var + eps)).sqrt()
 
 
 def h1(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
@@ -145,9 +146,10 @@ BINS = ("low", "mid", "high")
 FIELD_METRICS = ("vrmse", "h1", "ssim", "lde", "shift") + tuple(f"{m}_{b}" for m in ("spectral", "power") for b in BINS)
 
 
-def field_metrics(x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-    """Every per-field metric of one trajectory, stacked in the order of FIELD_METRICS. [len(FIELD_METRICS), C]."""
-    rows = [f(x_hat, x)[None] for f in (vrmse, h1, ssim, lde, shift)]
+def field_metrics(x_hat: torch.Tensor, x: torch.Tensor, var: torch.Tensor | None = None) -> torch.Tensor:
+    """Every per-field metric of one trajectory, stacked in the order of FIELD_METRICS; `var`: the VRMSE's
+    normaliser. [len(FIELD_METRICS), C]."""
+    rows = [vrmse(x_hat, x, var)[None]] + [f(x_hat, x)[None] for f in (h1, ssim, lde, shift)]
     return torch.cat([*rows, spectral(x_hat, x).T, power(x_hat, x).T])
 
 
@@ -177,10 +179,14 @@ def well_windows(per_frame: torch.Tensor, stride: int = 1) -> dict[str, torch.Te
     return {w: v for w, v in windows.items() if len(v)}
 
 
-def vrmse_per_frame(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
-    """The Well's rollout metric: VRMSE of each frame against that frame's own variance, mean over fields. [N]."""
+def vrmse_per_frame(
+    x_hat: torch.Tensor, x: torch.Tensor, var: torch.Tensor | None = None, eps: float = 1e-8
+) -> torch.Tensor:
+    """The Well's rollout metric: VRMSE of each frame against that frame's own variance (or `var` [C]), mean over
+    fields. [N]."""
     dims = (2, 3)
-    return ((x_hat - x).square().mean(dims) / (x.var(dims, unbiased=False) + eps)).sqrt().mean(1)
+    var = x.var(dims, unbiased=False) if var is None else var
+    return ((x_hat - x).square().mean(dims) / (var + eps)).sqrt().mean(1)
 
 
 class Aggregate:
@@ -197,15 +203,17 @@ class Aggregate:
         self.curve = torch.zeros(0, device=device) if trajectory else None  # per-frame VRMSE summed over sims
         self.per_sim: list[torch.Tensor] = []  # each sim's VRMSE per field: the median over sims
 
-    def add(self, x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-        """Scores one simulation [N, C, H, W]; returns its field_metrics."""
-        m = field_metrics(x_hat[self.given :], x[self.given :])
+    def add(self, x_hat: torch.Tensor, x: torch.Tensor, var: torch.Tensor | None = None) -> torch.Tensor:
+        """Scores one simulation [N, C, H, W]; returns its field_metrics. `var` [C]: the normaliser of the VRMSE and
+        the per-frame curve (None: the scored frames' variance, each frame's own for the curve)."""
+        m = field_metrics(x_hat[self.given :], x[self.given :], var)
         self.n += 1
         self.sum += m
         self.sum_sq += m[0].mean() ** 2
         self.per_sim.append(m[0].cpu())
         if self.curve is not None:
-            self.curve = self.curve + vrmse_per_frame(x_hat, x) if len(self.curve) else vrmse_per_frame(x_hat, x)
+            frames = vrmse_per_frame(x_hat, x, var)
+            self.curve = self.curve + frames if len(self.curve) else frames
         return m
 
     def reduce(self) -> None:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import torch
 
 from windinet.data.specs import SPECS
@@ -54,6 +56,11 @@ def log_metrics(tag: str, metrics: dict[str, float], loss: float | None = None, 
     if all(f"vrmse_median_{f}" in metrics for f in fields):
         medians = "  ".join(f"{SYMBOLS[f]} {num(metrics[f'vrmse_median_{f}'])}" for f in fields)
         lines.append(f"{pad} | median     {medians}")
+    by_scalar: dict[str, list[str]] = {}
+    for k, v in metrics.items():
+        if m := re.fullmatch(r"vrmse_mean_([a-z]+)(.+)", k):
+            by_scalar.setdefault(m[1], []).append(f"{m[2]} {num(v)}")
+    lines += [f"{pad} | {'per ' + name:<10} {'  '.join(values)}" for name, values in by_scalar.items()]
     if windows := _windows(metrics):
         lines.append(f"{pad} | per frame  {windows}")
     if "h1_mean" in metrics:

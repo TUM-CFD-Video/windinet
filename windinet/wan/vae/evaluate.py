@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from windinet.data.specs import Spec
-from windinet.experiment.distributed import all_sum, world
+from windinet.experiment.distributed import all_sum, gather, world
 from windinet.experiment.metrics import Aggregate
 from windinet.field_adapter import GroupedAdapter
 from windinet.wan.dit.benchmark import Benchmark
@@ -24,11 +24,14 @@ def evaluate(
     *,
     spec: Spec,
     bench: Benchmark | None = None,
+    variances: dict[str, torch.Tensor] | None = None,
 ) -> tuple[dict, list, dict]:
     """The per-field metrics (FIELD_METRICS) per simulation, averaged over simulations (the VRMSE with its std over
-    simulations and, on whole trajectories, per frame); the adapter's RGB images of the first sim's last frame; on whole
-    trajectories the first sim at the lowest and the highest value of the dataset's first scalar {value: (sim id, x,
-    x_hat)} for the videos. `bench` (whole trajectories only): its metrics on the same reconstructions."""
+    simulations and, on whole trajectories, per frame and per value of each scalar); the adapter's RGB images of the
+    first sim's last frame; on whole trajectories the first sim at the lowest and the highest value of the dataset's
+    first scalar {value: (sim id, x, x_hat)} for the videos. `bench` (whole trajectories only): its metrics on the
+    same reconstructions. `variances` (spec.uniform_start, clips): each sim's whole-trajectory variance per dataset
+    field, the VRMSE's normaliser."""
     # the loader yields one simulation at a time, so the variance normalisation is that simulation's own;
     # clip None = the whole trajectory as one clip; under torchrun each rank sums its shard, then the sums are reduced
     device = next(adapter.parameters()).device
@@ -44,14 +47,34 @@ def evaluate(
             x_hat, rgbs = decode(adapter, z.to(device), vaes).flatten(0, 1), adapter(x)
         else:
             x_hat, rgbs = round_trip(adapter, x, vaes, clip or len(x))
-        aggregate.add(x_hat, x)
+        var = None  # uniform start: a sample before the shock has ~0 variance, so the trajectory's normalises
+        if variances:
+            var = adapter.select(variances[sid][None])[0].to(x)
+        elif spec.uniform_start and clip is None:  # the VRMSE's own, now also the per-frame curve's
+            var = x[aggregate.given :].var((0, 2, 3), unbiased=False)
+        aggregate.add(x_hat, x, var)
         if bench:
             bench.add(x_hat, x)
         first_rgbs = first_rgbs or [r[-1].cpu() for r in rgbs]
         if clip is None and first[sid] in ends and first[sid] not in examples:
             examples[first[sid]] = (sid, x.cpu(), x_hat.cpu())
     aggregate.reduce()
-    return aggregate.metrics(stride) | (bench.metrics() if bench else {}), first_rgbs, examples
+    metrics = aggregate.metrics(stride)
+    if variances:  # the other metrics normalise by the sample alone, ~0 before the shock: whole trajectories only
+        metrics = {k: v for k, v in metrics.items() if k.startswith("vrmse")}
+    if clip is None:
+        metrics |= by_scalar(aggregate.per_sim, [s for part in gather([spec.scalars(i) for i in ids]) for s in part])
+    return metrics | (bench.metrics() if bench else {}), first_rgbs, examples
+
+
+def by_scalar(per_sim: list[torch.Tensor], scalars: list[dict[str, float]]) -> dict[str, float]:
+    """vrmse_mean_<scalar><value> (as the DiT's per gamma): the mean over the sims of each value of their VRMSE, mean
+    over fields."""
+    groups: dict[str, dict[float, list[float]]] = {}
+    for v, sim in zip(per_sim, scalars, strict=True):
+        for name, value in sim.items():
+            groups.setdefault(name, {}).setdefault(round(value, 3), []).append(v.mean().item())
+    return {f"vrmse_mean_{n}{x:g}": sum(v) / len(v) for n, values in groups.items() for x, v in sorted(values.items())}
 
 
 @torch.no_grad()

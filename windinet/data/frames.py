@@ -147,6 +147,12 @@ class FrameSampler(ShockWaveDataset):
         group = self._get_group(self.ids[idx])
         return torch.from_numpy(np.stack([read_field(group, n, frames) for n in self.spec.fields], axis=1)).float()
 
+    def variance(self, idx: int) -> torch.Tensor:
+        """Population variance per field of sim idx over all its stored frames, float64. [C]"""
+        self._init_file()
+        group = self._get_group(self.ids[idx])
+        return torch.tensor([read_field(group, n, slice(None)).astype(np.float64).var() for n in self.spec.fields])
+
 
 def symmetry(fields: torch.Tensor, k: int, spec: Spec) -> torch.Tensor:
     """Element k (0..7) of D4 on fields [..., C, H, W] in `spec.fields` order, as `turn` on the grid; the vector's

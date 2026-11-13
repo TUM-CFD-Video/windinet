@@ -33,6 +33,7 @@ class Spec:
     log_fields: frozenset[str]  # default adapter log fields; also the loss space (base_norm)
     scalars: Callable[[str], dict[str, float]]  # sim id -> condition; the first one orders the example sims
     val_per_cell: int  # >0: this many val sims per cell of equal scalars; 0: data.val_sims at random
+    uniform_start: bool  # uniform before the shock arrives: short samples are scored over the trajectory's variance
     display: Display
 
 
@@ -49,6 +50,7 @@ EULERMQ = Spec(
     log_fields=frozenset({"density", "pressure"}),
     scalars=lambda sid: {"gamma": parse_gamma(sid)},
     val_per_cell=0,
+    uniform_start=False,
     display=Display(
         symbols={"density": "ρ", "momentum_x": "m_x", "momentum_y": "m_y", "pressure": "p"},
         frame_dt=0.015,
@@ -67,6 +69,7 @@ SRBA_OOOO = Spec(
     log_fields=frozenset(),
     scalars=_srba_scalars,
     val_per_cell=2,
+    uniform_start=True,
     display=Display(
         symbols={"pressure": "p", "velocityX": "u", "velocityY": "v", "log_density": "ln ρ"},
         frame_dt=0.7,

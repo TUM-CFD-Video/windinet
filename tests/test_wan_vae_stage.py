@@ -2,15 +2,18 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import h5py
+import numpy as np
 import pytest
 import torch
 import yaml
+from torch.utils.data import DataLoader
 
-from windinet.data.frames import SYMMETRIES, symmetry, val_split
+from windinet.data.frames import SYMMETRIES, FrameSampler, load_field_stats, symmetry, val_split
 from windinet.data.specs import EULERMQ, SRBA_OOOO
 from windinet.experiment.config import load_config
 from windinet.experiment.log import log_metrics
-from windinet.experiment.metrics import vrmse
+from windinet.experiment.metrics import Aggregate, vrmse
 from windinet.experiment.runs import run_dataset, write_index
 from windinet.field_adapter import FieldAdapter, GroupedAdapter, load_adapter
 from windinet.field_adapter.bijections import PreNorm
@@ -19,6 +22,7 @@ from windinet.losses import vrms_per_channel
 from windinet.wan.corrector.config import CorrectorStageConfig
 from windinet.wan.dit.config import DitStageConfig
 from windinet.wan.vae.config import VaeStageConfig
+from windinet.wan.vae.evaluate import evaluate
 from windinet.wan.weights import load_weights
 
 FIELDS = ["density", "momentum_x", "momentum_y", "pressure", "log_density", "log_pressure"]
@@ -80,6 +84,56 @@ def test_vrmse_equals_the_ltx_baselines_metric():
     x, x_hat = torch.rand(7, 4, 8, 8), torch.rand(7, 4, 8, 8)
     his = vrms_per_channel(x_hat.movedim(0, 1)[None], x.movedim(0, 1)[None])  # his layout: [B, C, T, H, W]
     assert torch.allclose(vrmse(x_hat, x), his, atol=1e-6)
+
+
+def _uniform_start(tmp_path):
+    """An srba-like sim of 9 frames, exactly uniform up to frame 4, written as the dataset stores it; its
+    FrameSampler (whole trajectories) and a prediction with 1e-3 noise."""
+    gen = torch.Generator().manual_seed(0)
+    x = torch.ones(9, 4, 16, 16, dtype=torch.float64)
+    x[4:] += torch.randn(5, 4, 16, 16, generator=gen, dtype=torch.float64)
+    sid = "000_Mas1.30_sb1_Ax0.0129_Ay0.0081_Ar0.0035_BxNaN_ByNaN_BrNaN"
+    with h5py.File(tmp_path / "s.h5", "w") as f:
+        for i, n in enumerate(SRBA_OOOO.fields):
+            v = x[:, i : i + 1].numpy()
+            f.create_dataset(f"{sid}/{n.removeprefix('log_')}", data=np.exp(v) if n.startswith("log_") else v)
+    sims = FrameSampler(tmp_path / "s.h5", [sid], None, 0, spec=SRBA_OOOO)
+    x = sims[0][0]
+    return sims, x, x + 1e-3 * torch.randn(x.shape, generator=gen)
+
+
+def test_uniform_start_scored_over_the_trajectory_variance(tmp_path):
+    sims, x, x_hat = _uniform_start(tmp_path)
+    var = sims.variance(0).float()
+    assert vrmse(x_hat[:2], x[:2]).min() > 1  # the sample's own variance is 0: the error explodes
+    assert vrmse(x_hat[:2], x[:2], var).max() < 1e-2
+    torch.testing.assert_close(vrmse(x_hat, x, var), vrmse(x_hat, x), rtol=1e-6, atol=0)  # whole trajectory: equal
+    curves = [Aggregate(SRBA_OOOO.fields, "cpu") for _ in range(2)]
+    curves[0].add(x_hat, x)
+    curves[1].add(x_hat, x, var)
+    assert max(curves[0].metrics()["vrmse_per_frame"]) > 1 and max(curves[1].metrics()["vrmse_per_frame"]) < 1e-2
+    adapter = _srba_adapter()
+    val, *_ = evaluate(adapter, DataLoader(sims, 1), [], 1, spec=SRBA_OOOO, variances={sims.ids[0]: var})
+    assert val and all(k.startswith("vrmse") for k in val) and val["vrmse_mean"] < 1e-2
+
+
+def test_eulermq_scores_unchanged(make_h5, tmp_path):
+    """No trajectory variance on eulermq: the numbers of HEAD 6707466's definitions, bit for bit."""
+    stats = load_field_stats("results/field_adapter/00_stats/eulermq_256_train_stats.json")
+    adapter = GroupedAdapter([list(g) for g in EULERMQ.groups], stats, EULERMQ)
+    ids = [f"{i:04d}_gamma{g}" for i, g in enumerate((1.13, 1.4, 1.76, 1.4))]
+    sims = FrameSampler(make_h5(tmp_path / "e.h5", EULERMQ, ids, size=16), ids, None, 0, spec=EULERMQ)
+    metrics, *_ = evaluate(adapter, DataLoader(sims, 1), [], None, spec=EULERMQ)
+    x = adapter.select(sims[0][0])
+    x_hat = x + 0.1 * torch.randn(x.shape, generator=torch.Generator().manual_seed(0))
+    one = Aggregate(adapter.fields, "cpu")
+    one.add(x_hat, x)
+    m, err = one.metrics(), (x_hat - x).square()
+    head = (err.mean((0, 2, 3)) / (x.var((0, 2, 3), unbiased=False) + 1e-8)).sqrt()
+    assert [m[f"vrmse_{f}"] for f in adapter.fields] == head.tolist()
+    head_curve = (err.mean((2, 3)) / (x.var((2, 3), unbiased=False) + 1e-8)).sqrt().mean(1)
+    assert m["vrmse_per_frame"] == head_curve.tolist()
+    assert {f"vrmse_mean_gamma{g}" for g in (1.13, 1.4, 1.76)} <= set(metrics) and "h1_mean" in metrics
 
 
 def test_val_split_is_the_ltx_baselines_rule():

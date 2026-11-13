@@ -219,7 +219,12 @@ def main(
     clip, spec = cfg.data.clip_len, cfg.data.spec
     rollouts = bool(cfg.data.latents)
     val_args = (None, cfg.data.frame_stride, True) if rollouts else (clip,)  # rollouts: whole trajectories
-    init, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec)
+    variances = None
+    if spec.uniform_start and not rollouts:  # once, over the loader's workers: ~3 s per sim
+        val = val_loader.dataset
+        reads = DataLoader(range(len(val)), None, num_workers=cfg.data.num_workers, collate_fn=val.variance)
+        variances = dict(zip(val.ids, reads, strict=True))
+    init, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances)
     log_metrics("init", init)
 
     vae_params = [p for vae in vaes for p in vae.trainable_params]
@@ -252,7 +257,7 @@ def main(
                 f"{sum(s['seconds'] for s in recent) / len(recent):.2f} s/update",
             )
         if step % cfg.train.eval_every == 0 or step == cfg.train.steps:
-            metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec)
+            metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances)
             if w0:
                 metrics["vae_drift"] = rel_change(vae_params, w0)
             history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1", "latent")}, **metrics})
@@ -266,8 +271,6 @@ def main(
     bench = None if rollouts else Benchmark(cfg.data.stats_json, adapter.fields, stride, device, "bench_vae")
     final, rgbs, examples = evaluate(adapter, test_loader, vaes, None, stride, rollouts, spec=spec, bench=bench)
     log_metrics(f"test {len(test_ids)} sims, whole trajectories", final, elapsed=time.time() - t0)
-    medians = "  ".join(f"{f} {final[f'vrmse_median_{f}']:.3f}" for f in adapter.fields)
-    print(f"median over sims: VRMSE {final['vrmse_median_mean']:.3f} | {medians}")
     latent_start = None
     if vaes and not rollouts:
         final |= latent_stats(adapter, test_loader, vaes, start_vaes)

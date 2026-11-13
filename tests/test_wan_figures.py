@@ -65,6 +65,13 @@ def test_evaluate_examples_at_lowest_and_highest_mach(srba_eval):
     assert examples[1.3][1].shape == (9, len(adapter.fields), 16, 16)
 
 
+def test_evaluate_breaks_the_vrmse_down_per_scalar(srba_eval):
+    metrics = srba_eval[2]
+    for name, counts in (("mach", {1.3: 2, 1.7: 2, 2.1: 2}), ("bubbles", {1: 3, 2: 3})):
+        means = {v: metrics[f"vrmse_mean_{name}{v:g}"] for v in counts}
+        assert math.isclose(sum(counts[v] * m for v, m in means.items()) / 6, metrics["vrmse_mean"], rel_tol=1e-5)
+
+
 def test_panel_and_videos_written(srba_eval, tmp_path):
     data, adapter, _, _, examples = srba_eval
     short = {m: (sid, x[:3], x_hat[:3]) for m, (sid, x, x_hat) in examples.items()}
