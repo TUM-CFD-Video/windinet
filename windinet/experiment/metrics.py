@@ -8,7 +8,7 @@ import math
 import torch
 import torch.nn.functional as F
 
-from windinet.experiment.distributed import all_sum
+from windinet.experiment.distributed import all_sum, gather
 
 
 def vrmse(x_hat: torch.Tensor, x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
@@ -195,6 +195,7 @@ class Aggregate:
         self.sum = torch.zeros(len(FIELD_METRICS), len(fields), device=device)  # of field_metrics over sims
         self.sum_sq = torch.zeros((), device=device)  # of each sim's mean VRMSE: its std over sims
         self.curve = torch.zeros(0, device=device) if trajectory else None  # per-frame VRMSE summed over sims
+        self.per_sim: list[torch.Tensor] = []  # each sim's VRMSE per field: the median over sims
 
     def add(self, x_hat: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
         """Scores one simulation [N, C, H, W]; returns its field_metrics."""
@@ -202,22 +203,27 @@ class Aggregate:
         self.n += 1
         self.sum += m
         self.sum_sq += m[0].mean() ** 2
+        self.per_sim.append(m[0].cpu())
         if self.curve is not None:
             self.curve = self.curve + vrmse_per_frame(x_hat, x) if len(self.curve) else vrmse_per_frame(x_hat, x)
         return m
 
     def reduce(self) -> None:
         all_sum(self.n, self.sum, self.sum_sq, self.curve)
+        self.per_sim = [v for part in gather(self.per_sim) for v in part]
 
     def metrics(self, stride: int = 1) -> dict:
-        """<metric>_<field> and <metric>_mean, vrmse_std over sims; on trajectories also vrmse_per_frame and its means
-        over The Well's windows (given in original frames: `stride` frames per curve entry)."""
+        """<metric>_<field> and <metric>_mean, vrmse_std and vrmse_median_<field | mean> over sims; on trajectories also
+        vrmse_per_frame and its means over The Well's windows (given in original frames: `stride` frames per entry)."""
         per_field = self.sum / self.n
         out = {}
         for name, values in zip(FIELD_METRICS, per_field, strict=True):
             out |= {f"{name}_{f}": v.item() for f, v in zip(self.fields, values, strict=True)}
             out[f"{name}_mean"] = values.mean().item()
         out["vrmse_std"] = (self.sum_sq / self.n - per_field[0].mean() ** 2).clamp(min=0).sqrt().item()
+        per_sim = torch.stack(self.per_sim)  # [sims, C]: robust to the few low-variance sims that dominate the mean
+        out |= {f"vrmse_median_{f}": v.item() for f, v in zip(self.fields, per_sim.median(0).values, strict=True)}
+        out["vrmse_median_mean"] = per_sim.mean(1).median().item()
         if self.curve is not None:
             curve = self.curve / self.n
             out["vrmse_per_frame"] = curve.tolist()

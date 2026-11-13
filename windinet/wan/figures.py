@@ -58,6 +58,21 @@ def save_strip(video: torch.Tensor, path: Path, reference: torch.Tensor | None =
     plt.close(fig)
 
 
+def _shown(stats_json: str, fields: list[str]) -> list[dict]:
+    """The train-set statistics per field as windinet/video.py takes them."""
+    from windinet.eulermq.data import load_field_stats
+
+    stats = load_field_stats(stats_json)
+    return [{**stats[n], "signed": n.startswith("momentum")} for n in fields]
+
+
+def _title(sid: str, label) -> str:
+    from windinet.eulermq.data import parse_gamma
+
+    tail = f", {label}" if isinstance(label, str) else ""
+    return f"sim {sid.split('_')[0]} (γ {round(parse_gamma(sid), 3):g}){tail}"
+
+
 def save_examples(
     examples: dict,
     fields: list[str],
@@ -67,20 +82,20 @@ def save_examples(
     kind: str,
     frame_stride: int,
 ) -> None:
-    """<kind>_gamma<g>.mp4 (windinet/video.py: truth, prediction, |error| per field on train-stat scales) and
-    example_gamma<g>.pt of the examples {gamma: (sim id, truth, pred)}, [F, C, H, W] physical fields."""
-    from windinet.eulermq.data import FRAME_DT, load_field_stats
+    """<kind>_<label>.mp4 (windinet/video.py: truth, prediction, |error| per field on train-stat scales) and
+    example_<label>.pt of the examples {label: (sim id, truth, pred)}, [F, C, H, W] physical fields; a float label is
+    a gamma (gamma<g>), a str one is used as it is (worst, best)."""
+    from windinet.eulermq.data import FRAME_DT
     from windinet.video import write_video
     from windinet.wan.weights import big_file
 
-    stats = load_field_stats(stats_json)
-    shown = [{**stats[n], "signed": n.startswith("momentum")} for n in fields]
-    for g, (sid, truth, pred) in examples.items():
+    shown = _shown(stats_json, fields)
+    for label, (sid, truth, pred) in examples.items():
+        name = label if isinstance(label, str) else f"gamma{label:g}"
         times = [FRAME_DT * frame_stride * i for i in range(len(truth))]
-        title = f"sim {sid.split('_')[0]} (γ {g:g})"
-        path = big_file(run_dir, f"{kind}_gamma{g:g}.mp4", weights_dir)
-        write_video(truth.numpy(), pred.numpy(), times, fields, shown, path, title)
-        torch.save({"id": sid, "truth": truth, "pred": pred}, big_file(run_dir, f"example_gamma{g:g}.pt", weights_dir))
+        path = big_file(run_dir, f"{kind}_{name}.mp4", weights_dir)
+        write_video(truth.numpy(), pred.numpy(), times, fields, shown, path, _title(sid, label))
+        torch.save({"id": sid, "truth": truth, "pred": pred}, big_file(run_dir, f"example_{name}.pt", weights_dir))
 
 
 def _curves(steps: list[dict], history: list[dict], fields: list[str]):
@@ -193,31 +208,27 @@ def save_vae_curves(
     _save(fig, path)
 
 
-def save_panel(example: tuple, fields: list[str], path: Path) -> None:
-    """Per field: GT / reconstruction / residual; last column the RGB image(s) fed to the VAE. Small PNG."""
+def save_panel(examples: dict, fields: list[str], stats_json: str, frame_stride: int, path: Path) -> None:
+    """The last frame of the lowest-gamma example in the video's format (windinet/video.py) as a png."""
+    from windinet.eulermq.data import FRAME_DT
+    from windinet.video import write_frame
+
+    sid, truth, pred = examples[min(examples)]
+    t = FRAME_DT * frame_stride * (len(truth) - 1)
+    write_frame(truth[-1].numpy(), pred[-1].numpy(), t, fields, _shown(stats_json, fields), path, _title(sid, None))
+
+
+def save_adapter_rgb(rgbs: list, path: Path) -> None:
+    """The RGB image the adapter feeds the VAE, one per group. Small PNG."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    x, x_hat, rgbs = example
-    fig, axes = plt.subplots(len(fields), 4, figsize=(12, 2.75 * len(fields)), squeeze=False)
-    for i, name in enumerate(fields):
-        lo, hi = x[i].min().item(), x[i].max().item()
-        same = {"vmin": lo, "vmax": hi}
-        panels = [
-            (x[i], f"{name} GT", same),
-            (x_hat[i], "recon", same),
-            (x_hat[i] - x[i], "residual", {"cmap": "RdBu_r"}),
-        ]
-        for j, (img, title, kw) in enumerate(panels):
-            im = axes[i, j].imshow(img, **kw)
-            axes[i, j].set_title(title, fontsize=9)
-            plt.colorbar(im, ax=axes[i, j], fraction=0.046)
-    for g, rgb in enumerate(rgbs):
-        axes[g, 3].imshow((rgb.permute(1, 2, 0) + 1) / 2)
-        axes[g, 3].set_title(f"adapter RGB {group_tag(g)}", fontsize=9)
-    for ax in axes.flat:
+    fig, axes = plt.subplots(1, len(rgbs), figsize=(3 * len(rgbs), 3), squeeze=False)
+    for g, (ax, rgb) in enumerate(zip(axes[0], rgbs, strict=True)):
+        ax.imshow((rgb.permute(1, 2, 0) + 1) / 2)
+        ax.set_title(f"adapter RGB {group_tag(g)}", fontsize=9)
         ax.axis("off")
     fig.tight_layout()
     fig.savefig(path, dpi=70)

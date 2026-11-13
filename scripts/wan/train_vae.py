@@ -40,7 +40,7 @@ from windinet.experiment.optim import adamw, rel_change
 from windinet.experiment.runs import provenance, write_index
 from windinet.field_adapter import GroupedAdapter, group_tag
 from windinet.wan.dit.latents import WithLatents
-from windinet.wan.figures import save_examples, save_panel, save_vae_curves
+from windinet.wan.figures import save_adapter_rgb, save_examples, save_panel, save_vae_curves
 from windinet.wan.vae.config import TrainConfig, VaeStageConfig
 from windinet.wan.vae.evaluate import evaluate, latent_stats
 from windinet.wan.vae.loss import loss_terms
@@ -154,10 +154,11 @@ def drift_per_block(vaes: list, w0: list) -> dict[str, float]:
 
 
 def write_outputs(
-    cfg: VaeStageConfig, run_dir: Path, adapter, vaes, record: dict, drift: dict, example, examples: dict
+    cfg: VaeStageConfig, run_dir: Path, adapter, vaes, record: dict, drift: dict, rgbs: list, examples: dict
 ) -> None:
     """Figures, videos, weights, metrics.json and the results index."""
-    save_panel(example, adapter.fields, run_dir / "panel.png")
+    save_panel(examples, adapter.fields, cfg.data.stats_json, cfg.data.frame_stride, run_dir / "panel.png")
+    save_adapter_rgb(rgbs, run_dir / "adapter_rgb.png")
     kind = "rollout" if cfg.data.latents else "recon"
     save_examples(examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, kind, cfg.data.frame_stride)
     save_vae_curves(record["steps"], record["history"], adapter.fields, run_dir / "curves.png", drift)
@@ -236,8 +237,10 @@ def main(
                 save_weights(run_dir, adapter, vaes, cfg.weights_dir)  # a killed run keeps its last evaluated weights
                 (run_dir / "history.json").write_text(json.dumps(history, indent=1))  # and its curve so far
 
-    final, example, examples = evaluate(adapter, test_loader, vaes, None, cfg.data.frame_stride, rollouts)
+    final, rgbs, examples = evaluate(adapter, test_loader, vaes, None, cfg.data.frame_stride, rollouts)
     log_metrics(f"test {len(test_ids)} sims, whole trajectories", final, elapsed=time.time() - t0)
+    medians = "  ".join(f"{f} {final[f'vrmse_median_{f}']:.3f}" for f in adapter.fields)
+    print(f"median over sims: VRMSE {final['vrmse_median_mean']:.3f} | {medians}")
     latent_start = None
     if vaes and not rollouts:
         final |= latent_stats(adapter, test_loader, vaes, start_vaes)
@@ -260,7 +263,7 @@ def main(
         "steps": steps,
         "n_params": sum(p.numel() for p in adapter.parameters()),
     }
-    write_outputs(cfg, run_dir, adapter, vaes, record, drift_per_block(vaes, w0) if w0 else {}, example, examples)
+    write_outputs(cfg, run_dir, adapter, vaes, record, drift_per_block(vaes, w0) if w0 else {}, rgbs, examples)
 
 
 if __name__ == "__main__":
