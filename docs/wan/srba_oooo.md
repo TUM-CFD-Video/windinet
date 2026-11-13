@@ -71,3 +71,44 @@ The lowest validation mean is `adapter_q99999` (0.0741 vs 0.0751, 1.4 % lower).
 Differences within the 0.995–0.99999 band are below 2 %, and for close results the simpler setting wins.
 Quantile 0.999 is already the dataset default in `configs/wan/srba_oooo/vae.yaml`.
 All later stages (decoders, latents, DiT) use this adapter.
+
+## Decoders behind the chosen adapter
+
+Recipe: encoder frozen, adapter `res256/pairs/adapter_q999` fixed (`train.adapter_lr=0`), one decoder per image
+(`train.vae_per_group=true`), all 8 orientations.
+1000 updates of 6 sims with one 5-frame clip each, decoder lr 1e-6 with 100 warm-up steps and cosine decay to 2 %,
+gradient clipping 5, RMSE + H1 (defaults of `configs/wan/srba_oooo/vae.yaml`, commit 1925ddc, job 23709385, 3 GPUs per arm).
+The arms differ only in the decoder start: the original Wan 2.1 VAE, or the eulermq decoders of
+`results/wan/eulermq/vae/res256/pairs/2dec_clip33` loaded by image position (`--set vae_load=...`).
+Both datasets name the vector image (x, y), but eulermq's x is the row axis and srba_oooo's x is the column axis,
+so the two vector channels are swapped relative to the image axes.
+Test VRMSE is over the 60 test sims, whole trajectories (`<run>/metrics.json`, block `final`).
+Mid-run validation is the last one (step 1000) on short samples over the 30 validation sims, divided by each sim's
+whole-trajectory variance (block `val`); the adapter's `val` block predates that division, its whole-trajectory
+validation is in the table above (0.075).
+
+| run | decoders | test VRMSE mean ± std | p | u | v | ln ρ | bench_vae VRMSE | mid-run val VRMSE mean |
+|---|---|---|---|---|---|---|---|---|
+| `res256/pairs/adapter_q999` | frozen, original Wan | 0.075 ± 0.007 | 0.048 | 0.041 | 0.153 | 0.058 | 0.073 | – |
+| `res256/pairs/2dec` | from original Wan | 0.069 ± 0.008 | 0.042 | 0.035 | 0.157 | 0.044 | 0.068 | 0.047 |
+| `res256/pairs/2dec_from_eulermq` | from eulermq `2dec_clip33` | 0.063 ± 0.006 | 0.036 | 0.031 | 0.144 | 0.041 | 0.062 | 0.047 |
+
+Test VRMSE mean per Mach number and per bubble count (block `final`; the adapter run predates these keys):
+
+| run | Mach 1.3 | Mach 1.7 | Mach 2.1 | 1 bubble | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|---|---|
+| `res256/pairs/adapter_q999` | – | – | – | – | – | – | – | – |
+| `res256/pairs/2dec` | 0.076 | 0.065 | 0.067 | 0.073 | 0.064 | 0.067 | 0.069 | 0.073 |
+| `res256/pairs/2dec_from_eulermq` | 0.066 | 0.060 | 0.063 | 0.065 | 0.058 | 0.061 | 0.064 | 0.067 |
+
+Against the frozen decoders, the test mean drops by 7.5 % from the Wan start and by 15.9 % from the eulermq start.
+The eulermq start beats the Wan start on test by 9.0 % (0.063 vs 0.069) and on every field.
+On mid-run validation it is 1.5 % lower (0.0468 vs 0.0475).
+v remains the weakest field; from the Wan start it is slightly worse than with frozen decoders (0.157 vs 0.153).
+Mach 1.3 has the highest error in both arms.
+
+Choice: `res256/pairs/2dec_from_eulermq`.
+It was made on the mid-run validation numbers, with the test numbers pointing the same way; there was no separate
+whole-trajectory validation pass.
+It continues with 33-frame clips as `res256/pairs/2dec_clip33` (job 23710941, the eulermq recipe: 2000 updates,
+8 clips of 33 frames per update over 8 GPUs, decoder lr 3e-6); results to be added.

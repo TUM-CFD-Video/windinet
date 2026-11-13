@@ -1,0 +1,56 @@
+# res256/pairs/2dec: (ln rho, p) + (u, v); one decoder per image (1e-6) from the original Wan VAE behind the fixed res256/pairs/adapter_q999; 8 orientations
+# Re-run: python scripts/wan/train_vae.py results/wan/srba_oooo/vae/res256/pairs/2dec/config.yaml --name <new name>
+name: res256/pairs/2dec
+description: (ln rho, p) + (u, v); one decoder per image (1e-6) from the original Wan VAE behind the fixed res256/pairs/adapter_q999; 8 orientations
+vae: wan
+data:
+  dataset: srba_oooo
+  h5_path: datasets/srba_oooo/train.h5
+  test_h5: datasets/srba_oooo/test.h5
+  stats_json: results/wan/srba_oooo/stats/train_256.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: 100
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 5
+  clip: true
+  frame_stride: 1
+  augment: true
+  num_workers: 2
+  latents: null
+adapter:
+  groups:
+  - - log_density
+    - pressure
+  - - velocityX
+    - velocityY
+  log_fields: null
+  clip_quantile: 0.999
+loss:
+  rmse: 1.0
+  h1: 1.0
+  latent: 0.0
+  kind: rmse_h1
+train:
+  steps: 1000
+  batch_sims: 6
+  micro_batch: 6
+  adapter_lr: 0.0
+  vae_parts: decoder
+  precision: fp32
+  checkpointing: true
+  vae_per_group: true
+  vae_lr: 1.0e-06
+  io_lr: null
+  warmup_steps: 100
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 100
+  log_every: 10
+  seed: 0
+load: results/wan/srba_oooo/vae/res256/pairs/adapter_q999
+vae_load: null
+results_dir: results/wan/srba_oooo/vae
+weights_dir: /scratch/project_465003416/lc_work/weights
