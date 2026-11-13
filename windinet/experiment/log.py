@@ -46,6 +46,9 @@ def log_metrics(tag: str, metrics: dict[str, float], loss: float | None = None, 
     if "power_high_mean" in metrics:
         power = "  ".join(f"{b} {metrics[f'power_{b}_mean']:.2f}" for b in BINS)
         lines.append(f"{pad} | power      {power}  (prediction / truth, 1 = no blur)")
+    if "teacher_cos" in metrics:
+        close = f"velocity cos {metrics['teacher_cos']:.4f}  rel MSE {metrics['teacher_rel_mse']:.4f}"
+        lines.append(f"{pad} | teacher    {close} (fixed val batch)")
     for prefix, label in (("vae", "VAE share"), ("dit", "DiT share"), ("wan", "Wan alone")):
         if f"{prefix}_vrmse_mean" in metrics:
             sub = {k[len(prefix) + 1 :]: v for k, v in metrics.items() if k.startswith(f"{prefix}_")}

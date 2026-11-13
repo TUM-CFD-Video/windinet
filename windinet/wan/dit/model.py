@@ -16,6 +16,7 @@ from torch import nn
 from transformers import T5TokenizerFast, UMT5EncoderModel
 
 from windinet.wan import REPO
+from windinet.wan.dit.prune import shrink
 
 
 def encode_text(prompts: list[str], device: torch.device | str, repo: str = REPO, max_len: int = 512) -> torch.Tensor:
@@ -88,19 +89,22 @@ class WanDiT:
         checkpointing: bool = False,
         num_latents: int = 1,
         shift: float = 3.0,
+        pruned: dict | None = None,
     ):
         # local_files_only: the sharded loader would otherwise ask the Hub even in offline mode
         self.transformer = WanTransformer3DModel.from_pretrained(
             repo, subfolder="transformer", torch_dtype=dtype, local_files_only=True
         )
-        self.patchify_params = widen_patchify(self.transformer, num_latents) if num_latents > 1 else []
+        self.widened = num_latents > 1
+        if self.widened:
+            widen_patchify(self.transformer, num_latents)
+        if pruned:  # the shapes of a pruned run (windinet.wan.dit.prune), its weights come from `load`
+            shrink(self.transformer, pruned)
         self.transformer.to(device).requires_grad_(train)
         if load:
             self.transformer.load_state_dict(torch.load(load, map_location=device))
         if checkpointing:
             self.transformer.enable_gradient_checkpointing()
-        widened = {id(p) for p in self.patchify_params}
-        self.trainable_params = [p for p in self.transformer.parameters() if p.requires_grad and id(p) not in widened]
         self.scheduler = UniPCMultistepScheduler.from_pretrained(
             repo, subfolder="scheduler", local_files_only=True, flow_shift=shift
         )
@@ -108,6 +112,18 @@ class WanDiT:
         self.transformer.condition_embedder.time_embedder.register_forward_hook(self.modulation)
         self.device, self.dtype = torch.device(device), dtype
         self.delta_scale: torch.Tensor | None = None  # [2, C] when it generates scaled changes (dit/delta.py)
+        self.noise: torch.Tensor | None = None  # [C, F', h, w] every sample starts from (cfg.noise); None = drawn
+
+    @property
+    def patchify_params(self) -> list[nn.Parameter]:
+        """The widened patchify and head: zero-initialised streams, their own lr."""
+        t = self.transformer
+        return [*t.patch_embedding.parameters(), *t.proj_out.parameters()] if self.widened else []
+
+    @property
+    def trainable_params(self) -> list[nn.Parameter]:
+        widened = {id(p) for p in self.patchify_params}
+        return [p for p in self.transformer.parameters() if p.requires_grad and id(p) not in widened]
 
     def velocity(self, latents: torch.Tensor, timestep: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
         """The transformer's prediction (noise - x0) at `timestep` in 0..1000, one per sample [B] or per latent frame
@@ -144,7 +160,8 @@ class WanDiT:
         seeds = seed if isinstance(seed, list) else [seed]
         per = (shape[0] // len(seeds), *shape[1:])
         gens = [torch.Generator(self.device).manual_seed(s) for s in seeds]
-        noise = torch.cat([torch.randn(per, generator=g, device=self.device) for g in gens])
+        drawn = lambda: torch.cat([torch.randn(per, generator=g, device=self.device) for g in gens])  # noqa: E731
+        noise = drawn() if self.noise is None else self.noise.detach().expand(shape).clone()
         self.scheduler.set_timesteps(steps, device=self.device)
         timesteps, start = self.scheduler.timesteps, 0
         latents = noise
@@ -167,7 +184,7 @@ class WanDiT:
                 v = v_uncond + guidance * (v - v_uncond)
             if stochastic:  # x = (1 - s) x0 + s noise and v = noise - x0 give both estimates
                 sigma, nxt = sigmas[i : i + 2]
-                fresh = torch.cat([torch.randn(per, generator=g, device=self.device) for g in gens])
+                fresh = drawn() if self.noise is None else noise
                 x0, eps = latents - sigma * v, latents + (1 - sigma) * v
                 latents = (1 - nxt) * x0 + nxt * ((1 - stochastic**2) ** 0.5 * eps + stochastic * fresh)
             else:

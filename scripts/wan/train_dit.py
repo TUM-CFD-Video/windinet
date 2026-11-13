@@ -14,7 +14,7 @@ latent frames stay clean at timestep 0 and are left out of the loss. train.pixel
 latents, L1 + gradient-difference L1 between the decoded clean-latent estimate and the decoded clean latent.
 train.batch_sims is the global batch, split over
 the ranks; evaluation is sharded; rank 0 logs and writes <results_dir>/<name>/{config.yaml, metrics.json, curves.png,
-rollout_gamma<g>.mp4 + example_gamma<g>.pt for the lowest and the highest gamma test sim, dit.pt,
+rollout_<label>.mp4 + example_<label>.pt per `examples` (gamma<g>, worst, best), dit.pt,
 cond.pt, dit_<step>.pt per eval point} (mp4, examples and weights in weights_dir, symlinked) and regenerates the
 results_dir index. `load` + `load_step` evaluate (or continue from) an eval point. With train.ema, every evaluation
 and every saved weight file is the EMA of the weights, and the raw weights are evaluated beside it (raw_* metrics).
@@ -22,6 +22,7 @@ and every saved weight file is the EMA of the weights, and the raw weights are e
 
 from __future__ import annotations
 
+import copy
 import json
 import shutil
 import time
@@ -30,11 +31,11 @@ from pathlib import Path
 import torch
 import typer
 import yaml
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from windinet.eulermq.data import FrameSampler, endless, parse_gamma
 from windinet.experiment.config import start_run
-from windinet.experiment.distributed import all_mean, rank, shard, sync, world
+from windinet.experiment.distributed import all_mean, all_sum, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress
 from windinet.experiment.optim import EMA, adamw
 from windinet.experiment.runs import provenance, write_index
@@ -42,10 +43,12 @@ from windinet.field_adapter import load_adapter
 from windinet.wan.dit import conditioning
 from windinet.wan.dit.config import DitStageConfig
 from windinet.wan.dit.delta import scales, to_delta
-from windinet.wan.dit.evaluate import evaluate
+from windinet.wan.dit.distill import Teacher, closeness
+from windinet.wan.dit.evaluate import evaluate, render
 from windinet.wan.dit.flow import clean_estimate, draw_sigmas, frame_sigmas, gated, noised, velocity_target
-from windinet.wan.dit.latents import LatentDataset, encode_info, with_augmentations
+from windinet.wan.dit.latents import LatentDataset, encode_info, parse_latent_id, with_augmentations
 from windinet.wan.dit.model import WanDiT, autocast
+from windinet.wan.dit.prune import calibrate, choose, compose, importance, shrink
 from windinet.wan.dit.rollout import noise_seeds, rollout
 from windinet.wan.figures import save_dit_curves, save_examples
 from windinet.wan.vae.loss import pixel_loss
@@ -57,14 +60,21 @@ def train_loader(cfg: DitStageConfig, ids: list[str]) -> DataLoader:
     """This rank's share of the global batch, shuffled: whole or truncated latent trajectories, or random windows of
     latents.ar_window frames, from every file the folder holds per sim (symmetric copies, later starts)."""
     ids = with_augmentations(cfg.latents.dir, shard(ids))
-    data = LatentDataset(cfg.latents.dir, "train", ids, cfg.latents.frames, cfg.latents.ar_window)
-    workers = cfg.data.num_workers
-    return DataLoader(data, max(1, cfg.train.batch_sims // world), shuffle=True, num_workers=workers)
+    masks = cfg.train.detail_masks if cfg.train.detail_weight else None
+    data = LatentDataset(cfg.latents.dir, "train", ids, cfg.latents.frames, cfg.latents.ar_window, masks)
+    sampler = None
+    if cfg.train.sim_weights:
+        w = json.loads(Path(cfg.train.sim_weights).read_text())
+        sampler = WeightedRandomSampler([w[parse_latent_id(i)[0]] for i in ids], len(ids))
+    batch, workers = max(1, cfg.train.batch_sims // world), cfg.data.num_workers
+    return DataLoader(data, batch, shuffle=sampler is None, sampler=sampler, num_workers=workers)
 
 
-def eval_loaders(cfg: DitStageConfig, split: str, h5: str, ids: list[str]) -> tuple[DataLoader, DataLoader]:
+def eval_loaders(
+    cfg: DitStageConfig, split: str, h5: str, ids: list[str], sharded: bool = True
+) -> tuple[DataLoader, DataLoader]:
     """The latents (first frame + gamma) and the simulations (ground truth) of this rank's sims, same order."""
-    ids = shard(ids)
+    ids = shard(ids) if sharded else ids
     latents = LatentDataset(cfg.latents.dir, split, ids, cfg.latents.frames)
     fields = FrameSampler(h5, ids, None, 0, stride=cfg.data.frame_stride)  # whole trajectories; evaluate() truncates
     batch, workers = cfg.sampling.batch, cfg.data.num_workers
@@ -92,62 +102,111 @@ def build(cfg: DitStageConfig, device: torch.device) -> tuple:
     vaes = [WanVAE(device=device, channels=adapter.channels, checkpointing=checkpointing) for _ in range(n_vaes)]
     load_weights(run, adapter, vaes, device)
     adapter.requires_grad_(False)  # frozen in this stage; the pixel loss back-propagates through it
+    dit, cond = load_dit(cfg, device, cfg.load, cfg.load_step, len(groups), train=cfg.train.steps > 0)
+    return adapter, vaes, dit, cond
+
+
+def load_dit(cfg: DitStageConfig, device, run: str | None, step: int | None, num_latents: int, train: bool) -> tuple:
+    """The transformer of `run` (cut to its prune.json if it was pruned; None = pretrained) and its conditioning."""
     dtype = torch.bfloat16 if cfg.model.precision == "bf16" else torch.float32
-    load = Path(cfg.load) if cfg.load else None
+    load = Path(run) if run else None
+    pruned = load and (load / "prune.json").exists()
     dit = WanDiT(
         device,
         dtype,
         cfg.model.repo,
-        load / f"dit{tag(cfg.load_step)}.pt" if load else None,
-        train=cfg.train.steps > 0,
-        checkpointing=cfg.model.checkpointing,
-        num_latents=len(groups),
+        load / f"dit{tag(step)}.pt" if load else None,
+        train=train,
+        checkpointing=cfg.model.checkpointing and train,
+        num_latents=num_latents,
         shift=cfg.sampling.shift,
+        pruned=json.loads((load / "prune.json").read_text())["spec"] if pruned else None,
     )
     cond = conditioning.build(cfg.cond, device, dit.transformer.condition_embedder)
-    if load and (load / f"cond{tag(cfg.load_step)}.pt").exists():
-        state = torch.load(load / f"cond{tag(cfg.load_step)}.pt", map_location=device)
+    if load and (load / f"cond{tag(step)}.pt").exists():
+        state = torch.load(load / f"cond{tag(step)}.pt", map_location=device)
         if state.keys() == cond.state_dict().keys():
             cond.load_state_dict(state)
         else:
             print(f"{load} conditioned the DiT differently ({cfg.cond.kind} now): the conditioning starts fresh")
     sync(cond)  # a fresh embedding is random: every rank takes rank 0's
-    return adapter, vaes, dit, cond
+    cond.requires_grad_(train)
+    if cfg.noise != "random":
+        learned = train and cfg.noise == "learned"
+        dit.noise = torch.nn.Parameter(shared_noise(cfg, load, step).to(device), requires_grad=learned)
+    return dit, cond
 
 
-def train_step(cfg: DitStageConfig, dit: WanDiT, cond, adapter, vaes, latents, gamma, opt, sched, params) -> dict:
+def shared_noise(cfg: DitStageConfig, load: Path | None, step: int | None) -> torch.Tensor:
+    """The noise every sample shares: the loaded run's noise.pt, else one seeded N(0, 1) draw of a latent's shape."""
+    saved = load / f"noise{tag(step)}.pt" if load else None
+    if saved and saved.exists():
+        return torch.load(saved, map_location="cpu")
+    z = torch.load(next((Path(cfg.latents.dir) / "train").glob("*.pt")))["latents"][:, :, : cfg.latents.frames]
+    return torch.randn(z.flatten(0, 1).shape, generator=torch.Generator().manual_seed(cfg.sampling.seed))
+
+
+def states(cfg: DitStageConfig, dit: WanDiT, cond, z: torch.Tensor, g: torch.Tensor) -> tuple:
+    """A micro-batch's training inputs: x_σ at drawn sigmas, train.unrolled of them replaced by the sampler's own state
+    (call c of an n-step chain from noise, Euler steps, without gradient). Returns x_σ, sigma [B, F'], the noise,
+    the frames in the loss and how many lead samples are unrolled."""
+    t = cfg.train
+    noise = torch.randn_like(z) if dit.noise is None else dit.noise.expand_as(z)
+    draws = draw_sigmas(z.shape[0] * z.shape[2], z.device, t.sigma_mean, t.sigma_std, t.sigma_shift)
+    sigma, target = frame_sigmas(draws.view(len(z), -1), cfg.cond.context, t.history_noise)
+    x_sigma = noised(z, noise, sigma)
+    k = round((t.unrolled or 0) * len(z))
+    if k:
+        n = int(torch.randint(t.unrolled_steps[0], t.unrolled_steps[1] + 1, ()))
+        c = int(torch.randint(2, n + 1, ()))
+        s, shift = torch.linspace(1, 0, n + 1)[:c], cfg.sampling.shift
+        sigmas = (shift * s / (1 + (shift - 1) * s)).tolist()  # the sampler's, as UniPC uses them
+        levels = [(sigma[:k] > 0) * level for level in sigmas]  # the context stays clean
+        sigma = sigma.clone()  # the noise mix above keeps sigma for its gradient (learned noise)
+        sigma[:k] = levels[-1]
+        x = noised(z[:k], noise[:k], levels[0])
+        with torch.no_grad(), autocast(cfg.model.precision, dit.device):
+            for a, b in zip(levels, levels[1:], strict=False):
+                x = clean_estimate(x, dit.velocity(x, a * 1000, cond(g[:k])), a - b)  # x + (b - a) v
+        x_sigma[:k] = x
+    return x_sigma, sigma, noise, target, k
+
+
+def train_step(
+    cfg: DitStageConfig, dit: WanDiT, cond, adapter, vaes, latents, gamma, opt, sched, params, teacher, detail=None
+):
     """One update: micro-batched flow-matching loss (train.unrolled of the samples on the sampler's own states), plus
-    train.pixel_loss on the decoded clean-latent estimates of the lowest-sigma latents, gradients averaged over ranks,
-    clip, step. Returns the terms (means over the batch)."""
+    train.pixel_loss on the decoded clean-latent estimates of the lowest-sigma latents, plus with a `teacher` the
+    distillation terms at the same inputs, gradients averaged over ranks, clip, step. `detail` [B, F', h, w]: the
+    latent cells' detail shares (train.detail_weight). Returns the terms (means over the batch)."""
     opt.zero_grad(set_to_none=True)
-    z_all, terms = latents.flatten(1, 2), {"loss": 0.0, "pixel": 0.0, "front": 0.0}  # a sample's latents in channels
+    z_all = latents.flatten(1, 2)  # a sample's latents in channels
+    terms = {"loss": 0.0, "pixel": 0.0, "front": 0.0, "flow": 0.0, "kd_velocity": 0.0, "kd_features": 0.0}
     if dit.delta_scale is not None:
         z_all = to_delta(z_all, dit.delta_scale)
-    t, groups = cfg.train, latents.shape[1]
-    for z, g in zip(z_all.split(t.micro_batch), gamma.split(t.micro_batch), strict=True):
-        noise = torch.randn_like(z)
-        draws = draw_sigmas(z.shape[0] * z.shape[2], z.device, t.sigma_mean, t.sigma_std, t.sigma_shift)
-        sigma, target = frame_sigmas(draws.view(len(z), -1), cfg.cond.context, t.history_noise)
-        x_sigma = noised(z, noise, sigma)
-        k = round((t.unrolled or 0) * len(z))
-        if k:  # these start from the sampler's own state: call c of an n-step chain from noise, Euler steps
-            n = int(torch.randint(t.unrolled_steps[0], t.unrolled_steps[1] + 1, ()))
-            c = int(torch.randint(2, n + 1, ()))
-            s, shift = torch.linspace(1, 0, n + 1)[:c], cfg.sampling.shift
-            sigmas = (shift * s / (1 + (shift - 1) * s)).tolist()  # the sampler's, as UniPC uses them
-            levels = [(sigma[:k] > 0) * level for level in sigmas]  # the context stays clean
-            sigma[:k] = levels[-1]
-            x = noised(z[:k], noise[:k], levels[0])
-            with torch.no_grad(), autocast(cfg.model.precision, dit.device):
-                for a, b in zip(levels, levels[1:], strict=False):
-                    x = clean_estimate(x, dit.velocity(x, a * 1000, cond(g[:k])), a - b)  # x + (b - a) v
-            x_sigma[:k] = x
+    t, groups, kd = cfg.train, latents.shape[1], cfg.distill
+    mb = t.micro_batch
+    for i, (z, g) in enumerate(zip(z_all.split(mb), gamma.split(mb), strict=True)):
+        x_sigma, sigma, noise, target, k = states(cfg, dit, cond, z, g)
         with autocast(cfg.model.precision, dit.device):
             v = dit.velocity(x_sigma, sigma * 1000, cond(g))
-        err = (v - velocity_target(z, noise)).square().mean((1, 3, 4))  # per latent frame
+        err = (v - velocity_target(z, noise)).square().mean(1)  # per latent frame and cell
         if k:  # their target is the clean latent itself, the noise is no longer the gap to it
-            err[:k] = (clean_estimate(x_sigma[:k], v[:k], sigma[:k]) - z[:k]).square().mean((1, 3, 4))
-        loss = err[target].mean() * (len(z) / len(z_all))
+            err[:k] = (clean_estimate(x_sigma[:k], v[:k], sigma[:k]) - z[:k]).square().mean(1)
+        share = len(z) / len(z_all)
+        w = 1 + t.late_weight * torch.linspace(0, 1, err.shape[1], device=err.device)[:, None, None]  # per frame
+        if detail is not None:
+            w = w * (1 + t.detail_weight * detail[i * mb : (i + 1) * mb])
+        loss = (err * w)[target].mean() / w.expand_as(err)[target].mean() * share
+        if teacher:  # on the same inputs, the unrolled ones being the student's own sampler states
+            with autocast(cfg.model.precision, dit.device):
+                v_teacher = teacher.velocity(x_sigma, sigma, g)
+            parts = {"flow": loss, "kd_velocity": (v - v_teacher).square().mean((1, 3, 4))[target].mean() * share}
+            if kd.features:
+                parts["kd_features"] = teacher.feature_loss() * share
+            loss = kd.flow * loss + kd.velocity * parts["kd_velocity"] + kd.features * parts["kd_features"]
+            for key, part in parts.items():
+                terms[key] += part.item()
         sel = gated(sigma, t.pixel_gate, t.pixel_gate_samples) if t.pixel_loss else []
         if len(sel):
             x0_hat = clean_estimate(x_sigma[sel], v[sel], sigma[sel]).unflatten(1, (groups, -1))
@@ -166,12 +225,78 @@ def train_step(cfg: DitStageConfig, dit: WanDiT, cond, adapter, vaes, latents, g
     return terms
 
 
-def validate(dit, cond, adapter, vaes, val_loaders, train_loaders, gammas, cfg: DitStageConfig) -> dict:
-    """Rollout metrics on the val sims plus, as train_*, the means on a few training sims (the gap = overfitting)."""
+def validate(dit, cond, adapter, vaes, val_loaders, train_loaders, gammas, cfg: DitStageConfig, close=None) -> dict:
+    """Rollout metrics on the val sims plus, as train_*, the means on a few training sims (the gap = overfitting),
+    and with `close` the closeness to the teacher on its fixed batch."""
     metrics, _ = evaluate(dit, cond, adapter, vaes, val_loaders, gammas, cfg)
     train, _ = evaluate(dit, cond, adapter, vaes, train_loaders, gammas, cfg)
     train = {f"train_{k}": v for k, v in train.items() if "gamma" not in k and k not in ("vrmse_per_frame", "per_sim")}
-    return {k: v for k, v in metrics.items() if k != "per_sim"} | train  # per-sim values: the test only
+    return {k: v for k, v in metrics.items() if k != "per_sim"} | train | (close() if close else {})
+
+
+def probe_batch(cfg: DitStageConfig, ids: list[str], device: torch.device) -> list[tuple]:
+    """The fixed batch on which the closeness to the teacher is measured: the first distill.probe_sims val sims at
+    the sigmas of a 4-step chain, one fixed noise; micro-batches of (x_σ, sigma, gamma)."""
+    n = cfg.distill.probe_sims if cfg.distill else 8
+    data = LatentDataset(cfg.latents.dir, "val", ids[:n], cfg.latents.frames)
+    noise, out = torch.Generator().manual_seed(0), []
+    for latents, gamma in DataLoader(data, cfg.train.micro_batch):
+        z = latents.flatten(1, 2)
+        for level in (1.0, 0.9, 0.75, 0.5):
+            sigma = (torch.arange(z.shape[2]) >= cfg.cond.context).float().expand(len(z), -1) * level
+            out.append((noised(z, torch.randn(z.shape, generator=noise), sigma).to(device), sigma.to(device), gamma))
+    return [(x, sigma, gamma.to(device)) for x, sigma, gamma in out]
+
+
+@torch.no_grad()
+def probe_velocity(cfg: DitStageConfig, velocity, probe: list[tuple]) -> torch.Tensor:
+    """`velocity(x, sigma, gamma)` on every micro-batch of the probe."""
+    with autocast(cfg.model.precision, probe[0][0].device):
+        return torch.cat([velocity(*batch) for batch in probe])
+
+
+def n_params(module: torch.nn.Module) -> int:
+    return sum(p.numel() for p in module.parameters())
+
+
+def prune_model(cfg: DitStageConfig, dit: WanDiT, cond, batches, probe: list[tuple], before: dict | None) -> tuple:
+    """Cut the loaded transformer to cfg.prune: statistics on train sims (GT-noised and sampler-chain states, as in
+    training), importance, the cut with the least-squares refit. Returns the spec (composed with the loaded run's)
+    and a report: parameters, block-drop errors and the closeness to the unpruned model with and without the refit."""
+    p, t, mb, start = cfg.prune, dit.transformer, cfg.train.micro_batch, time.time()
+    inputs = []
+    while len(inputs) * mb < p.calib_sims // world:
+        latents, gamma, *_ = next(batches)
+        z_all, gamma = latents.flatten(1, 2).to(dit.device), gamma.to(dit.device)
+        for z, g in zip(z_all.split(mb), gamma.split(mb), strict=True):
+            inputs.append(states(cfg, dit, cond, z, g)[:2] + (g,))
+
+    def forward(x: torch.Tensor, sigma: torch.Tensor, gamma: torch.Tensor) -> torch.Tensor:
+        return dit.velocity(x, sigma * 1000, cond(gamma))
+
+    with autocast(cfg.model.precision, dit.device):
+        stats = calibrate(t, p, lambda batch: forward(*batch), inputs)
+    all_sum(*(stats["grams"][k] for k in sorted(stats["grams"])), stats["residual"], stats["drop"])
+    scores = importance(t, p, stats)
+    local = choose(t, p, scores)
+    unpruned, report = probe_velocity(cfg, forward, probe), {"params_before": n_params(t)}
+    variants = [(False, copy.deepcopy(t) if p.compensate else t)] + [(True, t)] * p.compensate  # plain on a copy
+    for refit, cut in variants:
+        shrink(cut, local | {"bias": local["bias"] and refit}, scores, refit)
+        dit.transformer = cut
+        report[f"close_{'refit' if refit else 'plain'}"] = closeness(probe_velocity(cfg, forward, probe), unpruned)
+    if p.compensate and report["close_refit"]["teacher_rel_mse"] > report["close_plain"]["teacher_rel_mse"]:
+        t = variants[0][1]  # the refit did not help on the probe: the plain cut goes on
+        local["bias"] = False
+    report["refit_kept"] = p.compensate and t is not variants[0][1]
+    dit.transformer = t
+    del variants
+    sync(t)  # the cut is deterministic; guard against rank-wise rounding in the solves anyway
+    report |= {"params": n_params(dit.transformer), "blocks": local["blocks"], "seconds": round(time.time() - start)}
+    if p.depth and p.blocks == "scan":
+        report["block_drop"] = scores["drop"]
+    print(f"pruned to {report['params'] / 1e6:.1f} M parameters: {report}")
+    return compose(before, local), report
 
 
 def as_raw(metrics: dict) -> dict:
@@ -207,6 +332,8 @@ def save_run(run_dir: Path, dit: WanDiT, cond, weights_dir: str | None, step: in
     save_state(run_dir, f"dit{tag(step)}.pt", dit.transformer.state_dict(), weights_dir)
     if list(cond.parameters()):
         save_state(run_dir, f"cond{tag(step)}.pt", cond.state_dict(), weights_dir)
+    if dit.noise is not None:
+        torch.save(dit.noise.detach().cpu(), run_dir / f"noise{tag(step)}.pt")  # 1.7 MB: in the run folder, gitignored
 
 
 def main(
@@ -236,6 +363,26 @@ def main(
     )
 
     adapter, vaes, dit, cond = build(cfg, device)
+    loaded = Path(cfg.load or "") / "prune.json"
+    spec = json.loads(loaded.read_text())["spec"] if cfg.load and loaded.exists() else None
+    probe = probe_batch(cfg, val_ids, device) if cfg.prune or cfg.distill else []
+    prune_report = {}
+    if cfg.prune:
+        spec, prune_report = prune_model(cfg, dit, cond, batches, probe, spec)
+    if spec and rank == 0:  # a pruned run keeps its shapes beside its weights
+        (run_dir / "prune.json").write_text(json.dumps({"spec": spec, "report": prune_report}, indent=1))
+    teacher, close = None, None
+    if cfg.distill:
+        teacher_dit, teacher_cond = load_dit(cfg, device, cfg.distill.teacher, None, len(adapter.groups), False)
+        teacher = Teacher(teacher_dit, teacher_cond, dit, spec, cfg.distill.features > 0)
+        reference = probe_velocity(cfg, teacher.velocity, probe)
+
+        def close() -> dict:
+            mine = probe_velocity(cfg, lambda x, sigma, g: dit.velocity(x, sigma * 1000, cond(g)), probe)
+            return closeness(mine, reference)
+
+        sizes = n_params(dit.transformer) / 1e6, n_params(teacher_dit.transformer) / 1e6
+        print("student {:.1f} M, teacher {:.1f} M parameters".format(*sizes))
     if cfg.latents.delta:  # the delta scale of the run continued from, else measured on the train latents
         loaded = Path(cfg.load or "") / "delta.pt"
         if cfg.load and loaded.exists():
@@ -252,7 +399,7 @@ def main(
             cfg, dit, cond, {"test": (test_h5, test_ids), "val": (val_h5, eval_ids), "train": (train_h5, train_ids)}
         )
         return
-    init = validate(dit, cond, adapter, vaes, val_loaders, train_eval_loaders, gammas, cfg)
+    init = validate(dit, cond, adapter, vaes, val_loaders, train_eval_loaders, gammas, cfg, close)
     log_metrics("init", init)
 
     groups = [{"params": dit.trainable_params, "lr": cfg.train.lr}]
@@ -260,6 +407,8 @@ def main(
         groups.append({"params": dit.patchify_params, "lr": cfg.train.patchify_lr or cfg.train.lr})
     if list(cond.parameters()):
         groups.append({"params": list(cond.parameters()), "lr": cfg.train.lr})
+    if cfg.noise == "learned":
+        groups.append({"params": [dit.noise], "lr": cfg.train.noise_lr})
     opt, sched = adamw(groups, cfg.train.steps, cfg.train.warmup_steps, cfg.train.lr_floor, cfg.train.weight_decay)
     params = [p for g in groups for p in g["params"]]
     moments = Path(cfg.load or "") / "opt.pt"
@@ -273,12 +422,26 @@ def main(
     ema = EMA(params, cfg.train.ema) if cfg.train.ema and cfg.train.steps else None  # eval only: nothing to average
     steps, history = [], []  # per update / per evaluation
     aux = [k for k in ("pixel", "front") if getattr(cfg.train, f"{k}_loss")]  # extra terms in the progress line
+    aux += ["flow", "kd_velocity", "kd_features"] if teacher else []
     metrics = init
     t0 = t_log = time.time()
     for step in range(1, cfg.train.steps + 1):
-        latents, gamma = next(batches)
+        latents, gamma, *detail = next(batches)
         lr = opt.param_groups[0]["lr"]  # this update's: the cosine makes a flat curve ambiguous without it
-        terms = train_step(cfg, dit, cond, adapter, vaes, latents.to(device), gamma.to(device), opt, sched, params)
+        terms = train_step(
+            cfg,
+            dit,
+            cond,
+            adapter,
+            vaes,
+            latents.to(device),
+            gamma.to(device),
+            opt,
+            sched,
+            params,
+            teacher,
+            detail[0].to(device) if detail else None,
+        )
         if ema:
             ema.update()
         steps.append({"step": step, "lr": lr, **terms})
@@ -294,15 +457,16 @@ def main(
                 [g["lr"] for g in opt.param_groups],
                 [],
                 per_step * (cfg.train.steps - step),
-                " ".join(f"{k} {sum(s[k] for s in recent) / len(recent):.4f}" for k in aux),
+                f"{per_step:.1f} s/update "
+                + " ".join(f"{k} {sum(s[k] for s in recent) / len(recent):.4f}" for k in aux),
             )
         if step % cfg.train.eval_every == 0 or step == cfg.train.steps:
-            raw = validate(dit, cond, adapter, vaes, val_loaders, train_eval_loaders, gammas, cfg) if ema else {}
+            raw = validate(dit, cond, adapter, vaes, val_loaders, train_eval_loaders, gammas, cfg, close) if ema else {}
             if raw:
                 log_metrics(f"raw {step}", raw)
             if ema:
                 ema.swap()
-            metrics = validate(dit, cond, adapter, vaes, val_loaders, train_eval_loaders, gammas, cfg)
+            metrics = validate(dit, cond, adapter, vaes, val_loaders, train_eval_loaders, gammas, cfg, close)
             history.append({"step": step, "lr": lr, "train": terms, **metrics, **as_raw(raw)})
             log_metrics(f"val {step} (lr {lr:.1e})", metrics, terms["loss"], time.time() - t0)
             if rank == 0 and step < cfg.train.steps:  # the last point is the final dit.pt below
@@ -321,6 +485,13 @@ def main(
     log_metrics(f"test {len(test_ids)} sims", final, elapsed=time.time() - t0)
     if rank != 0:
         return
+    ranked = sorted(final["per_sim"], key=lambda sid: final["per_sim"][sid]["vrmse"])
+    picks = {k: ranked[i] for k, i in (("worst", -1), ("best", 0)) if k in cfg.examples}
+    examples = {g: e for g, e in examples.items() if "gamma" in cfg.examples}
+    if picks:
+        loaders = eval_loaders(cfg, "test", test_h5, list(picks.values()), sharded=False)
+        sims = render(dit, cond, adapter, vaes, loaders, cfg)
+        examples |= {k: sims[sid] for k, sid in picks.items()}
     save_examples(
         examples, adapter.fields, cfg.data.stats_json, run_dir, cfg.weights_dir, "rollout", cfg.data.frame_stride
     )
@@ -337,6 +508,8 @@ def main(
         "history": history,
         "steps": steps,
         "n_params": sum(p.numel() for p in params),
+        "transformer_params": n_params(dit.transformer),
+        "prune": prune_report,
     }
     (run_dir / "metrics.json").write_text(json.dumps(record, indent=1))
     write_index(Path(cfg.results_dir))

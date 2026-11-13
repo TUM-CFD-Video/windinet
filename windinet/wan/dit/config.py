@@ -104,6 +104,7 @@ class DitTrainConfig(_Base):
     batch_sims: int = Field(default=32, description="simulations per update (under torchrun: global, split over ranks)")
     micro_batch: int = Field(default=4, description="simulations per backward pass per process")
     lr: float = Field(default=1e-5, description="peak lr of the transformer and the conditioning")
+    noise_lr: float = Field(default=1e-3, description="peak lr of the shared noise with noise: learned")
     patchify_lr: float | None = Field(
         default=None,
         description="peak lr of the patchify and unpatchify layers when widened for several latents (widen_patchify); "
@@ -175,6 +176,26 @@ class DitTrainConfig(_Base):
     unrolled_steps: tuple[int, int] = Field(
         default=(2, 5), description="range of the chain length n (uniform); the trained call k is uniform in 2..n"
     )
+    late_weight: float = Field(
+        default=0.0,
+        ge=0,
+        description="flow loss of latent frame f weighted 1 + late_weight * f / (F - 1), normalised to mean 1 over the "
+        "target frames: later frames count more; 0 = all equal",
+    )
+    detail_weight: float = Field(
+        default=0.0,
+        ge=0,
+        description="flow loss of each latent cell weighted 1 + detail_weight * its detail share (detail_masks), "
+        "normalised to mean 1 like late_weight: fronts and vortices count more; 0 = all equal",
+    )
+    detail_masks: str | None = Field(
+        default=None, description="folder of per-sim detail shares [F', h, w] (scripts/wan/detail_masks.py)"
+    )
+    sim_weights: str | None = Field(
+        default=None,
+        description="JSON {sim id: weight}: training sims drawn with these weights (their symmetric copies too) "
+        "instead of uniformly; None = uniform",
+    )
     eval_every: int = Field(default=1000, description="validation rollouts (and weight save) every n updates")
     log_every: int = Field(default=10, description="training-progress line every n updates")
     seed: int = Field(default=0, description="torch seed (+ rank under torchrun)")
@@ -210,6 +231,48 @@ class SamplingConfig(_Base):
     )
 
 
+class PruneConfig(_Base):
+    """Structured pruning of the loaded transformer before training (windinet/wan/dit/prune.py); null = keep."""
+
+    depth: int | None = Field(default=None, ge=2, description="blocks kept, the first and the last among them")
+    blocks: Literal["spread", "scan"] = Field(
+        default="spread",
+        description="which blocks: evenly spaced (every other at half depth), or the lowest velocity error when "
+        "dropped alone on the calibration states",
+    )
+    hidden: int | None = Field(
+        default=None, description="residual-stream channels kept (Minitron embedding axis); heads and FFN keep theirs"
+    )
+    heads: int | None = Field(default=None, ge=1, description="self-attention heads kept per block")
+    cross_heads: int | None = Field(default=None, ge=1, description="cross-attention heads kept per block")
+    ffn: int | None = Field(default=None, ge=1, description="FFN channels kept per block")
+    calib_sims: int = Field(
+        default=64, description="train sims of the calibration pass (global): their GT-noised and sampler-chain states"
+    )
+    compensate: bool = Field(
+        default=True,
+        description="least-squares refit of every layer whose inputs were cut on the calibration activations; a "
+        "kept block followed by dropped ones adds their mean residual",
+    )
+
+
+class DistillConfig(_Base):
+    """Knowledge distillation from a frozen teacher run, evaluated on the fly without gradients."""
+
+    teacher: str = Field(description="DiT run folder of the teacher: its dit.pt and cond.pt")
+    flow: float = Field(default=1.0, ge=0, description="weight of the flow loss on the ground truth (the anchor)")
+    velocity: float = Field(
+        default=1.0, ge=0, description="weight of the MSE to the teacher's velocity at the same inputs and states"
+    )
+    features: float = Field(
+        default=0.0,
+        ge=0,
+        description="weight of the relative MSE between each block's output and the teacher's at the matching depth "
+        "(the end of its group of dropped blocks; the kept channels when the stream is pruned)",
+    )
+    probe_sims: int = Field(default=8, description="val sims of the fixed batch on which the closeness is tracked")
+
+
 class DitStageConfig(_Base):
     name: str = Field(description="short run name: the results folder")
     description: str = Field(min_length=1, description="one sentence: what this run tests; shown in the results index")
@@ -224,6 +287,8 @@ class DitStageConfig(_Base):
     load_step: int | None = Field(
         default=None, description="with load: this eval point (dit_<step>.pt, cond_<step>.pt), not the final dit.pt"
     )
+    prune: PruneConfig | None = Field(default=None, description="shrink the loaded transformer before training")
+    distill: DistillConfig | None = Field(default=None, description="train against a frozen teacher run")
     benchmark: bool = Field(
         default=False,
         description="also cfd_bench's metrics (Harish): RMSE, VRMSE, 1-SSIM, MLW on frames 10, 20, ..., 100 in Li's "
@@ -234,6 +299,17 @@ class DitStageConfig(_Base):
         ge=0,
         description="first original frame the per-field metrics and frame windows score (never the context frames): "
         "the same frames for every context size; 0 = all predicted frames",
+    )
+    examples: list[Literal["gamma", "worst", "best"]] = Field(
+        default=["gamma", "worst", "best"],
+        description="test videos: the first sim at the lowest and the highest gamma, the sim with the highest and the "
+        "lowest VRMSE (mean over fields)",
+    )
+    noise: Literal["random", "fixed", "learned"] = Field(
+        default="random",
+        description="random: fresh N(0, 1) per sample; fixed: one seeded N(0, 1) draw (sampling.seed) shared by every "
+        "sample in training and sampling, a regression model; learned: that draw trained with train.noise_lr. The run "
+        "saves it as noise.pt and a later run loads it from `load`",
     )
     rollouts: str | None = Field(
         default=None,

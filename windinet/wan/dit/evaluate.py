@@ -102,3 +102,19 @@ def evaluate(
     metrics |= {f"vrmse_mean_gamma{g:g}": (by_gamma[i] / n_gamma[i]).item() for i, g in enumerate(gammas) if n_gamma[i]}
     metrics["per_sim"] = {sid: v for part in gather(per_sim) for sid, v in part.items()}
     return metrics, examples
+
+
+@torch.no_grad()
+def render(
+    dit: WanDiT, cond: nn.Module, adapter: GroupedAdapter, vaes: list, loaders: tuple, cfg: DitStageConfig
+) -> dict[str, tuple]:
+    """{sim id: (sim id, truth, pred)} of every sim of `loaders` with the evaluation's noise, on this rank alone."""
+    out, ids, device = {}, loaders[0].dataset.ids, dit.device
+    for (latents, gamma), (frames, _) in zip(*loaders, strict=True):
+        batch = ids[len(out) : len(out) + len(gamma)]
+        z = rollout(dit, cond, latents.to(device), gamma.to(device), cfg, noise_seeds(batch, cfg.sampling.seed))
+        pred = decode(adapter, z, vaes)
+        truth = adapter.select(frames.to(device).flatten(0, 1)).unflatten(0, (len(frames), -1))
+        for sid, p, x in zip(batch, pred, truth, strict=True):
+            out[sid] = (sid, x[: len(p)].cpu(), p.cpu())
+    return out

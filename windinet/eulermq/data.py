@@ -124,13 +124,23 @@ def symmetry(fields: torch.Tensor, k: int) -> torch.Tensor:
     """Element k (0..7) of the square's symmetry group D4 on fields [..., 4, H, W] (axis H = x): bit 0 swaps the axes,
     bits 1 and 2 flip x and y. Momentum is a vector: its components swap and change sign with the axes."""
     mx, my = FIELDS.index("momentum_x"), FIELDS.index("momentum_y")
+    fields = turn(fields, k)
     if k & 1:
-        fields = fields.transpose(-2, -1)[..., [0, my, mx, 3], :, :]
-    for bit, dim, c in ((2, -2, mx), (4, -1, my)):
-        if k & bit:
-            fields = fields.flip(dim)  # a copy, so the sign change below leaves the input alone
+        fields = fields[..., [0, my, mx, 3], :, :]
+    for bit, c in ((2, mx), (4, my)):
+        if k & bit:  # turn flipped a copy, so the sign change leaves the input alone
             fields[..., c, :, :] = -fields[..., c, :, :]
     return fields
+
+
+def turn(x: torch.Tensor, k: int) -> torch.Tensor:
+    """Element k of D4 on the grid alone [..., H, W], as in `symmetry`; for scalar maps."""
+    if k & 1:
+        x = x.transpose(-2, -1)
+    for bit, dim in ((2, -2), (4, -1)):
+        if k & bit:
+            x = x.flip(dim)
+    return x
 
 
 def endless(loader):
