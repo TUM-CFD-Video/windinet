@@ -7,8 +7,8 @@ latents:
 vae: results/wan/eulermq/vae/res256/rgb3/two_stage   # the adapter behind the latents and its fine-tuned decoder
 
 data:                                  # the simulations: split and ground truth of the evaluation (as in vae.yaml)
-  h5_path: euler_mq_dataset/256x256_ds/train.h5
-  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  h5_path: datasets/eulermq/256x256_ds/train.h5
+  test_h5: datasets/eulermq/256x256_ds/test.h5
   stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
   eval_sims: 16                        # validation rollouts mid-run; the final test uses all 500 (test_sims null)
   num_workers: 2

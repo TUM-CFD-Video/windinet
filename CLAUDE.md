@@ -63,6 +63,9 @@ git sparse-checkout set .vscode configs docs euler_mq_dataset jobs pretrained re
     windinet logs/lc
 ```
 
+Configs reach the data through `datasets/<name>` (`datasets/eulermq`, `datasets/srba_oooo`): git-ignored symlinks to
+scratch that hold no data.
+
 Clusters: outputs go to `$WINDINET_WORK/finetune_vae_outputs` (`windinet/cluster_config.py`), LTX weights to
 `$WINDINET_HF_CACHE`. Lars's launchers (`jobs/lumi/lc`, `jobs/jupiter/lc`) source `env.sh` there, which sets both, and `run.sbatch <command>`
 runs any command on a full node (clusters bill node hours, so never request fewer GPUs). Slurm logs go to `logs/lc/`. Local GPU is a 2080 Ti (11 GB, fp32 only).

@@ -1,7 +1,10 @@
-# VAE stage on 2D_SRBA_OOOO 256x256: as configs/wan/vae.yaml on the other dataset.
+# VAE stage on 2D_SRBA_OOOO 256x256: as configs/wan/vae.yaml on the other dataset, under all 8 orientations.
 extends: configs/wan/vae.yaml
 data:
   dataset: srba_oooo
-  h5_path: neptuna_datasets/2D_SRBA_OOOO/256x256/train.h5
-  test_h5: neptuna_datasets/2D_SRBA_OOOO/256x256/test.h5
+  h5_path: datasets/srba_oooo/train.h5
+  test_h5: datasets/srba_oooo/test.h5
   stats_json: results/wan/srba_oooo/stats/train_256.json
+  augment: true
+adapter:
+  clip_quantile: 0.999
