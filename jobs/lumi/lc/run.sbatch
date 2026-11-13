@@ -19,7 +19,7 @@
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR}"
 source jobs/lumi/lc/env.sh
-export OMP_NUM_THREADS=$(( SLURM_CPUS_PER_TASK / SLURM_GPUS_ON_NODE ))  # one GPU's share of the cores per process (torchrun would set 1)
+export OMP_NUM_THREADS=$(( SLURM_CPUS_PER_TASK / (${SLURM_GPUS_ON_NODE:-0} > 0 ? SLURM_GPUS_ON_NODE : 1) ))  # one GPU's share of the cores per process (torchrun would set 1); CPU jobs: all
 # MIOpen's kernel-tuning cache lives in node-local /tmp; staged from scratch and back, so a new node does not retune (~9 min per run).
 MIOPEN_SAVED=${WORK}/miopen_cache
 mkdir -p "${MIOPEN_USER_DB_PATH}"
