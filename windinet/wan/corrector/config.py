@@ -63,7 +63,9 @@ class CorrectorStageConfig(_Base):
         description="decoded Wan rollouts (decode_rollouts.py), one folder per sampling seed; the first is evaluated",
     )
     load: str | None = Field(default=None, description="corrector run folder to evaluate or continue (corrector.pt)")
-    results_dir: str = Field(default="results/wan/dit/corrector", description="one folder per run is created here")
+    results_dir: str = Field(
+        default="results/wan/eulermq/dit/corrector", description="one folder per run is created here"
+    )
     weights_dir: str | None = Field(
         default=None, description="where corrector.pt and the mp4 go, symlinked from the run; None = the run folder"
     )

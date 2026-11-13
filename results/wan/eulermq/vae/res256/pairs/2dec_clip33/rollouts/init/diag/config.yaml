@@ -1,0 +1,49 @@
+# res256/pairs/2dec_clip33/rollouts/init/diag: rollouts/init's decoders evaluated again on the 500 test rollouts for the new metrics (power ratio)
+# Re-run: python scripts/wan/train_vae.py results/wan/eulermq/vae/res256/pairs/2dec_clip33/rollouts/init/diag/config.yaml --name <new name>
+name: res256/pairs/2dec_clip33/rollouts/init/diag
+description: rollouts/init's decoders evaluated again on the 500 test rollouts for the new metrics (power ratio)
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_test_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: null
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 33
+  clip: true
+  frame_stride: 2
+  augment: false
+  num_workers: 2
+  latents: /scratch/project_465003416/lc_work/latents/rollouts/stage3_d4_steps2
+adapter:
+  groups:
+  - - density
+    - pressure
+  - - momentum_x
+    - momentum_y
+loss:
+  rmse: 1.0
+  h1: 1.0
+  kind: rmse_h1
+train:
+  steps: 0
+  batch_sims: 8
+  micro_batch: 1
+  adapter_lr: 0.0
+  vae_parts: decoder
+  vae_per_group: true
+  vae_lr: 1.0e-05
+  io_lr: null
+  warmup_steps: 100
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 400
+  log_every: 10
+  seed: 0
+load: results/wan/eulermq/vae/res256/pairs/2dec_clip33
+results_dir: results/wan/eulermq/vae
+weights_dir: /scratch/project_465003416/lc_work/weights

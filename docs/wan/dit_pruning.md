@@ -2,7 +2,7 @@
 
 Goal: at most half the parameters of the teacher `res256/pairs/unrolled/unrolled2` (v2 test VRMSE 0.2307 at 2 steps)
 at almost its quality. Plan and sources: [pruning_research.md](pruning_research.md). Runs under
-`results/wan/dit/res256/pairs/pruned/`; config `configs/wan/dit_prune.yaml`; code `windinet/wan/dit/{prune,distill}.py`.
+`results/wan/eulermq/dit/res256/pairs/pruned/`; config `configs/wan/dit_prune.yaml`; code `windinet/wan/dit/{prune,distill}.py`.
 
 ## Summary
 

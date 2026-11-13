@@ -74,14 +74,14 @@ clips, at the last update.
 
 ```bash
 torchrun --standalone --nproc_per_node=8 scripts/wan/train_vae.py configs/wan/vae.yaml \
-    --name res256/pairs/2dec_test500 --desc "..." --set load=results/wan/vae/res256/pairs/2dec --set train.vae_per_group=true \
+    --name res256/pairs/2dec_test500 --desc "..." --set load=results/wan/eulermq/vae/res256/pairs/2dec --set train.vae_per_group=true \
     --set train.steps=0 --set train.vae_parts=none --set data.test_sims=null
 ```
 
 ## Later VAE runs
 
 Decoders for the DiT line, the 512 data and rollouts, and the other image layouts; test VRMSE, `run` under
-`results/wan/vae/`.
+`results/wan/eulermq/vae/`.
 
 | run | what | VRMSE |
 |---|---|---|

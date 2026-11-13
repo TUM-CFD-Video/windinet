@@ -50,11 +50,11 @@ def test_settings_phrase_for_a_dit_run():
         "cond": {"kind": "gamma", "context": 1},
         "train": {"steps": 8000, "lr": 1e-5, "batch_sims": 32},
         "sampling": {"steps": 20},
-        "vae": "results/wan/vae/res256/rgb3/two_stage",
+        "vae": "results/wan/eulermq/vae/res256/rgb3/two_stage",
     }
     assert settings(cfg) == "8000 steps, lr 1e-05, batch 32"
     assert (
-        settings({"load": "results/wan/dit/run", "load_step": 4000, "train": {"steps": 0}})
+        settings({"load": "results/wan/eulermq/dit/run", "load_step": 4000, "train": {"steps": 0}})
         == "from run @ 4000, eval only"
     )
 

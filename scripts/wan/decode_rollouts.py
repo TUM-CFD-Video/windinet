@@ -2,8 +2,8 @@
 """Decode DiT rollout latents to fields with a VAE run's decoders: the AR corrector's input frames.
 
     torchrun --standalone --nproc_per_node=8 scripts/wan/decode_rollouts.py \
-        --rollouts $WINDINET_WORK/latents/rollouts/stage3_d4_steps2_val500 --vae results/wan/vae/res256/pairs/2dec_clip33 \
-        --out $WINDINET_WORK/fields/stage3_d4_steps2_val500
+        --rollouts $WINDINET_WORK/latents/rollouts/stage3_d4_steps2_val500 \
+        --vae results/wan/eulermq/vae/res256/pairs/2dec_clip33 --out $WINDINET_WORK/fields/stage3_d4_steps2_val500
 
 Writes <out>/<split>/<sim id>.pt = {"fields": [F, 4, H, W] fp16 in physical units, "gamma"} for every file of
 <rollouts>/<split>/ and <out>/decode.yaml (what produced them). Sharded over torchrun ranks; existing files are

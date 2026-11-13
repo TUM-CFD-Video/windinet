@@ -1,6 +1,6 @@
 # Wan DiT stage: results
 
-Test VRMSE (mean over fields, physical units) on 500 test sims; `run` is the folder under `results/wan/dit/`.
+Test VRMSE (mean over fields, physical units) on 500 test sims; `run` is the folder under `results/wan/eulermq/dit/`.
 **v2** = protocol v2: scored from frame 10, per-sim noise seeds, cfd_bench beside it (`bench`), paired CIs between
 runs. **v1** = the older scoring from frame 0 with one shared seed: about 0.02 lower than v2 for the same model,
 comparable only within its own table. Sampling settings: [dit_sampling.md](dit_sampling.md).

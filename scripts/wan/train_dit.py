@@ -5,8 +5,8 @@ with several images per sample (pairs) gives several latents; they enter the DiT
 
     torchrun --standalone --nproc_per_node=8 scripts/wan/train_dit.py configs/wan/dit.yaml --name rgb3_dit --desc "..."
     python scripts/wan/train_dit.py configs/wan/dit_eval.yaml --name <run>/<eval> --desc "..." \
-        --set load=results/wan/dit/<run>                               # evaluate a run
-    torchrun ... scripts/wan/train_dit.py configs/wan/dit_anneal.yaml --set load=results/wan/dit/<run> \
+        --set load=results/wan/eulermq/dit/<run>                               # evaluate a run
+    torchrun ... scripts/wan/train_dit.py configs/wan/dit_anneal.yaml --set load=results/wan/eulermq/dit/<run> \
         --name <run>/stage2_anneal                                     # continue a run (nested stage folder)
 
 Rectified flow: x_σ = (1 - σ) z + σ ε, target ε - z, σ logit-normal (train.sigma_*); the first cond.context

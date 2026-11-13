@@ -3,7 +3,7 @@
 The four fields (ρ, m_x, m_y, p) enter one 4-channel image; `widen_io` adds a zero-initialised fourth input slot to
 `encoder.conv_in` and a fourth output row to `decoder.conv_out`. One latent of 16 channels per trajectory, against two
 for pairs and four for singles. Protocol of the quad rows in [vae_baselines.md](vae_baselines.md): test VRMSE on the
-first 100 test simulations, whole trajectories at frame stride 2; `run` is the folder under `results/wan/vae/`.
+first 100 test simulations, whole trajectories at frame stride 2; `run` is the folder under `results/wan/eulermq/vae/`.
 
 ## How Wan trained its VAE
 

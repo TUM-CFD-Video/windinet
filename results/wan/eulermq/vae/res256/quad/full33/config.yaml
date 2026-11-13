@@ -1,0 +1,53 @@
+# res256/quad/full33: four fields in one widened Wan VAE pass from the pretrained VAE (zero slots, identity mix fixed, per-channel tanh scale), encoder + decoder at 1e-5 (io 1e-4), 33-frame clips at stride 2 under D4 from the start, 8 per update (1 per GCD), warmup 100, cosine to 2 %, 11000 updates, bf16 with fp32 io convs
+# Re-run: python scripts/wan/train_vae.py results/wan/eulermq/vae/res256/quad/full33/config.yaml --name <new name>
+name: res256/quad/full33
+description: four fields in one widened Wan VAE pass from the pretrained VAE (zero slots, identity mix fixed, per-channel tanh scale), encoder + decoder at 1e-5 (io 1e-4), 33-frame clips at stride 2 under
+  D4 from the start, 8 per update (1 per GCD), warmup 100, cosine to 2 %, 11000 updates, bf16 with fp32 io convs
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: 100
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 33
+  clip: true
+  frame_stride: 2
+  augment: true
+  num_workers: 4
+  latents: null
+adapter:
+  groups:
+  - - density
+    - momentum_x
+    - momentum_y
+    - pressure
+loss:
+  rmse: 1.0
+  h1: 1.0
+  latent: 0.0
+  kind: rmse_h1
+train:
+  steps: 11000
+  batch_sims: 8
+  micro_batch: 1
+  adapter_lr: 0.0
+  vae_parts: all
+  precision: mixed
+  checkpointing: false
+  vae_per_group: false
+  vae_lr: 1.0e-05
+  io_lr: 0.0001
+  warmup_steps: 100
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 500
+  log_every: 10
+  seed: 0
+load: null
+results_dir: results/wan/eulermq/vae
+weights_dir: /scratch/project_465003416/lc_work/weights

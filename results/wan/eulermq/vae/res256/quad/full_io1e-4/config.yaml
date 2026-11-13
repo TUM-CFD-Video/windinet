@@ -1,0 +1,48 @@
+# res256/quad/full_io1e-4: four fields in one image: the Wan VAE widened to 4 channels, encoder + decoder fine-tuned at 1e-5 with the in and out convolutions at 1e-4 and the adapter fixed (identity mix, data-initialised scale), 33-frame clips at frame stride 2 under random D4 symmetries, 8 clips per update over 8 GPUs, 4000 updates
+# Re-run: python scripts/wan/train_vae.py results/wan/eulermq/vae/res256/quad/full_io1e-4/config.yaml --name <new name>
+name: res256/quad/full_io1e-4
+description: 'four fields in one image: the Wan VAE widened to 4 channels, encoder + decoder fine-tuned at 1e-5 with the in and out convolutions at 1e-4 and the adapter fixed (identity mix, data-initialised
+  scale), 33-frame clips at frame stride 2 under random D4 symmetries, 8 clips per update over 8 GPUs, 4000 updates'
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: 100
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 33
+  clip: true
+  frame_stride: 2
+  augment: true
+  num_workers: 2
+adapter:
+  groups:
+  - - density
+    - momentum_x
+    - momentum_y
+    - pressure
+loss:
+  rmse: 1.0
+  h1: 1.0
+train:
+  steps: 4000
+  batch_sims: 8
+  micro_batch: 1
+  adapter_lr: 0.0
+  vae_parts: all
+  vae_lr: 1.0e-05
+  io_lr: 0.0001
+  vae_per_group: false
+  warmup_steps: 100
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 200
+  log_every: 10
+  seed: 0
+load: null
+results_dir: results/wan/eulermq/vae
+weights_dir: /scratch/project_465003416/lc_work/weights

@@ -4,11 +4,11 @@
 #   torchrun --standalone --nproc_per_node=8 scripts/wan/train_dit.py configs/wan/dit_prune.yaml \
 #       --set prune.depth=14 --name res256/pairs/pruned/<arm> --desc "..."
 extends: load
-load: results/wan/dit/res256/pairs/unrolled/unrolled2
+load: results/wan/eulermq/dit/res256/pairs/unrolled/unrolled2
 load_step: null
 prune: {}
 distill:
-  teacher: results/wan/dit/res256/pairs/unrolled/unrolled2
+  teacher: results/wan/eulermq/dit/res256/pairs/unrolled/unrolled2
   features: 1.0
 train:
   steps: 1500

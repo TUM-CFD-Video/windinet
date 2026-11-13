@@ -51,7 +51,9 @@ class SampleConfig(_Base):
         default=False, description="keep `source`'s first latent frame clean (timestep 0), generate the rest"
     )
     load: str | None = Field(default=None, description="DiT run folder (dit.pt); None = pretrained Wan 2.1")
-    results_dir: str = Field(default="results/wan/dit/zero_shot", description="one folder per sample is created here")
+    results_dir: str = Field(
+        default="results/wan/eulermq/dit/zero_shot", description="one folder per sample is created here"
+    )
     video_dir: str | None = Field(
         default=None, description="where the mp4 is written, symlinked from the run folder; None = the run folder"
     )
@@ -316,7 +318,7 @@ class DitStageConfig(_Base):
         description="write the rollout latents of every train sim and of the evaluated val and test sims to "
         "<this>/<split>/<sim id>.pt (the latent folder layout) and stop: the VAE stage's data.latents",
     )
-    results_dir: str = Field(default="results/wan/dit", description="one folder per run is created here")
+    results_dir: str = Field(default="results/wan/eulermq/dit", description="one folder per run is created here")
     weights_dir: str | None = Field(
         default=None,
         description="where dit.pt (5.7 GB), cond.pt and the mp4 go (the results tree mirrored), symlinked from the "

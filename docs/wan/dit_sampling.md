@@ -1,7 +1,7 @@
 # Wan DiT: sampling settings
 
 res256/pairs/unrolled/unrolled, protocol v2 (500 test sims, from frame 10, per-sim seeds), paired 95 % CI against
-its own 2-step deterministic test (* = significant). Runs under `results/wan/dit/res256/pairs/unrolled/unrolled/`.
+its own 2-step deterministic test (* = significant). Runs under `results/wan/eulermq/dit/res256/pairs/unrolled/unrolled/`.
 η = share of fresh noise per step (`sampling.stochastic`): 0 = UniPC, deterministic.
 
 | run | steps | η | samples | VRMSE | Δ | bench | LDE | front shift |

@@ -134,7 +134,7 @@ class VaeStageConfig(_Base):
         default=None,
         description="run folder to continue from: its adapter.pt and, if present, vae.pt or one vae_<group>.pt per VAE",
     )
-    results_dir: str = Field(default="results/wan/vae", description="one folder per run is created here")
+    results_dir: str = Field(default="results/wan/eulermq/vae", description="one folder per run is created here")
     weights_dir: str | None = Field(
         default=None,
         description="where vae.pt (280+ MB) is written, with a symlink in the run folder; None = the run folder itself",

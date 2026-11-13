@@ -2,7 +2,7 @@
 """Encode every simulation with a fixed adapter and the frozen Wan encoder: the DiT stage's training data.
 
     torchrun --standalone --nproc_per_node=8 scripts/wan/encode_latents.py configs/wan/vae.yaml \
-        --load results/wan/vae/res256/rgb3/adapter --out $WINDINET_WORK/latents/rgb3
+        --load results/wan/eulermq/vae/res256/rgb3/adapter --out $WINDINET_WORK/latents/rgb3
 
 Takes the VAE-stage YAML for the data files and the split, the adapter from `--load`. Writes
 <out>/<train|val|test>/<sim id>.pt = {"latents": [groups, 16, F/4 + 1, H/8, W/8] fp32 normalised Wan latents

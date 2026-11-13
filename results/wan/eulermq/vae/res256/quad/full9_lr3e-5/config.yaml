@@ -1,0 +1,53 @@
+# res256/quad/full9_lr3e-5: as res256/quad/full9 (widened pretrained VAE, identity mix fixed, io 1e-4, 9-frame clips, 16 per update, 8000 updates, bf16) with the encoder + decoder at 3e-5 instead of 1e-5: is convergence speed the limit
+# Re-run: python scripts/wan/train_vae.py results/wan/eulermq/vae/res256/quad/full9_lr3e-5/config.yaml --name <new name>
+name: res256/quad/full9_lr3e-5
+description: 'as res256/quad/full9 (widened pretrained VAE, identity mix fixed, io 1e-4, 9-frame clips, 16 per update, 8000 updates, bf16) with the encoder + decoder at 3e-5 instead of 1e-5: is convergence
+  speed the limit'
+vae: wan
+data:
+  h5_path: euler_mq_dataset/256x256_ds/train.h5
+  test_h5: euler_mq_dataset/256x256_ds/test.h5
+  stats_json: results/field_adapter/00_stats/eulermq_256_train_stats.json
+  val_sims: 500
+  split_seed: 42
+  eval_sims: 100
+  test_sims: 100
+  test_every: 5
+  test_gamma: null
+  frames_per_sim: 9
+  clip: true
+  frame_stride: 2
+  augment: true
+  num_workers: 4
+  latents: null
+adapter:
+  groups:
+  - - density
+    - momentum_x
+    - momentum_y
+    - pressure
+loss:
+  rmse: 1.0
+  h1: 1.0
+  latent: 0.0
+  kind: rmse_h1
+train:
+  steps: 8000
+  batch_sims: 16
+  micro_batch: 2
+  adapter_lr: 0.0
+  vae_parts: all
+  precision: mixed
+  checkpointing: false
+  vae_per_group: false
+  vae_lr: 3.0e-05
+  io_lr: 0.0001
+  warmup_steps: 100
+  lr_floor: 0.02
+  max_grad_norm: 5.0
+  eval_every: 500
+  log_every: 10
+  seed: 0
+load: null
+results_dir: results/wan/eulermq/vae
+weights_dir: /scratch/project_465003416/lc_work/weights
