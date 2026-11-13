@@ -5,8 +5,8 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 
 ## Ownership and branches
 
-- Lars's parts: `windinet/{field_adapter,wan,data,experiment}`, `scripts/wan`, `configs/wan`, `docs/field_adapter`, `docs/wan`,
-  `docs/references`, `results/{field_adapter,wan}`, `tests`, `jobs/lc`, `jobs/lumi/lc`, `jobs/jupiter/lc`, this file.
+- Lars's parts: `windinet/{field_adapter,wan,data,experiment,video.py}`, `scripts/wan`, `configs/wan`, `docs/field_adapter`, `docs/wan`,
+  `docs/video_spec.md`, `docs/references`, `results/{field_adapter,wan}`, `tests`, `jobs/lc`, `jobs/lumi/lc`, `jobs/jupiter/lc`, this file.
 - Layout of Lars's code: `field_adapter` is the field-to-RGB map only; `wan` one subpackage per stage
   (`wan/vae`, `wan/dit`: model wrapper, config schema, loss and evaluation) plus the shared figures and weight files; `data` dataset access and splits; `experiment` run bookkeeping
   (config overrides, provenance, index, lr schedule, metrics). One script per stage in `scripts/wan`, one schema per script.
@@ -46,7 +46,7 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
   writes `config.yaml`, `metrics.json` with provenance, figures and `adapter.pt`; `vae.pt` is not in git.
 - The `README.md` index of a results folder is generated (`scripts/wan/index_runs.py`); do not edit.
 - A run folder stays only if a number in a document under `docs/` comes from it; every table there has a `run`
-  column. Unused runs are deleted. New VAE-stage runs go to `results/wan/vae`; `results/field_adapter` is the
+  column. Unused runs are deleted. New VAE-stage runs go to `results/wan/eulermq/vae`; `results/field_adapter` is the
   finished adapter study.
 - Settings live in the pydantic schema with defaults; a YAML names only what differs, a run variant is a `--set`.
 - Documents are short: numbers in tables, one claim per sentence, no filler.
