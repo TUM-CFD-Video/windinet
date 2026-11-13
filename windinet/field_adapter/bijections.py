@@ -80,24 +80,33 @@ class Mix(nn.Module):
 
 
 class SoftClip(nn.Module):
-    """z = tanh(y / s) with one learnable scale s; maps to the (-1, 1) range video VAEs expect."""
+    """z = tanh(y / s) with one learnable scale s per channel; maps to the (-1, 1) range video VAEs expect."""
 
-    def __init__(self, target_quantile: float = 0.98, target_value: float = 0.9):
+    def __init__(self, channels: int = 3, target_quantile: float = 0.98, target_value: float = 0.9):
         super().__init__()
-        self.log_scale = nn.Parameter(torch.zeros(()))
+        self.log_scale = nn.Parameter(torch.zeros(channels))
         self.q, self.v = target_quantile, target_value
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        key = prefix + "log_scale"
+        if key in state_dict and state_dict[key].ndim == 0:  # adapters saved with one shared scale
+            state_dict[key] = state_dict[key].expand_as(self.log_scale).clone()
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
     @torch.no_grad()
     def init_from_data(self, y: torch.Tensor) -> None:
-        """Pick s so that `target_quantile` of |y| lands inside +-`target_value`."""
-        sample = y.abs().flatten()[torch.randperm(y.numel(), device=y.device)[:1_000_000]]
-        self.log_scale.fill_(math.log(torch.quantile(sample, self.q).item() / math.atanh(self.v)))
+        """Pick each channel's s so that `target_quantile` of its |y| lands inside +-`target_value`."""
+        per_channel = y.abs().transpose(0, 1).flatten(1)
+        sample = per_channel[:, torch.randperm(per_channel.shape[1], device=y.device)[:1_000_000]]
+        q = torch.quantile(sample, self.q, dim=1)
+        q = torch.where(q > 0, q, q.max())  # an empty channel (pairs: the third) takes the largest scale
+        self.log_scale.copy_((q / math.atanh(self.v)).log())
 
     def forward(self, y: torch.Tensor) -> torch.Tensor:
-        return torch.tanh(y / self.log_scale.exp())
+        return torch.tanh(y / _per_channel(self.log_scale.exp(), y))
 
     def inverse(self, z: torch.Tensor) -> torch.Tensor:
-        return torch.atanh(z.clamp(-1 + 1e-6, 1 - 1e-6)) * self.log_scale.exp()
+        return torch.atanh(z.clamp(-1 + 1e-6, 1 - 1e-6)) * _per_channel(self.log_scale.exp(), z)
 
 
 class FieldAdapter(nn.Module):
@@ -107,7 +116,7 @@ class FieldAdapter(nn.Module):
         super().__init__()
         self.prenorm = PreNorm(mean, std, log_channels, lo, hi)
         self.mix = Mix(len(mean), channels)
-        self.clip = SoftClip()
+        self.clip = SoftClip(channels)
         self.stages = [self.prenorm, self.mix, self.clip]
 
     @torch.no_grad()
