@@ -30,7 +30,7 @@ elsewhere ([pretrained/README.md](pretrained/README.md)).
 ## Layout
 
 ```
-windinet/           library: VAE adapter, losses, scalar conditioning, training; field_adapter/, wan/, eulermq/, experiment/
+windinet/           library: VAE adapter, losses, scalar conditioning, training; field_adapter/, wan/, data/, experiment/
 scripts/            entry points (finetune_vae.py, preprocess_dataset.py, train.py, inference_shockwave.py,
                     wan/train_vae.py)
 configs/            YAML per experiment family: finetune_vae/, dit/, wan/

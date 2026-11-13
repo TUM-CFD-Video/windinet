@@ -1,6 +1,6 @@
 import torch
 
-from windinet.eulermq.data import val_split
+from windinet.data.frames import val_split
 from windinet.experiment.metrics import vrmse
 from windinet.field_adapter import FieldAdapter, GroupedAdapter
 from windinet.losses import vrms_per_channel

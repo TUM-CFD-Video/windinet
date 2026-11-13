@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from windinet.eulermq.data import SYMBOLS
+from windinet.data.frames import SYMBOLS
 from windinet.experiment.metrics import BINS
 
 

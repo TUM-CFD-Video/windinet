@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from windinet.eulermq import data
+from windinet.data import frames
 
 
 class _Base(BaseModel):
@@ -41,7 +41,7 @@ class DataConfig(_Base):
     )
     augment: bool = Field(
         default=False,
-        description="training data under the dataset's symmetries (eulermq.data.symmetry): VAE-stage frames and clips "
+        description="training data under the dataset's symmetries (data.frames.symmetry): VAE-stage frames and clips "
         "under a random one, latent encoding stores every one, corrector: the Wan/truth pairs under one random one; "
         "evaluation never",
     )
@@ -58,8 +58,10 @@ class DataConfig(_Base):
         return self.frames_per_sim if self.clip else 1
 
     def splits(self) -> dict[str, tuple[str, list[str]]]:
-        """{'train' | 'val' | 'test': (h5 file, sim ids)}, see eulermq.data.splits."""
-        return data.splits(self.h5_path, self.test_h5, self.val_sims, self.split_seed, self.test_every, self.test_gamma)
+        """{'train' | 'val' | 'test': (h5 file, sim ids)}, see data.frames.splits."""
+        return frames.splits(
+            self.h5_path, self.test_h5, self.val_sims, self.split_seed, self.test_every, self.test_gamma
+        )
 
 
 class AdapterConfig(_Base):

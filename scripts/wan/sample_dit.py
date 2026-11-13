@@ -17,7 +17,7 @@ from pathlib import Path
 import torch
 import typer
 
-from windinet.eulermq.data import FrameSampler
+from windinet.data.frames import FrameSampler
 from windinet.experiment.config import start_run
 from windinet.experiment.runs import provenance
 from windinet.field_adapter import load_adapter

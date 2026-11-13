@@ -32,7 +32,7 @@ import torch
 import typer
 from torch.utils.data import DataLoader
 
-from windinet.eulermq.data import FrameSampler, endless, load_field_stats
+from windinet.data.frames import FrameSampler, endless, load_field_stats
 from windinet.experiment.config import start_run
 from windinet.experiment.distributed import all_mean, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress

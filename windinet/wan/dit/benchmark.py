@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import torch
 
-from windinet.eulermq.data import load_field_stats
+from windinet.data.frames import load_field_stats
 from windinet.experiment.distributed import all_sum
 from windinet.losses import (
     SSIMLoss,

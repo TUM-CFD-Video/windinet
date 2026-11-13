@@ -2,7 +2,7 @@ import json
 
 import torch
 
-from windinet.eulermq.data import FIELDS
+from windinet.data.frames import FIELDS
 from windinet.experiment.config import load_config
 from windinet.experiment.metrics import FIELD_METRICS, Aggregate, ensemble_scores, field_metrics, power
 from windinet.experiment.optim import EMA, warmup_cosine
@@ -174,7 +174,7 @@ def test_gamma_modulation_starts_as_the_pretrained_model():
 def test_frame_sampler_stride_keeps_4k_plus_1_frames(tmp_path):
     import h5py
 
-    from windinet.eulermq.data import CHANNEL_NAMES, FrameSampler, symmetry
+    from windinet.data.frames import CHANNEL_NAMES, FrameSampler, symmetry
 
     with h5py.File(tmp_path / "t.h5", "w") as f:
         for name in CHANNEL_NAMES:
@@ -191,7 +191,7 @@ def test_frame_sampler_stride_keeps_4k_plus_1_frames(tmp_path):
 
 
 def test_symmetry_keeps_a_radial_momentum_field_and_has_order_four():
-    from windinet.eulermq.data import symmetry
+    from windinet.data.frames import symmetry
     from windinet.wan.dit.latents import latent_id
 
     r = torch.arange(6.0) - 2.5  # centred coordinate: momentum (x, y) points away from the centre
@@ -322,7 +322,7 @@ def test_amse_does_not_reward_damping_an_unknown_scale():
 def test_with_latents_pairs_each_sims_frames_with_its_rollout(tmp_path):
     import h5py
 
-    from windinet.eulermq.data import CHANNEL_NAMES, FrameSampler
+    from windinet.data.frames import CHANNEL_NAMES, FrameSampler
     from windinet.wan.dit.latents import WithLatents
 
     ids = ["0000_gamma1.3", "0001_gamma1.4"]

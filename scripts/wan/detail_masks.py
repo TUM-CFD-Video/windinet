@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import typer
 
-from windinet.eulermq.data import FIELDS
+from windinet.data.frames import FIELDS
 from windinet.experiment.distributed import rank, shard
 from windinet.wan.dit.detail import detail_share
 

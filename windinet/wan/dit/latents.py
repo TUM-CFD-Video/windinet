@@ -10,7 +10,7 @@ import torch
 import yaml
 from torch.utils.data import Dataset
 
-from windinet.eulermq.data import SYMMETRIES, turn
+from windinet.data.frames import SYMMETRIES, turn
 
 
 class LatentDataset(Dataset):
@@ -67,7 +67,7 @@ def encode_info(dir: str | Path) -> dict:
 
 
 def latent_id(sid: str, k: int = 0, start: int = 0) -> str:
-    """File stem of a simulation's latents: the sim id as recorded, _s<k> under eulermq.data.symmetry k, _t<start>
+    """File stem of a simulation's latents: the sim id as recorded, _s<k> under data.frames.symmetry k, _t<start>
     for the clip from that frame on."""
     return sid + (f"_s{k}" if k else "") + (f"_t{start}" if start else "")
 

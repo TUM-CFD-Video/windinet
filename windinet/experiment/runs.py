@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from windinet.eulermq.data import FIELDS, SYMBOLS
+from windinet.data.frames import FIELDS, SYMBOLS
 
 
 def provenance(started: float, world: int = 1) -> dict:

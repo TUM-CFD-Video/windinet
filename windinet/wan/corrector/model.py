@@ -6,7 +6,7 @@ import torch
 from diffusers import UNet2DModel
 from torch import nn
 
-from windinet.eulermq.data import FIELDS
+from windinet.data.frames import FIELDS
 from windinet.wan.corrector.config import CorrectorModelConfig
 from windinet.wan.dit.model import autocast
 

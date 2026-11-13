@@ -60,14 +60,14 @@ def save_strip(video: torch.Tensor, path: Path, reference: torch.Tensor | None =
 
 def _shown(stats_json: str, fields: list[str]) -> list[dict]:
     """The train-set statistics per field as windinet/video.py takes them."""
-    from windinet.eulermq.data import load_field_stats
+    from windinet.data.frames import load_field_stats
 
     stats = load_field_stats(stats_json)
     return [{**stats[n], "signed": n.startswith("momentum")} for n in fields]
 
 
 def _title(sid: str, label) -> str:
-    from windinet.eulermq.data import parse_gamma
+    from windinet.data.frames import parse_gamma
 
     tail = f", {label}" if isinstance(label, str) else ""
     return f"sim {sid.split('_')[0]} (γ {round(parse_gamma(sid), 3):g}){tail}"
@@ -85,7 +85,7 @@ def save_examples(
     """<kind>_<label>.mp4 (windinet/video.py: truth, prediction, |error| per field on train-stat scales) and
     example_<label>.pt of the examples {label: (sim id, truth, pred)}, [F, C, H, W] physical fields; a float label is
     a gamma (gamma<g>), a str one is used as it is (worst, best)."""
-    from windinet.eulermq.data import FRAME_DT
+    from windinet.data.frames import FRAME_DT
     from windinet.video import write_video
     from windinet.wan.weights import big_file
 
@@ -210,7 +210,7 @@ def save_vae_curves(
 
 def save_panel(examples: dict, fields: list[str], stats_json: str, frame_stride: int, path: Path) -> None:
     """The last frame of the lowest-gamma example in the video's format (windinet/video.py) as a png."""
-    from windinet.eulermq.data import FRAME_DT
+    from windinet.data.frames import FRAME_DT
     from windinet.video import write_frame
 
     sid, truth, pred = examples[min(examples)]

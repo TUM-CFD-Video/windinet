@@ -5,7 +5,7 @@ from __future__ import annotations
 import torch
 from torch.utils.data import DataLoader
 
-from windinet.eulermq.data import parse_gamma
+from windinet.data.frames import parse_gamma
 from windinet.experiment.distributed import all_sum, world
 from windinet.experiment.metrics import Aggregate
 from windinet.field_adapter import GroupedAdapter

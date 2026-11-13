@@ -8,7 +8,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset
 
-from windinet.eulermq.data import SYMMETRIES, FrameSampler, parse_gamma, symmetry
+from windinet.data.frames import SYMMETRIES, FrameSampler, parse_gamma, symmetry
 
 
 class RolloutFields(Dataset):

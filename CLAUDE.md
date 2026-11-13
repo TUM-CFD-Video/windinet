@@ -5,10 +5,10 @@ pipeline, branch `main`) and Lars (Wan 2.1 field adapter, branch `dev-lars/main`
 
 ## Ownership and branches
 
-- Lars's parts: `windinet/{field_adapter,wan,eulermq,experiment}`, `scripts/wan`, `configs/wan`, `docs/field_adapter`, `docs/wan`,
+- Lars's parts: `windinet/{field_adapter,wan,data,experiment}`, `scripts/wan`, `configs/wan`, `docs/field_adapter`, `docs/wan`,
   `docs/references`, `results/{field_adapter,wan}`, `tests`, `jobs/lc`, `jobs/lumi/lc`, `jobs/jupiter/lc`, this file.
 - Layout of Lars's code: `field_adapter` is the field-to-RGB map only; `wan` one subpackage per stage
-  (`wan/vae`, `wan/dit`: model wrapper, config schema, loss and evaluation) plus the shared figures and weight files; `eulermq` data access and splits; `experiment` run bookkeeping
+  (`wan/vae`, `wan/dit`: model wrapper, config schema, loss and evaluation) plus the shared figures and weight files; `data` dataset access and splits; `experiment` run bookkeeping
   (config overrides, provenance, index, lr schedule, metrics). One script per stage in `scripts/wan`, one schema per script.
 - Weihao's thesis (the LTX baseline we compare against) is `docs/references/weihao_li_master_thesis_2026.pdf`.
 - Everything else is Weihao's. Do not edit, move or delete his files. If a change there is unavoidable, keep

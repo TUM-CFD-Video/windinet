@@ -22,7 +22,7 @@ import typer
 import yaml
 from torch.utils.data import DataLoader
 
-from windinet.eulermq.data import SYMMETRIES, FrameSampler, symmetry
+from windinet.data.frames import SYMMETRIES, FrameSampler, symmetry
 from windinet.experiment.config import load_config
 from windinet.experiment.distributed import rank, setup, shard, world
 from windinet.experiment.runs import provenance

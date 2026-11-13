@@ -33,7 +33,7 @@ import typer
 import yaml
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-from windinet.eulermq.data import FrameSampler, endless, parse_gamma
+from windinet.data.frames import FrameSampler, endless, parse_gamma
 from windinet.experiment.config import start_run
 from windinet.experiment.distributed import all_mean, all_sum, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress

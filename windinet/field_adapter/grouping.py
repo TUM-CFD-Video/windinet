@@ -15,7 +15,7 @@ import torch
 import yaml
 from torch import nn
 
-from windinet.eulermq.data import FIELDS, load_field_stats
+from windinet.data.frames import FIELDS, load_field_stats
 
 from .bijections import FieldAdapter, PreNorm
 

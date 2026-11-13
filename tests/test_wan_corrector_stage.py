@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch import nn
 
-from windinet.eulermq.data import FIELDS
+from windinet.data.frames import FIELDS
 from windinet.wan.corrector.config import CorrectorModelConfig
 from windinet.wan.corrector.data import Windows
 from windinet.wan.corrector.model import Corrector, rollout, teacher_forced
