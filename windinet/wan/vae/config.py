@@ -107,6 +107,11 @@ class AdapterConfig(_Base):
         lt=1,
         description="SoftClip init: this quantile of each channel's |value| lands at 0.9 of the range",
     )
+    shared_vector_scale: bool = Field(
+        default=False,
+        description="both components of the dataset's vector field are normalised with one mean-free scale (adapters "
+        "and loss space), so the 8 orientations of data.augment share statistics",
+    )
 
 
 class LossConfig(_Base):
@@ -194,4 +199,10 @@ class VaeStageConfig(_Stage):
             raise ValueError(f"adapter fields {unknown} not in dataset {self.data.dataset}")
         if logs := [n for n in self.adapter.log_fields or [] if n.startswith("log_")]:
             raise ValueError(f"adapter.log_fields {logs} are already logs in dataset {self.data.dataset}")
+        if self.adapter.shared_vector_scale:
+            vector = self.data.spec.vector
+            if vector is None:
+                raise ValueError(f"adapter.shared_vector_scale: dataset {self.data.dataset} has no vector field")
+            if logged := set(vector) & (set(self.adapter.log_fields or []) | self.data.spec.log_fields):
+                raise ValueError(f"adapter.shared_vector_scale: vector components {sorted(logged)} are log fields")
         return self

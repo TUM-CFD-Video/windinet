@@ -77,8 +77,9 @@ def check_load(run: dict, cfg: VaeStageConfig) -> None:
     dataset = run.get("data", {}).get("dataset", "eulermq")  # runs before the field are eulermq
     if dataset != cfg.data.dataset:
         raise typer.BadParameter(f"load: {cfg.load} is a run on {dataset}, not {cfg.data.dataset}")
-    for key in ("groups", "log_fields"):  # the inverse's clamp bounds follow the current config, the stats the run's
-        theirs, ours = run.get("adapter", {}).get(key), getattr(cfg.adapter, key)
+    # the inverse's clamp bounds follow the current config, the stats the run's
+    for key, missing in (("groups", None), ("log_fields", None), ("shared_vector_scale", False)):
+        theirs, ours = run.get("adapter", {}).get(key, missing), getattr(cfg.adapter, key)
         if theirs != ours:
             raise typer.BadParameter(f"load: {cfg.load} has adapter.{key}={theirs}, this config {ours}")
 
@@ -87,7 +88,8 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
     """Adapter and VAEs with their weights (from `cfg.load`, else data-initialised; VAEs from `cfg.vae_load`)."""
     stats = load_field_stats(cfg.data.stats_json)
     a = cfg.adapter
-    adapter = GroupedAdapter(a.groups, stats, cfg.data.spec, a.log_fields, a.clip_quantile).to(device)
+    adapter = GroupedAdapter(a.groups, stats, cfg.data.spec, a.log_fields, a.clip_quantile, a.shared_vector_scale)
+    adapter = adapter.to(device)
     adapter.requires_grad_(cfg.train.adapter_lr > 0)  # fixed adapter: no gradient through the encoder for it
     vaes = []
     if cfg.vae == "wan":
@@ -107,7 +109,7 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
         load_weights(Path(cfg.load), adapter, [] if cfg.vae_load else vaes, device)
     else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw
         ids = train_ids[:: max(1, len(train_ids) // 100)][:100]
-        probe = FrameSampler(cfg.data.h5_path, ids, 2, seed=0, spec=cfg.data.spec)
+        probe = FrameSampler(cfg.data.h5_path, ids, 2, seed=0, augment=cfg.data.augment, spec=cfg.data.spec)
         adapter.init_from_data(adapter.select(torch.cat([probe[i][0] for i in range(len(probe))])).to(device))
     if cfg.vae_load:  # VAE i takes vae_<i-th letter>.pt, else vae.pt: groups are matched by position, not by name
         run, n = Path(cfg.vae_load), len(vaes)

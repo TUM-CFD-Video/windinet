@@ -6,7 +6,7 @@ import pytest
 import torch
 import yaml
 
-from windinet.data.frames import val_split
+from windinet.data.frames import SYMMETRIES, symmetry, val_split
 from windinet.data.specs import EULERMQ, SRBA_OOOO
 from windinet.experiment.config import load_config
 from windinet.experiment.log import log_metrics
@@ -14,6 +14,7 @@ from windinet.experiment.metrics import vrmse
 from windinet.experiment.runs import run_dataset, write_index
 from windinet.field_adapter import FieldAdapter, GroupedAdapter, load_adapter
 from windinet.field_adapter.bijections import PreNorm
+from windinet.field_adapter.grouping import shared_vector_stats
 from windinet.losses import vrms_per_channel
 from windinet.wan.corrector.config import CorrectorStageConfig
 from windinet.wan.dit.config import DitStageConfig
@@ -136,6 +137,42 @@ def test_srba_adapter_round_trip_and_loss_space():
     assert _srba_adapter(clip_quantile=0.999).adapters[1].clip.q == 0.999
 
 
+SKEWED = SRBA_STATS | {  # srba_oooo-like: u large and one-signed, v small and centred
+    "velocityX": {"mean": 147.0, "std": 184.0, "min": -143.0, "max": 1029.0},
+    "velocityY": {"mean": 0.0, "std": 23.5, "min": -625.0, "max": 577.0},
+}
+
+
+def _skewed(shared: bool) -> GroupedAdapter:
+    return GroupedAdapter([list(g) for g in SRBA_OOOO.groups], SKEWED, SRBA_OOOO, shared_vector_scale=shared)
+
+
+def test_shared_vector_scale_makes_the_normalisation_d4_equivariant():
+    std = ((147.0**2 + 184.0**2 + 23.5**2) / 2) ** 0.5
+    assert shared_vector_stats(SKEWED, SRBA_OOOO.vector)["velocityY"] == {
+        "mean": 0.0, "std": std, "min": -1029.0, "max": 1029.0
+    }  # fmt: skip
+    on, off = _skewed(True), _skewed(False)
+    uv = [on.fields.index(n) for n in SRBA_OOOO.vector]
+    assert on.fields == list(SRBA_OOOO.fields)  # so symmetry acts on the grouped fields as on the dataset's
+    for pre, idx in ((on.base_norm, uv), (on.adapters[1].prenorm, [0, 1])):
+        for buf, want in (("mean", 0.0), ("std", std), ("lo", -1029.0), ("hi", 1029.0)):
+            assert torch.allclose(getattr(pre, buf)[idx], torch.tensor(want))
+    x = torch.randn(2, 4, 8, 8) * 50
+    x[:, 0], x[:, 3] = torch.rand(2, 8, 8) * 8 + 0.5, torch.randn(2, 8, 8)  # inside the scalars' bounds (+-9)
+    x[:, 1] += 147.0
+    for k in range(SYMMETRIES):
+        rotated = on.normalized(symmetry(x.clone(), k, SRBA_OOOO))
+        assert torch.allclose(rotated, symmetry(on.normalized(x), k, SRBA_OOOO), atol=1e-6)
+    # per-component statistics: a transposed sim puts u into the channel normalised for v
+    assert not torch.allclose(
+        off.normalized(symmetry(x.clone(), 1, SRBA_OOOO)), symmetry(off.normalized(x), 1, SRBA_OOOO)
+    )
+    xs = on.select(x)
+    on.init_from_data(xs)
+    assert torch.allclose(on.inverse(on(xs)), xs, atol=1e-3, rtol=1e-4)
+
+
 def test_inverse_gradient_finite_for_large_linear_fields():
     pre = PreNorm([0.0, 0.0], [1.0, 1.0], [False, True])
     z = torch.tensor([[1e5, 1.0]], requires_grad=True)  # pressure in Pa: exp overflows
@@ -171,6 +208,30 @@ def test_load_adapter_reads_the_dataset(tmp_path):
     loaded = load_adapter(run, "cpu")
     assert run_dataset(run) == "eulermq" and loaded.adapters[0].prenorm.log_mask.all()
     assert all(torch.equal(v, loaded.state_dict()[k]) for k, v in eulermq.state_dict().items())
+
+
+def test_load_adapter_restores_the_shared_vector_scale(tmp_path):
+    groups = [list(g) for g in SRBA_OOOO.groups]
+    run = _run(
+        tmp_path / "run",
+        {"dataset": "srba_oooo"},
+        SKEWED,
+        _skewed(True),
+        {"groups": groups, "shared_vector_scale": True},
+    )
+    loaded, fresh = load_adapter(run, "cpu"), _skewed(True)
+    for a, b in zip(fresh.adapters, loaded.adapters, strict=True):
+        assert torch.equal(a.prenorm.lo, b.prenorm.lo) and torch.equal(a.prenorm.hi, b.prenorm.hi)
+    assert torch.equal(fresh.base_norm.std, loaded.base_norm.std)
+    assert not torch.equal(_skewed(False).adapters[1].prenorm.hi, loaded.adapters[1].prenorm.hi)
+
+
+def test_shared_vector_scale_refuses_log_components():
+    sets = [*NAMED, "adapter.log_fields=[velocityX]", "adapter.shared_vector_scale=true"]
+    with pytest.raises(ValueError, match="vector components"):
+        VaeStageConfig(**load_config(Path("configs/wan/srba_oooo/vae.yaml"), sets))
+    with pytest.raises(ValueError, match="log fields"):
+        GroupedAdapter([["velocityY", "velocityX"]], SKEWED, SRBA_OOOO, ["velocityX"], shared_vector_scale=True)
 
 
 def test_load_weights_without_adapter_takes_only_the_vae(tmp_path):

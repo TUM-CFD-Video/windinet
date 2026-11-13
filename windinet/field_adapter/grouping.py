@@ -8,6 +8,7 @@ A field in no group is dropped; a field in several groups is averaged on the way
 
 from __future__ import annotations
 
+import math
 import string
 from pathlib import Path
 
@@ -39,9 +40,18 @@ def _norm_args(names: list[str], stats: dict[str, dict], log: set[str] | frozens
     }
 
 
+def shared_vector_stats(stats: dict[str, dict], vector: tuple[str, str]) -> dict[str, dict]:
+    """`stats` with both vector components on one D4-invariant scale: mean 0, the second moment pooled over both
+    components (and so both signs), bounds +-the largest |value| of either."""
+    std = math.sqrt(sum(stats[n]["mean"] ** 2 + stats[n]["std"] ** 2 for n in vector) / 2)
+    m = max(abs(stats[n][k]) for n in vector for k in ("min", "max"))
+    return stats | {n: stats[n] | {"mean": 0.0, "std": std, "min": -m, "max": m} for n in vector}
+
+
 class GroupedAdapter(nn.Module):
     """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order; `channels` per image.
-    The adapters log `log_fields` (None: the spec's); the loss space `base_norm` always logs the spec's."""
+    The adapters log `log_fields` (None: the spec's); the loss space `base_norm` always logs the spec's.
+    `shared_vector_scale`: adapters and loss space take the vector's components on shared_vector_stats."""
 
     def __init__(
         self,
@@ -50,6 +60,7 @@ class GroupedAdapter(nn.Module):
         spec: Spec,
         log_fields: list[str] | None = None,
         clip_quantile: float = 0.98,
+        shared_vector_scale: bool = False,
     ):
         super().__init__()
         self.groups = groups
@@ -57,6 +68,10 @@ class GroupedAdapter(nn.Module):
         self.fields = [n for n in spec.fields if any(n in g for g in groups)]
         self.channels = max(3, *map(len, groups))
         log = spec.log_fields if log_fields is None else set(log_fields)
+        if shared_vector_scale:
+            if logged := set(spec.vector) & (log | spec.log_fields):
+                raise ValueError(f"shared_vector_scale: vector components {sorted(logged)} are log fields")
+            stats = shared_vector_stats(stats, spec.vector)
         self.base_norm = PreNorm(**_norm_args(self.fields, stats, spec.log_fields))
         self.adapters = nn.ModuleList(
             FieldAdapter(**_norm_args(g, stats, log), channels=self.channels, clip_quantile=clip_quantile)
@@ -100,6 +115,8 @@ def load_adapter(run: str | Path, device: torch.device | str) -> GroupedAdapter:
     cfg = yaml.safe_load((run / "config.yaml").read_text())
     spec = SPECS[cfg["data"].get("dataset", "eulermq")]
     stats = load_field_stats(cfg["data"]["stats_json"])
-    adapter = GroupedAdapter(cfg["adapter"]["groups"], stats, spec, cfg["adapter"].get("log_fields")).to(device)
+    a = cfg["adapter"]
+    shared = a.get("shared_vector_scale", False)
+    adapter = GroupedAdapter(a["groups"], stats, spec, a.get("log_fields"), shared_vector_scale=shared).to(device)
     adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
     return adapter
