@@ -1,0 +1,2706 @@
+{
+ "title": "cond9_zeros_5steps, trajectory 0456_gamma1.7599999905 (conditioned on GT t \u2264 0.12 s)",
+ "fps": 8.333333333333334,
+ "slowdown": 8.0,
+ "frame_size": [
+  960,
+  1090
+ ],
+ "stats": {
+  "density": {
+   "mean": 0.9050976477108875,
+   "std": 0.6618199912434923,
+   "min": 0.022826313972473145,
+   "max": 30.326322555541992,
+   "p0_5": 0.12936254893416027,
+   "p99_5": 4.302566582775148,
+   "unit": "",
+   "signed": false
+  },
+  "momentum_x": {
+   "mean": 0.004045365949982485,
+   "std": 0.5335233432828089,
+   "min": -28.177932739257812,
+   "max": 30.350719451904297,
+   "p0_5": -2.0508986549525687,
+   "p99_5": 2.028264572277614,
+   "unit": "",
+   "signed": true
+  },
+  "momentum_y": {
+   "mean": -0.0019089379638760565,
+   "std": 0.5268940723644502,
+   "min": -33.09458923339844,
+   "max": 31.383377075195312,
+   "p0_5": -2.032140578869111,
+   "p99_5": 1.9952540281310505,
+   "unit": "",
+   "signed": true
+  },
+  "pressure": {
+   "mean": 0.9031908053900557,
+   "std": 0.8053303341374036,
+   "min": 0.0009409633930772543,
+   "max": 25.921844482421875,
+   "p0_5": 0.06757817587095448,
+   "p99_5": 5.759610113163426,
+   "unit": "",
+   "signed": false
+  }
+ },
+ "scales": {
+  "density": {
+   "centre": 0.9050976477108875,
+   "lo": 0.022826313972473145,
+   "hi": 2.2287376301978723,
+   "std": 0.6618199912434923,
+   "cmap": "viridis"
+  },
+  "momentum_x": {
+   "centre": 0.0,
+   "lo": -1.0710920525156002,
+   "hi": 1.0710920525156002,
+   "std": 0.5335233432828089,
+   "cmap": "RdBu_r"
+  },
+  "momentum_y": {
+   "centre": 0.0,
+   "lo": -1.0556970826927765,
+   "hi": 1.0556970826927765,
+   "std": 0.5268940723644502,
+   "cmap": "RdBu_r"
+  },
+  "pressure": {
+   "centre": 0.9031908053900557,
+   "lo": 0.0009409633930772543,
+   "hi": 2.5138514736648627,
+   "std": 0.8053303341374036,
+   "cmap": "viridis"
+  }
+ },
+ "mapping": {
+  "fields": "AsinhNorm(linear_width=0.1 * std, vmin=lo - centre, vmax=hi - centre)(value - centre)",
+  "error": "AsinhNorm(linear_width=0.05, vmin=0, vmax=2.0)(|pred - truth| / std)"
+ },
+ "frames": [
+  {
+   "time": 0.0,
+   "density": {
+    "rmse": 0.020914757624268532,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.013943118043243885,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.014747116714715958,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03616058826446533,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.015,
+   "density": {
+    "rmse": 0.029221029952168465,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.013965982012450695,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.01895434968173504,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.041058722883462906,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.03,
+   "density": {
+    "rmse": 0.02263110689818859,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.012509839609265327,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.016668137162923813,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.032351989299058914,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.045,
+   "density": {
+    "rmse": 0.022498423233628273,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.012704148888587952,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.017225343734025955,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03318283334374428,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.06,
+   "density": {
+    "rmse": 0.023629169911146164,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.013117177411913872,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.018134385347366333,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03473326191306114,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.075,
+   "density": {
+    "rmse": 0.022392434999346733,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.01282565388828516,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.017859214916825294,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03218294307589531,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.09,
+   "density": {
+    "rmse": 0.02602197788655758,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.014455782249569893,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.02568623423576355,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03890438377857208,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.105,
+   "density": {
+    "rmse": 0.041321393102407455,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.01869427040219307,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.04054917395114899,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.047069989144802094,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.12,
+   "density": {
+    "rmse": 0.060230325907468796,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.02384020946919918,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.056471943855285645,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.05982530117034912,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.135,
+   "density": {
+    "rmse": 0.07487056404352188,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.02921593375504017,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0697096735239029,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.07209135591983795,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.15,
+   "density": {
+    "rmse": 0.09121770411729813,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.03375157341361046,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07860428094863892,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.07992962002754211,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.16499999999999998,
+   "density": {
+    "rmse": 0.10432280600070953,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.037948425859212875,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08466513454914093,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08504132926464081,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.18,
+   "density": {
+    "rmse": 0.11238186806440353,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.041144631803035736,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0887942686676979,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08599495887756348,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.195,
+   "density": {
+    "rmse": 0.122748464345932,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.04534545913338661,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0907926931977272,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08544746041297913,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.21,
+   "density": {
+    "rmse": 0.12847378849983215,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.05484969541430473,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.09239441901445389,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08418229222297668,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.22499999999999998,
+   "density": {
+    "rmse": 0.13342830538749695,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.060742009431123734,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0942377820611,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.0848710760474205,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.24,
+   "density": {
+    "rmse": 0.1417660117149353,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.062113527208566666,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.09579987078905106,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08590321242809296,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.255,
+   "density": {
+    "rmse": 0.14577704668045044,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06338609755039215,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.09495808184146881,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08671890944242477,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.27,
+   "density": {
+    "rmse": 0.14633609354496002,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06428220868110657,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.09171104431152344,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08676259219646454,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.285,
+   "density": {
+    "rmse": 0.14649198949337006,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06452661007642746,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08514414727687836,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08347780257463455,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.3,
+   "density": {
+    "rmse": 0.14705756306648254,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06479105353355408,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07989023625850677,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.08001700043678284,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.315,
+   "density": {
+    "rmse": 0.14748936891555786,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06485754251480103,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07588022202253342,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.0766909196972847,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.32999999999999996,
+   "density": {
+    "rmse": 0.1474495828151703,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06512583047151566,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07216808944940567,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.07254988700151443,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.345,
+   "density": {
+    "rmse": 0.14769795536994934,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06572113931179047,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06901811808347702,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.06812811642885208,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.36,
+   "density": {
+    "rmse": 0.14834001660346985,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06666769087314606,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06558597832918167,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.06310957670211792,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.375,
+   "density": {
+    "rmse": 0.14968226850032806,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06761457771062851,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06212003529071808,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.05880942940711975,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.39,
+   "density": {
+    "rmse": 0.15177567303180695,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.06868431717157364,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.059124719351530075,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.05429995432496071,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.40499999999999997,
+   "density": {
+    "rmse": 0.15446120500564575,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.0697716549038887,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05679105967283249,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.0498177669942379,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.42,
+   "density": {
+    "rmse": 0.15754161775112152,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.0709586888551712,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05592387542128563,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.04664769768714905,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.435,
+   "density": {
+    "rmse": 0.1609991490840912,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.0721895694732666,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05578174069523811,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.044630665332078934,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.44999999999999996,
+   "density": {
+    "rmse": 0.16476082801818848,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.07370229810476303,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0557432658970356,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.043513424694538116,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.46499999999999997,
+   "density": {
+    "rmse": 0.16854722797870636,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.07523266971111298,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05579996109008789,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.04284306988120079,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.48,
+   "density": {
+    "rmse": 0.17170071601867676,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.07682090997695923,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05576084926724434,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.04206148535013199,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.495,
+   "density": {
+    "rmse": 0.1747131645679474,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.07809082418680191,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05565629526972771,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.040694378316402435,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.51,
+   "density": {
+    "rmse": 0.1781332641839981,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.07889827340841293,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05589039996266365,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.039476703852415085,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.525,
+   "density": {
+    "rmse": 0.18203730881214142,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.0792740136384964,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.056342966854572296,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03793981298804283,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.54,
+   "density": {
+    "rmse": 0.1861678510904312,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.07973112165927887,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05673471465706825,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03632604330778122,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.5549999999999999,
+   "density": {
+    "rmse": 0.18978379666805267,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08034400641918182,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05688527598977089,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03484100475907326,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.57,
+   "density": {
+    "rmse": 0.192194402217865,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08134155720472336,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05676090344786644,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03351624310016632,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.585,
+   "density": {
+    "rmse": 0.19356314837932587,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08236362785100937,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.056179508566856384,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03220129758119583,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.6,
+   "density": {
+    "rmse": 0.1942998170852661,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08350279182195663,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.055539581924676895,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.031423576176166534,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.615,
+   "density": {
+    "rmse": 0.19480136036872864,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08465301990509033,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05480443313717842,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03111294098198414,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.63,
+   "density": {
+    "rmse": 0.1954602599143982,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08591783046722412,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.054235685616731644,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.031071390956640244,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.645,
+   "density": {
+    "rmse": 0.19659309089183807,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.0871979147195816,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05399689823389053,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03115374781191349,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.6599999999999999,
+   "density": {
+    "rmse": 0.19824835658073425,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08856628835201263,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.054052937775850296,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.031215274706482887,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.6749999999999999,
+   "density": {
+    "rmse": 0.20069198310375214,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.08982118964195251,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05446929112076759,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.031100312247872353,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.69,
+   "density": {
+    "rmse": 0.20343410968780518,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.09121201932430267,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05506901070475578,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.030756093561649323,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.705,
+   "density": {
+    "rmse": 0.20625953376293182,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.09246782958507538,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05571386590600014,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.030234185978770256,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.72,
+   "density": {
+    "rmse": 0.20884253084659576,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.09380251914262772,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05642101168632507,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02957691065967083,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.735,
+   "density": {
+    "rmse": 0.211417093873024,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.09508683532476425,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.057180844247341156,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.029085835441946983,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.75,
+   "density": {
+    "rmse": 0.21389798820018768,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.09637875854969025,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.058050621300935745,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02888105809688568,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.765,
+   "density": {
+    "rmse": 0.21619641780853271,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.09760762006044388,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05897752568125725,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.028671035543084145,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.78,
+   "density": {
+    "rmse": 0.21819789707660675,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.09888450056314468,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.05990903079509735,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02844645269215107,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.7949999999999999,
+   "density": {
+    "rmse": 0.22025981545448303,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10009124875068665,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.060861073434352875,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.028250642120838165,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.8099999999999999,
+   "density": {
+    "rmse": 0.22226379811763763,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10149269551038742,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06188545376062393,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.028097787871956825,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.825,
+   "density": {
+    "rmse": 0.22426839172840118,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10271793603897095,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06293792277574539,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.028028931468725204,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.84,
+   "density": {
+    "rmse": 0.22619333863258362,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10402999818325043,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06400091201066971,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02797061577439308,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.855,
+   "density": {
+    "rmse": 0.22814078629016876,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10532257705926895,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0650862380862236,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.027977164834737778,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.87,
+   "density": {
+    "rmse": 0.23010322451591492,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10659443587064743,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06613123416900635,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02793087810277939,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.885,
+   "density": {
+    "rmse": 0.23204734921455383,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10777319967746735,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0671033263206482,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02788035199046135,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.8999999999999999,
+   "density": {
+    "rmse": 0.23369060456752777,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.10907816141843796,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06799577921628952,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.027963504195213318,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.9149999999999999,
+   "density": {
+    "rmse": 0.23526373505592346,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.11036098748445511,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.06881967931985855,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02798936702311039,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.9299999999999999,
+   "density": {
+    "rmse": 0.23670369386672974,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.11188678443431854,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0695861428976059,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02804458886384964,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.945,
+   "density": {
+    "rmse": 0.238250270485878,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.11329982429742813,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0702194795012474,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.028164125978946686,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.96,
+   "density": {
+    "rmse": 0.2398739755153656,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.1148260086774826,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07076121866703033,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.028469106182456017,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.975,
+   "density": {
+    "rmse": 0.24167697131633759,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.11627429723739624,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0712641105055809,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02873367629945278,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 0.99,
+   "density": {
+    "rmse": 0.24354718625545502,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.1176946759223938,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07169574499130249,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02896212786436081,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.005,
+   "density": {
+    "rmse": 0.2453296035528183,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.11900514364242554,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0720682218670845,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.029172098264098167,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.02,
+   "density": {
+    "rmse": 0.24687594175338745,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.12037023901939392,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.072513148188591,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02949264831840992,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.035,
+   "density": {
+    "rmse": 0.2484622299671173,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.121675044298172,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07292409241199493,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.02968120574951172,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.05,
+   "density": {
+    "rmse": 0.24992215633392334,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.12318592518568039,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07342321425676346,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.029872847720980644,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.065,
+   "density": {
+    "rmse": 0.25133246183395386,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.12454676628112793,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07385087013244629,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03006405383348465,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.08,
+   "density": {
+    "rmse": 0.25264957547187805,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.12599335610866547,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07420333474874496,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03051884099841118,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.095,
+   "density": {
+    "rmse": 0.2540671229362488,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.127352774143219,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07449249923229218,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.030912715941667557,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.1099999999999999,
+   "density": {
+    "rmse": 0.25551238656044006,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.12872745096683502,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0746900886297226,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03124542161822319,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.125,
+   "density": {
+    "rmse": 0.25690191984176636,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.1299053132534027,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0747128501534462,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03160771355032921,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.14,
+   "density": {
+    "rmse": 0.25806117057800293,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13110969960689545,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07471837103366852,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03211812302470207,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.155,
+   "density": {
+    "rmse": 0.259077787399292,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13203613460063934,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07458629459142685,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.032581306993961334,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.17,
+   "density": {
+    "rmse": 0.26004770398139954,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.1329948902130127,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0745653435587883,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03274354711174965,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.185,
+   "density": {
+    "rmse": 0.26101869344711304,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13360409438610077,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0746503695845604,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.032976970076560974,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.2,
+   "density": {
+    "rmse": 0.2619500458240509,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13423176109790802,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07488245517015457,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03332635760307312,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.2149999999999999,
+   "density": {
+    "rmse": 0.26301309466362,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13477496802806854,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07521600276231766,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03364455699920654,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.23,
+   "density": {
+    "rmse": 0.2641828656196594,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13534508645534515,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07566297054290771,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03378022834658623,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.2449999999999999,
+   "density": {
+    "rmse": 0.26535743474960327,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13570766150951385,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07615955919027328,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.033765025436878204,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.26,
+   "density": {
+    "rmse": 0.2665015161037445,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13605672121047974,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07676615566015244,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.0337834507226944,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.275,
+   "density": {
+    "rmse": 0.2677282392978668,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13622598350048065,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.0773395299911499,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.033944856375455856,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.29,
+   "density": {
+    "rmse": 0.26903989911079407,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.1366519033908844,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07798811048269272,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03402841463685036,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.305,
+   "density": {
+    "rmse": 0.2703031301498413,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13697335124015808,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07863987982273102,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.034249596297740936,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.3199999999999998,
+   "density": {
+    "rmse": 0.27145782113075256,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13730549812316895,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07928881794214249,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.034658174961805344,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.335,
+   "density": {
+    "rmse": 0.27257874608039856,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13759620487689972,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.07987266033887863,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.0349852479994297,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.3499999999999999,
+   "density": {
+    "rmse": 0.27381712198257446,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.1377490758895874,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08048446476459503,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03509322553873062,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.365,
+   "density": {
+    "rmse": 0.27502068877220154,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13779327273368835,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08102882653474808,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.034893352538347244,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.38,
+   "density": {
+    "rmse": 0.2762213349342346,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13791367411613464,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08148548007011414,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03497537225484848,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.395,
+   "density": {
+    "rmse": 0.27768322825431824,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13838611543178558,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08167187124490738,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03518223389983177,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.41,
+   "density": {
+    "rmse": 0.2790367901325226,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13880568742752075,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08178741484880447,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.035610444843769073,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.425,
+   "density": {
+    "rmse": 0.2805173099040985,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13864533603191376,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08146687597036362,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03655030578374863,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  },
+  {
+   "time": 1.44,
+   "density": {
+    "rmse": 0.28184959292411804,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_x": {
+    "rmse": 0.13914616405963898,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "momentum_y": {
+    "rmse": 0.08088956028223038,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   },
+   "pressure": {
+    "rmse": 0.03695779666304588,
+    "fraction_error_beyond": 0.0,
+    "fraction_prediction_beyond": 0.0,
+    "fraction_nonfinite": 0.0
+   }
+  }
+ ]
+}
