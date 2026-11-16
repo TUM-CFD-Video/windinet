@@ -16,7 +16,7 @@ latents, L1 + gradient-difference L1 between the decoded clean-latent estimate a
 train.batch_sims is the global batch, split over
 the ranks; evaluation is sharded; rank 0 logs and writes <results_dir>/<name>/{config.yaml, metrics.json, curves.png,
 rollout_<label>.mp4 + example_<label>.pt per `examples` (<first scalar><value>, worst, best), dit.pt,
-cond.pt, dit_<step>.pt per eval point} (mp4, examples and weights in weights_dir, symlinked) and regenerates the
+cond.pt, dit_<step>.pt per eval point} (examples and weights in weights_dir, symlinked) and regenerates the
 results_dir index. `load` + `load_step` evaluate (or continue from) an eval point. With train.ema, every evaluation
 and every saved weight file is the EMA of the weights, and the raw weights are evaluated beside it (raw_* metrics).
 """
@@ -98,6 +98,9 @@ def build(cfg: DitStageConfig, device: torch.device) -> tuple:
         raise typer.BadParameter(f"{cfg.latents.dir} was encoded with other groups than {run}")
     if info["config"]["data"].get("frame_stride", 1) != cfg.data.frame_stride:
         raise typer.BadParameter(f"{cfg.latents.dir} was encoded with another frame stride than data.frame_stride")
+    encoder = vae_cfg["train"].get("vae_parts") in ("io", "all")  # a fine-tuned encoder: its own latents only
+    if encoder and Path(info["config"]["load"]).resolve() != run.resolve():
+        raise typer.BadParameter(f"{run} fine-tunes its encoder, but {cfg.latents.dir} was encoded by another run")
     adapter = load_adapter(run, device)
     n_vaes = len(adapter.groups) if vae_cfg["train"]["vae_per_group"] else 1
     checkpointing = cfg.train.pixel_loss > 0

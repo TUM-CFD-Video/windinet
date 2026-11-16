@@ -68,5 +68,5 @@ class CorrectorStageConfig(_Stage):
         default=None, description="one folder per run is created here; None = results/wan/<data.dataset>/dit/corrector"
     )
     weights_dir: str | None = Field(
-        default=None, description="where corrector.pt and the mp4 go, symlinked from the run; None = the run folder"
+        default=None, description="where corrector.pt and example_*.pt go, symlinked from the run; None = run folder"
     )

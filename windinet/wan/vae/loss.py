@@ -121,10 +121,13 @@ def loss_terms(
 ) -> dict[str, torch.Tensor]:
     """The terms on the round trip of `x` (or on decoding `latents` [n, G, 16, F', h, w] against it) in z-scored field
     space, and the loss weights.kind makes of them, "loss"."""
-    z = latents if latents is not None else encode(adapter, x, vaes, clip)[0]
+    if latents is None:
+        z, _, kl = encode(adapter, x, vaes, clip, sample=weights.kl > 0)
+    else:
+        z, kl = latents, latents.new_zeros(())
     x_hat = decode(adapter, z, vaes).flatten(0, 1)
     x_hat, x = adapter.normalized(x_hat), adapter.normalized(x)
-    terms = {"rmse": rmse(x_hat - x), "h1": h1(x_hat - x), "latent": latent_moments(z)}
+    terms = {"rmse": rmse(x_hat - x), "h1": h1(x_hat - x), "latent": latent_moments(z), "kl": kl}
     match weights.kind:
         case "l1_gdl":
             loss = l1_gdl(x_hat, x)
@@ -132,4 +135,6 @@ def loss_terms(
             loss = amse(x_hat, x)
         case _:
             loss = weights.rmse * terms["rmse"] + weights.h1 * terms["h1"]
+    if weights.kl:
+        loss = loss + weights.kl * kl
     return {"loss": loss + weights.latent * terms["latent"], **terms}

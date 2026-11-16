@@ -12,12 +12,16 @@ if TYPE_CHECKING:
     from windinet.wan.vae.model import WanVAE
 
 
-def encode(adapter: GroupedAdapter, x: torch.Tensor, vaes: list[WanVAE], clip: int) -> tuple[torch.Tensor, list]:
+def encode(
+    adapter: GroupedAdapter, x: torch.Tensor, vaes: list[WanVAE], clip: int, sample: bool = False
+) -> tuple[torch.Tensor, list, torch.Tensor]:
     """Frames [N, C, H, W] -> latents [N / clip, G, 16, clip / 4 + 1, h, w] (each group's image through its encoder:
-    one shared VAE, or one per group) and the RGB image per group."""
+    one shared VAE, or one per group; posterior mean unless `sample`), the RGB image per group and the KL of the
+    posteriors, mean over groups (WanVAE.posterior)."""
     rgbs = adapter(x)
     clips = [rgb.unflatten(0, (-1, clip)).movedim(1, 2) for rgb in rgbs]  # [N / clip, 3, clip, H, W]
-    return torch.stack([vaes[g % len(vaes)].encode(c) for g, c in enumerate(clips)], 1), rgbs
+    zs, kls = zip(*(vaes[g % len(vaes)].posterior(c, sample) for g, c in enumerate(clips)), strict=True)
+    return torch.stack(zs, 1), rgbs, torch.stack(kls).mean()
 
 
 def decode(adapter: GroupedAdapter, latents: torch.Tensor, vaes: list[WanVAE]) -> torch.Tensor:
@@ -34,5 +38,5 @@ def round_trip(
     if not vaes:
         rgbs = adapter(x)
         return adapter.inverse(rgbs), rgbs
-    z, rgbs = encode(adapter, x, vaes, clip)
+    z, rgbs, _ = encode(adapter, x, vaes, clip)
     return decode(adapter, z, vaes).flatten(0, 1), rgbs

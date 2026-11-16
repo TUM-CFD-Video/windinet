@@ -22,6 +22,7 @@ test simulation's whole trajectory ("final"), the metric of the LTX baseline (th
 from __future__ import annotations
 
 import json
+import math
 import os
 import time
 from pathlib import Path
@@ -226,13 +227,15 @@ def main(
         variances = dict(zip(val.ids, reads, strict=True))
     init, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances)
     log_metrics("init", init)
+    best = (init["vrmse_mean"], 0, init)  # validation vrmse_mean, step and metrics of the saved weights
+    if rank == 0:
+        save_weights(run_dir, adapter, vaes, cfg.weights_dir)
 
     vae_params = [p for vae in vaes for p in vae.trainable_params]
     opt, sched = optimizer(cfg.train, adapter, vaes)
     params = [p for g in opt.param_groups for p in g["params"]]
     w0 = [p.detach().to("cpu", copy=True) for p in vae_params]  # start weights for the drift; read at evals only
     steps, history = [], []  # per update / per evaluation
-    metrics = init  # last validation; stays the init for an eval-only run
     batches = endless(train_loader)
     t0 = t_log = time.time()
     for step in range(1, cfg.train.steps + 1):
@@ -260,12 +263,19 @@ def main(
             metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances)
             if w0:
                 metrics["vae_drift"] = rel_change(vae_params, w0)
-            history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1", "latent")}, **metrics})
+            history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1", "latent", "kl")}, **metrics})
             loss = result["loss"]
             log_metrics(f"val {step}", metrics, loss, time.time() - t0)
+            if metrics["vrmse_mean"] < best[0] or math.isnan(best[0]):  # a NaN validation never becomes the best
+                best = (metrics["vrmse_mean"], step, metrics)
+                if rank == 0:
+                    save_weights(run_dir, adapter, vaes, cfg.weights_dir)  # a killed run keeps its best weights
             if rank == 0:
-                save_weights(run_dir, adapter, vaes, cfg.weights_dir)  # a killed run keeps its last evaluated weights
                 (run_dir / "history.json").write_text(json.dumps(history, indent=1))  # and its curve so far
+
+    if best[1] != cfg.train.steps:  # rank 0 saved them before the later updates' gradient all-reduces
+        load_weights(run_dir, adapter, vaes, device)
+        print(f"best validation at step {best[1]}: its weights for the test and the run folder")
 
     stride = cfg.data.frame_stride
     bench = None if rollouts else Benchmark(cfg.data.stats_json, adapter.fields, stride, device, "bench_vae")
@@ -278,7 +288,7 @@ def main(
         print(
             f"latents: |mean| {final['latent_mean_abs']:.3f} (start {latent_start['latent_mean_abs']:.3f}), std "
             f"{final['latent_std_mean']:.3f} (start {latent_start['latent_std_mean']:.3f}), drift from start "
-            f"{final['latent_drift']:.3f}"
+            f"{final['latent_drift']:.3f}, KL {final['latent_kl']:.3g} (start {latent_start['latent_kl']:.3g})"
         )
     if rank != 0:
         return
@@ -286,7 +296,8 @@ def main(
         "config": cfg.model_dump(),
         "provenance": provenance(started, world),
         "init": init,
-        "val": metrics,
+        "val": best[2],
+        "best_step": best[1],
         "final": final,
         "latent_start": latent_start,
         "history": history,

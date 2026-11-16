@@ -70,14 +70,18 @@ def evaluate(
 @torch.no_grad()
 def latent_stats(adapter: GroupedAdapter, loader: DataLoader, vaes: list, start_vaes: list, sims: int = 20) -> dict:
     """Normalised latents of `sims` whole trajectories against N(0, 1) (natural video under Wan's latents_mean/std):
-    per-channel mean and std, and their drift from the latents of the run's starting VAEs on the same input."""
+    per-channel mean and std, their drift from the latents of the run's starting VAEs on the same input, and the mean
+    KL of the posteriors (WanVAE.posterior)."""
     device = next(adapter.parameters()).device
     sums = torch.zeros(5, 16, device=device)  # count, sum, sum of squares, squared change, squared start latent
+    kl = torch.zeros(2, device=device)  # sum of the per-sim KL, sims
     for i, (frames, _) in enumerate(loader):
         if i >= -(-sims // world):  # this rank's share of the sims
             break
         x = adapter.select(frames.flatten(0, 1).to(device))
-        z, z0 = (encode(adapter, x, v, len(x))[0].transpose(0, 2).flatten(1).double() for v in (vaes, start_vaes))
+        (z, _, kl_sim), (z0, *_) = (encode(adapter, x, v, len(x)) for v in (vaes, start_vaes))
+        kl += torch.stack([kl_sim, torch.ones_like(kl_sim)])
+        z, z0 = (t.transpose(0, 2).flatten(1).double() for t in (z, z0))
         sums += torch.stack(
             [
                 torch.full_like(z[:, 0], z.shape[1]),
@@ -87,7 +91,7 @@ def latent_stats(adapter: GroupedAdapter, loader: DataLoader, vaes: list, start_
                 z0.square().sum(1),
             ]
         ).float()
-    all_sum(sums)
+    all_sum(sums, kl)
     n, s, sq, change, ref = sums
     mean, std = s / n, (sq / n - (s / n).square()).clamp(min=0).sqrt()
     return {
@@ -96,4 +100,5 @@ def latent_stats(adapter: GroupedAdapter, loader: DataLoader, vaes: list, start_
         "latent_mean_abs": mean.abs().mean().item(),
         "latent_std_mean": std.mean().item(),
         "latent_drift": (change.sum() / ref.sum()).sqrt().item(),
+        "latent_kl": (kl[0] / kl[1]).item(),
     }

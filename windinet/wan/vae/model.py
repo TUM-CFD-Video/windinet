@@ -74,9 +74,17 @@ class WanVAE:
 
     def encode(self, rgb: torch.Tensor) -> torch.Tensor:
         """Deterministic (posterior mean), normalised latents. Differentiable w.r.t. `rgb`."""
+        return self.posterior(rgb)[0]
+
+    def posterior(self, rgb: torch.Tensor, sample: bool = False) -> tuple[torch.Tensor, torch.Tensor]:
+        """Normalised latents (posterior mean, or a draw with `sample`) and KL(q(z|x) || N(0, I)) of the raw
+        posterior, mean per latent element."""
         with self._autocast():
-            z = self.vae.encode(self.pad_frames(rgb).to(self.dtype)).latent_dist.mode()
-        return (z.to(self.dtype) - self.latents_mean) / self.latents_std
+            dist = self.vae.encode(self.pad_frames(rgb).to(self.dtype)).latent_dist
+        z = dist.sample() if sample else dist.mode()
+        mean, logvar = dist.mean.float(), dist.logvar.float()
+        kl = 0.5 * (mean.square() + logvar.exp() - 1 - logvar).mean()
+        return (z.to(self.dtype) - self.latents_mean) / self.latents_std, kl
 
     def decode(self, z: torch.Tensor) -> torch.Tensor:
         with self._autocast():

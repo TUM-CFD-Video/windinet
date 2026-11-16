@@ -117,6 +117,11 @@ class LossConfig(_Base):
         description="weight of the latent anchor: per channel the squared batch mean and (std - 1)^2 of the normalised "
         "latents, toward the N(0, 1) of natural video that Wan's DiT was trained on; 0 = off",
     )
+    kl: float = Field(
+        default=0.0,
+        description="weight of KL(q(z|x) || N(0, I)) on the encoder's raw posterior (before latents_mean/std), mean "
+        "per latent element; > 0 also samples z in training (evaluation: posterior mean); 0 = off",
+    )
     kind: Literal["rmse_h1", "l1_gdl", "amse"] = Field(
         default="rmse_h1",
         description="rmse_h1: the weighted RMSE + H1; l1_gdl: L1 + gradient-difference L1 (Mathieu et al. "
@@ -154,7 +159,9 @@ class TrainConfig(_Base):
         default=0.02, description="end of the cosine decay as a fraction of each peak lr (LTX: 1e-6 / 5e-5)"
     )
     max_grad_norm: float = Field(default=0.0, description="gradient clipping; 0 = off")
-    eval_every: int = Field(default=300, description="validation (and weight save) every n updates")
+    eval_every: int = Field(
+        default=300, description="validation every n updates; weights saved when its vrmse_mean improves (best kept)"
+    )
     log_every: int = Field(default=10, description="training-progress line every n updates")
     seed: int = Field(default=0, description="torch and frame-sampling seed (+ rank under torchrun)")
 
@@ -194,4 +201,6 @@ class VaeStageConfig(_Stage):
             raise ValueError(f"adapter fields {unknown} not in dataset {self.data.dataset}")
         if logs := [n for n in self.adapter.log_fields or [] if n.startswith("log_")]:
             raise ValueError(f"adapter.log_fields {logs} are already logs in dataset {self.data.dataset}")
+        if self.loss.kl and self.train.vae_parts not in ("io", "all"):
+            raise ValueError("loss.kl needs a trained encoder: train.vae_parts io or all")
         return self

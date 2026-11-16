@@ -1,5 +1,5 @@
-"""Weight files of a run folder. Big files (vae.pt, dit.pt, cond.pt) go to `weights_dir` behind a symlink, so the
-repo keeps only the small adapter.pt; `load_weights` is the inverse of `save_weights`."""
+"""Weight files of a run folder. Big files (vae.pt, dit.pt, cond.pt, example_*.pt; not the mp4s) go to `weights_dir`
+behind a symlink, so the repo keeps only the small adapter.pt; `load_weights` is the inverse of `save_weights`."""
 
 from __future__ import annotations
 
@@ -23,7 +23,10 @@ def big_file(run_dir: Path, name: str, weights_dir: str | None = None) -> Path:
 
 
 def save_state(run_dir: Path, name: str, state: dict, weights_dir: str | None = None) -> None:
-    torch.save(state, big_file(run_dir, name, weights_dir))
+    path = big_file(run_dir, name, weights_dir)
+    tmp = path.with_name(path.name + ".tmp")  # replaced when complete: a kill mid-save keeps the previous file
+    torch.save(state, tmp)
+    tmp.replace(path)
 
 
 def vae_file(i: int, n_vaes: int) -> str:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""Encode every simulation with a fixed adapter and the frozen Wan encoder: the DiT stage's training data.
+"""Encode every simulation with a VAE-stage run's adapter and Wan encoder(s): the DiT stage's training data.
 
     torchrun --standalone --nproc_per_node=8 scripts/wan/encode_latents.py configs/wan/vae.yaml \
         --load results/wan/eulermq/vae/res256/rgb3/adapter --out $WINDINET_WORK/latents/rgb3
 
-Takes the VAE-stage YAML for the data files and the split, the adapter from `--load`. Writes
+Takes the VAE-stage YAML for the data files and the split, the adapter and the fine-tuned VAE(s) from `--load`. Writes
 <out>/<train|val|test>/<sim id>.pt = {"latents": [groups, 16, F/4 + 1, H/8, W/8] fp32 normalised Wan latents
 (posterior mean, the whole trajectory as one clip), "scalars"[, "direction" in the file's orientation]} and
 <out>/encode.yaml (what produced them). With data.augment every train sim is also encoded under the dataset's other
@@ -31,6 +31,7 @@ from windinet.wan.dit.config import EncodeConfig
 from windinet.wan.dit.latents import condition, latent_id
 from windinet.wan.vae.model import WanVAE
 from windinet.wan.vae.roundtrip import encode
+from windinet.wan.weights import load_weights
 
 
 def latent_files(out_dir: Path, split: str, sid: str, augment: bool, starts: list[int]) -> dict[Path, tuple[int, int]]:
@@ -42,19 +43,19 @@ def latent_files(out_dir: Path, split: str, sid: str, augment: bool, starts: lis
 
 
 @torch.no_grad()
-def encode_sim(adapter, vae: WanVAE, frames: torch.Tensor, sid: str, files: dict, spec, device) -> None:
+def encode_sim(adapter, vaes: list[WanVAE], frames: torch.Tensor, sid: str, files: dict, spec, device) -> None:
     """Writes the missing files of one simulation: `frames` [F, 4, H, W] from frame t on, under symmetry k, one clip."""
     for path, (k, t) in files.items():
         if path.exists():
             continue
         x = adapter.select(symmetry(frames[t:], k, spec).to(device))  # [F - t, C, H, W]
-        z, _ = encode(adapter, x, [vae], len(x))  # [1, G, 16, F', h, w]
+        z = encode(adapter, x, vaes, len(x))[0]  # [1, G, 16, F', h, w]
         torch.save({"latents": z[0].cpu(), **condition(spec, sid, k)}, path)
 
 
 def main(
     config_path: Path = typer.Argument(..., help="VAE-stage YAML: data files and split"),
-    load: str = typer.Option(..., help="VAE-stage run folder with adapter.pt"),
+    load: str = typer.Option(..., help="VAE-stage run folder: adapter.pt and, if fine-tuned, vae.pt or vae_<group>.pt"),
     out: str = typer.Option(..., help="latent folder"),
     sims: int | None = typer.Option(None, help="first n sims per split (smoke)"),
     all_starts: bool = typer.Option(False, help="also every train sim from each chunk boundary of its first half"),
@@ -67,7 +68,9 @@ def main(
     setup()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     adapter = load_adapter(run, device)
-    vae = WanVAE(device=device, channels=adapter.channels)
+    per_group = yaml.safe_load((run / "config.yaml").read_text())["train"].get("vae_per_group", False)  # old runs: none
+    vaes = [WanVAE(device=device, channels=adapter.channels) for _ in range(len(adapter.groups) if per_group else 1)]
+    load_weights(run, None, vaes, device)  # a frozen encoder's run has no vae.pt: the pretrained one
     sets = {k: (h5, ids[: cfg.sims]) for k, (h5, ids) in cfg.data.splits().items()}
     h5, ids = sets["train"]
     n_frames = len(FrameSampler(h5, ids[:1], None, 0, stride=stride, spec=spec)[0][0])  # 4k + 1 per trajectory
@@ -84,7 +87,7 @@ def main(
         loader = DataLoader(FrameSampler(h5, todo, None, 0, stride=stride, spec=spec), num_workers=2)
         t0 = time.time()
         for i, (sid, (frames, _)) in enumerate(zip(todo, loader, strict=True), 1):
-            encode_sim(adapter, vae, frames[0], sid, files[sid], spec, device)
+            encode_sim(adapter, vaes, frames[0], sid, files[sid], spec, device)
             if i % 50 == 0 or i == len(todo):
                 per_sim, left = (time.time() - t0) / i, len(todo) - i
                 print(f"{split}: {i}/{len(todo)} sims per rank, {per_sim:.1f} s/sim, eta {per_sim * left / 60:.0f} min")

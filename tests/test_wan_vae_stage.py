@@ -22,8 +22,9 @@ from windinet.field_adapter.grouping import shared_vector_stats
 from windinet.losses import vrms_per_channel
 from windinet.wan.corrector.config import CorrectorStageConfig
 from windinet.wan.dit.config import DitStageConfig
-from windinet.wan.vae.config import VaeStageConfig
+from windinet.wan.vae.config import LossConfig, VaeStageConfig
 from windinet.wan.vae.evaluate import evaluate
+from windinet.wan.vae.loss import loss_terms
 from windinet.wan.weights import load_weights
 
 FIELDS = ["density", "momentum_x", "momentum_y", "pressure", "log_density", "log_pressure"]
@@ -79,6 +80,31 @@ def test_widened_vae_starts_as_the_pretrained_one():
     assert torch.allclose(z, z3) and y.shape[1] == 4 and y[:, 3].abs().max() == 0
     a = GroupedAdapter([FIELDS[:4]], STATS, EULERMQ)
     assert a.channels == 4 and a(torch.rand(2, 4, 8, 8) + 0.1)[0].shape[1] == 4
+
+
+def test_kl_off_keeps_the_mean_latents_and_on_trains_the_encoder(tmp_path):
+    from diffusers import AutoencoderKLWan
+
+    from windinet.wan.vae.model import WanVAE
+
+    torch.manual_seed(0)
+    tiny = AutoencoderKLWan(base_dim=8, num_res_blocks=1, dim_mult=[1, 1, 1, 1], z_dim=4)
+    tiny.register_to_config(latents_mean=[0.1] * 4, latents_std=[2.0] * 4)
+    tiny.save_pretrained(tmp_path / "vae")
+    vae = WanVAE("cpu", repo=str(tmp_path), train="all")
+    a = GroupedAdapter([["density", "momentum_x", "momentum_y"]], STATS, EULERMQ)
+    x = a.select(torch.rand(2, 4, 16, 16) + 0.1)
+    a.init_from_data(x)
+    rgb = a(x)[0][:, :, None]  # two one-frame clips
+    torch.testing.assert_close(vae.encode(rgb), (vae.vae.encode(rgb).latent_dist.mode() - 0.1) / 2.0, rtol=0, atol=0)
+    off = loss_terms(a, x, [vae], 1, LossConfig())
+    assert off["loss"] == off["rmse"] + off["h1"]
+    on = loss_terms(a, x, [vae], 1, LossConfig(kl=1e-3))
+    assert torch.isfinite(on["kl"]) and on["kl"] > 0 and on["kl"] == off["kl"]
+    assert on["loss"] == on["rmse"] + on["h1"] + 1e-3 * on["kl"]
+    assert torch.autograd.grad(on["kl"], vae.vae.encoder.conv_in.weight)[0].abs().sum() > 0
+    with pytest.raises(ValueError, match="loss.kl"):
+        VaeStageConfig(name="x", description="x", data={"h5_path": "x", "stats_json": "x"}, loss={"kl": 1e-3})
 
 
 def test_vrmse_equals_the_ltx_baselines_metric():

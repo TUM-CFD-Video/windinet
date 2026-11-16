@@ -15,7 +15,10 @@ class EncodeConfig(_Base):
     """scripts/wan/encode_latents.py: every simulation of every split through adapter + encoder, once."""
 
     data: DataConfig
-    load: str = Field(description="VAE-stage run folder: its adapter.pt and adapter groups (config.yaml)")
+    load: str = Field(
+        description="VAE-stage run folder: its adapter.pt, its fine-tuned vae.pt or vae_<group>.pt if any, and adapter "
+        "groups (config.yaml)"
+    )
     out: str = Field(description="latent folder: <out>/<split>/<sim id>.pt and <out>/encode.yaml")
     sims: int | None = Field(default=None, description="first n sims per split (smoke); None = all")
     all_starts: bool = Field(
@@ -332,8 +335,8 @@ class DitStageConfig(_Stage):
     )
     weights_dir: str | None = Field(
         default=None,
-        description="where dit.pt (5.7 GB), cond.pt and the mp4 go (the results tree mirrored), symlinked from the "
-        "run; None = the run folder",
+        description="where dit.pt (5.7 GB), cond.pt and the example .pt files go (the results tree mirrored), "
+        "symlinked from the run; None = the run folder",
     )
 
     @model_validator(mode="after")

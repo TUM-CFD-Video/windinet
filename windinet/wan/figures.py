@@ -94,7 +94,8 @@ def save_examples(
     for label, (sid, truth, pred) in examples.items():
         name = label if isinstance(label, str) else f"{next(iter(spec.scalars(sid)))}{label:g}"
         times = [d.frame_dt * data.frame_stride * i for i in range(len(truth))]
-        path = big_file(run_dir, f"{kind}_{name}.mp4", weights_dir)
+        path = run_dir / f"{kind}_{name}.mp4"  # a real file: VS Code's viewer rejects symlinks
+        path.unlink(missing_ok=True)  # an older run's symlink into weights_dir would be written through
         args = (fields, shown, path, _title(sid, label, spec), d.slowdown)
         write_video(truth.numpy(), pred.numpy(), times, *args, origin=d.origin, time_unit=d.time_unit)
         torch.save({"id": sid, "truth": truth, "pred": pred}, big_file(run_dir, f"example_{name}.pt", weights_dir))
