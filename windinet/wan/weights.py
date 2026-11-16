@@ -24,7 +24,7 @@ def big_file(run_dir: Path, name: str, weights_dir: str | None = None) -> Path:
 
 def save_state(run_dir: Path, name: str, state: dict, weights_dir: str | None = None) -> None:
     path = big_file(run_dir, name, weights_dir)
-    tmp = path.with_name(path.name + ".tmp")  # replaced when complete: a kill mid-save keeps the previous file
+    tmp = path.with_suffix(".tmp.pt")  # replaced when complete: a kill mid-save keeps the previous file
     torch.save(state, tmp)
     tmp.replace(path)
 

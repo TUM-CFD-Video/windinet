@@ -37,7 +37,7 @@ def test_srba(srba_files, tmp_path):
     out = run("srba_oooo", h5, tmp_path / "stats.json")
     stats = out["data_normalization_stats"]
     assert out["num_simulations"] == SIMS
-    assert "log_pressure" in stats and "log_log_density" not in stats and "log_velocityX" not in stats
+    assert {"log_pressure", "density"} <= set(stats) and "log_log_density" not in stats and "log_velocityX" not in stats
     assert set(SPECS["srba_oooo"].fields) <= set(stats)
     for name, s in stats.items():
         x = pooled(h5, name)

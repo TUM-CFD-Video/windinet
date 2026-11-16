@@ -76,6 +76,18 @@ def _shown(data: DataConfig, fields: list[str]) -> list[dict]:
     return shown
 
 
+def _display(data: DataConfig, fields: list[str], *videos: torch.Tensor) -> tuple[list[str], list[dict], list]:
+    """Names, `_shown` statistics and videos as shown: a log_<f> as f when the stats hold f; metrics stay on ln f."""
+    from windinet.data.frames import load_field_stats
+
+    stats = load_field_stats(data.stats_json)
+    names = [n.removeprefix("log_") if n.removeprefix("log_") in stats else n for n in fields]
+    if missing := [n for n in names if n.startswith("log_")]:
+        print(f"{data.stats_json} has no {', '.join(n.removeprefix('log_') for n in missing)}: shown as ln")
+    exp = torch.tensor([n != f for n, f in zip(names, fields, strict=True)])[:, None, None]
+    return names, _shown(data, names), [torch.where(exp, v.exp(), v) for v in videos]
+
+
 def _title(sid: str, label, spec: Spec) -> str:
     tail = f", {label}" if isinstance(label, str) else ""
     return f"sim {sid.split('_')[0]} ({spec.display.condition(spec.scalars(sid))}){tail}"
@@ -90,14 +102,15 @@ def save_examples(
     from windinet.video import write_video
     from windinet.wan.weights import big_file
 
-    spec, d, shown = data.spec, data.spec.display, _shown(data, fields)
+    spec, d = data.spec, data.spec.display
     for label, (sid, truth, pred) in examples.items():
         name = label if isinstance(label, str) else f"{next(iter(spec.scalars(sid)))}{label:g}"
         times = [d.frame_dt * data.frame_stride * i for i in range(len(truth))]
         path = run_dir / f"{kind}_{name}.mp4"  # a real file: VS Code's viewer rejects symlinks
         path.unlink(missing_ok=True)  # an older run's symlink into weights_dir would be written through
-        args = (fields, shown, path, _title(sid, label, spec), d.slowdown)
-        write_video(truth.numpy(), pred.numpy(), times, *args, origin=d.origin, time_unit=d.time_unit)
+        names, shown, (gt, pr) = _display(data, fields, truth, pred)
+        args = (names, shown, path, _title(sid, label, spec), d.slowdown)
+        write_video(gt.numpy(), pr.numpy(), times, *args, origin=d.origin, time_unit=d.time_unit)
         torch.save({"id": sid, "truth": truth, "pred": pred}, big_file(run_dir, f"example_{name}.pt", weights_dir))
 
 
@@ -218,8 +231,9 @@ def save_panel(examples: dict, fields: list[str], data: DataConfig, path: Path) 
     sid, truth, pred = examples[min(examples)]
     d = data.spec.display
     t = d.frame_dt * data.frame_stride * (len(truth) - 1)
-    args = (fields, _shown(data, fields), path, _title(sid, None, data.spec))
-    write_frame(truth[-1].numpy(), pred[-1].numpy(), t, *args, origin=d.origin, time_unit=d.time_unit)
+    names, shown, (gt, pr) = _display(data, fields, truth[-1], pred[-1])
+    args = (names, shown, path, _title(sid, None, data.spec))
+    write_frame(gt.numpy(), pr.numpy(), t, *args, origin=d.origin, time_unit=d.time_unit)
 
 
 def save_adapter_rgb(rgbs: list, path: Path) -> None:

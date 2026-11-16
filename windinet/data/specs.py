@@ -19,7 +19,7 @@ class Display:
     slowdown: float  # video seconds per time_unit
     origin: str  # imshow's; 'lower' draws row 0 at the bottom
     condition: Callable[[dict[str, float]], str]  # scalars -> title text
-    widths: dict[str, float] | None  # asinh width in σ per field (absent: linear); None: video.py defaults
+    widths: dict[str, float] | None  # asinh width in σ per shown field (absent: linear); None: video.py defaults
 
 
 @dataclass(frozen=True)
@@ -90,7 +90,7 @@ SRBA_OOOO = Spec(
         slowdown=0.17,
         origin="lower",
         condition=lambda c: f"Mach {c['mach']:g}, {c['bubbles']:g} bubble{'s' * (c['bubbles'] != 1)}",
-        widths={"pressure": 0.5, "velocityY": 1.0},
+        widths={"pressure": 0.5, "velocityY": 1.0, "density": 0.5},
     ),
 )
 SPECS = {s.name: s for s in (EULERMQ, SRBA_OOOO)}

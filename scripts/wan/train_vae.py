@@ -182,13 +182,12 @@ def drift_per_block(vaes: list, w0: list) -> dict[str, float]:
 def write_outputs(
     cfg: VaeStageConfig, run_dir: Path, adapter, vaes, record: dict, drift: dict, rgbs: list, examples: dict
 ) -> None:
-    """Figures, videos, weights, metrics.json and the results index."""
+    """Figures, videos, metrics.json and the results index; the weights were saved at their validation."""
     save_panel(examples, adapter.fields, cfg.data, run_dir / "panel.png")
     save_adapter_rgb(rgbs, run_dir / "adapter_rgb.png")
     kind = "rollout" if cfg.data.latents else "recon"
     save_examples(examples, adapter.fields, cfg.data, run_dir, cfg.weights_dir, kind)
     save_vae_curves(record["steps"], record["history"], adapter.fields, run_dir / "curves.png", drift)
-    save_weights(run_dir, adapter, vaes, cfg.weights_dir)
     (run_dir / "metrics.json").write_text(json.dumps(record, indent=1))
     write_index(Path(cfg.results_dir))
     print(f"wrote {run_dir}/ and {run_dir.parent / 'README.md'}")
@@ -266,12 +265,13 @@ def main(
             history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1", "latent", "kl")}, **metrics})
             loss = result["loss"]
             log_metrics(f"val {step}", metrics, loss, time.time() - t0)
-            if metrics["vrmse_mean"] < best[0] or math.isnan(best[0]):  # a NaN validation never becomes the best
+            # NaN compares False: it never replaces a finite best
+            if metrics["vrmse_mean"] < best[0] or math.isnan(best[0]):
                 best = (metrics["vrmse_mean"], step, metrics)
                 if rank == 0:
                     save_weights(run_dir, adapter, vaes, cfg.weights_dir)  # a killed run keeps its best weights
-            if rank == 0:
-                (run_dir / "history.json").write_text(json.dumps(history, indent=1))  # and its curve so far
+            if rank == 0:  # a killed run keeps its curve so far
+                (run_dir / "history.json").write_text(json.dumps(history, indent=1))
 
     if best[1] != cfg.train.steps:  # rank 0 saved them before the later updates' gradient all-reduces
         load_weights(run_dir, adapter, vaes, device)

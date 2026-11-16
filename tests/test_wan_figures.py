@@ -2,19 +2,26 @@ import json
 import math
 
 import pytest
+import torch
 from torch.utils.data import DataLoader
 
 from windinet.data.frames import FrameSampler, load_field_stats
 from windinet.data.specs import EULERMQ, SRBA_OOOO
 from windinet.field_adapter import GroupedAdapter
 from windinet.wan.dit.benchmark import Benchmark
-from windinet.wan.figures import _shown, save_examples, save_panel
+from windinet.wan.figures import _display, _shown, save_examples, save_panel
 from windinet.wan.vae.config import DataConfig
 from windinet.wan.vae.evaluate import evaluate
 
 POSITIVE = {"mean": 1.6, "std": 2.0, "min": 0.01, "max": 30.0, "p0_1": 0.02, "p99_9": 20.0}
 SIGNED = {"mean": 0.1, "std": 1.0, "min": -4.0, "max": 4.0, "p0_1": -3.0, "p99_9": 2.5}
-SRBA_STATS = {"pressure": POSITIVE, "velocityX": SIGNED, "velocityY": SIGNED, "log_density": SIGNED | {"min": -3.5}}
+SRBA_STATS = {
+    "pressure": POSITIVE,
+    "velocityX": SIGNED,
+    "velocityY": SIGNED,
+    "log_density": SIGNED | {"min": -3.5},
+    "density": POSITIVE,
+}
 
 
 def _data(tmp_path, dataset, stats, h5="unused.h5"):
@@ -38,6 +45,15 @@ def test_eulermq_display_unchanged(tmp_path):
     data = _data(tmp_path, "eulermq", stats)
     today = [{**stats[n], "signed": n.startswith("momentum")} for n in EULERMQ.fields]
     assert _shown(data, list(EULERMQ.fields)) == today
+
+
+def test_log_field_shown_physical(tmp_path):
+    x = torch.randn(2, 4, 3, 3)
+    names, shown, (y,) = _display(_data(tmp_path, "srba_oooo", SRBA_STATS), SRBA_OOOO.fields, x)
+    assert names == ["pressure", "velocityX", "velocityY", "density"] and shown[3]["width"] == 0.5
+    assert torch.equal(y[:, :3], x[:, :3]) and torch.allclose(y[:, 3], x[:, 3].exp())
+    older = {k: v for k, v in SRBA_STATS.items() if k != "density"}
+    assert _display(_data(tmp_path, "srba_oooo", older), SRBA_OOOO.fields, x)[0] == list(SRBA_OOOO.fields)
 
 
 @pytest.fixture
@@ -78,3 +94,4 @@ def test_panel_and_videos_written(srba_eval, tmp_path):
     save_panel(short, adapter.fields, data, tmp_path / "panel.png")
     save_examples({2.1: short[2.1]}, adapter.fields, data, tmp_path, None, "recon")
     assert {"panel.png", "recon_mach2.1.mp4", "example_mach2.1.pt"} <= {p.name for p in tmp_path.iterdir()}
+    assert torch.equal(torch.load(tmp_path / "example_mach2.1.pt")["truth"], short[2.1][1])  # ln ρ, as scored

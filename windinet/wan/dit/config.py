@@ -57,9 +57,6 @@ class SampleConfig(_Base):
     results_dir: str = Field(
         default="results/wan/eulermq/dit/zero_shot", description="one folder per sample is created here"
     )
-    video_dir: str | None = Field(
-        default=None, description="where the mp4 is written, symlinked from the run folder; None = the run folder"
-    )
 
 
 class ModelConfig(_Base):

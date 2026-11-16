@@ -15,7 +15,7 @@ def test_spec_names_refer_to_its_fields(spec):
     fields = set(spec.fields)
     assert SPECS[spec.name] is spec and set(spec.vector) <= fields and spec.log_fields <= fields
     assert {f for g in spec.groups for f in g} <= fields and set(spec.display.symbols) == fields
-    assert set(spec.display.widths or {}) <= fields
+    assert set(spec.display.widths or {}) <= fields | {f.removeprefix("log_") for f in fields}
 
 
 @pytest.mark.parametrize("spec, sid", [(EULERMQ, "0001_gamma1.4"), (SRBA_OOOO, SRBA_ID)], ids=SPECS)

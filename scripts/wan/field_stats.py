@@ -1,5 +1,5 @@
 """Statistics of every field of one HDF5 file over all its sims (data.stats_json): mean, std, min, max and
-percentiles per spec field, and per log_<f> of each positive field."""
+percentiles per spec field, per log_<f> of each positive field and per f of each log_<f> field."""
 
 from __future__ import annotations
 
@@ -20,11 +20,14 @@ PERCENTILES = {"p0_1": 0.1, "p0_5": 0.5, "p1": 1.0, "p50": 50.0, "p99": 99.0, "p
 
 
 def quantities(h5: str, dataset: str, sid: str) -> dict[str, np.ndarray]:
-    """One sim's spec fields, flat float64, plus log_<f> of each field not itself a log that is positive here."""
+    """One sim's spec fields, flat float64, plus log_<f> of each field not itself a log that is positive here, and the
+    stored f of each log_<f> (the figures show f)."""
+    fields = SPECS[dataset].fields
+    stored = [n.removeprefix("log_") for n in fields if n.startswith("log_")]
     with h5py.File(h5, "r") as f:
-        x = {name: read_field(f[sid], name, slice(None)).ravel() for name in SPECS[dataset].fields}
+        x = {name: read_field(f[sid], name, slice(None)).ravel() for name in (*fields, *stored)}
     for name in list(x):
-        if not name.startswith("log_") and x[name].min() > 0:
+        if not name.startswith("log_") and f"log_{name}" not in x and x[name].min() > 0:
             x[f"log_{name}"] = np.log(x[name])
     return x
 

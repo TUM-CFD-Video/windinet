@@ -4,8 +4,8 @@ denoised again (SDEdit; strength 0 is the plain VAE round trip of the simulation
 
     python scripts/wan/sample_dit.py configs/wan/sample.yaml --name zs_native --desc "..." [--set height=256 ...]
 
-Writes <results_dir>/<name>/{config.yaml, provenance.json, strip.png, <name>.mp4} (the mp4 in `video_dir` when
-set, symlinked). Variants via --set, see jobs/lc/dit_zero_shot.txt.
+Writes <results_dir>/<name>/{config.yaml, provenance.json, strip.png, <name>.mp4}. Variants via --set, see
+jobs/lc/dit_zero_shot.txt.
 """
 
 from __future__ import annotations
@@ -56,12 +56,8 @@ def main(
     )
     video = vae.decode(latents)[0]  # [3, F, H, W] in (-1, 1)
 
-    video_path = (Path(cfg.video_dir) if cfg.video_dir else run_dir) / f"{cfg.name}.mp4"
-    video_path.parent.mkdir(parents=True, exist_ok=True)
+    video_path = run_dir / f"{cfg.name}.mp4"
     save_video(video, video_path, cfg.fps)
-    if cfg.video_dir:
-        (run_dir / video_path.name).unlink(missing_ok=True)
-        (run_dir / video_path.name).symlink_to(video_path)
     save_strip(video, run_dir / "strip.png", vae.decode(init)[0] if init is not None else None)
     (run_dir / "provenance.json").write_text(json.dumps(provenance(started), indent=1))
     print(f"wrote {run_dir}/ and {video_path} ({tuple(video.shape)}, {(time.time() - started) / 60:.0f} min)")
