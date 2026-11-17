@@ -16,13 +16,15 @@ world = int(os.environ.get("WORLD_SIZE", 1))
 
 
 def setup() -> None:
-    """Process group, this rank's GPU, and stdout only on rank 0."""
+    """This rank's GPU, the process group, and stdout only on rank 0."""
     if world == 1:
         return
-    dist.init_process_group("nccl" if torch.cuda.is_available() else "gloo")
-    atexit.register(dist.destroy_process_group)
+    # GPU first: its lazy init adds an environment variable, which segfaults a process group thread reading the
+    # environment as it starts (about one start in four on LUMI)
     if torch.cuda.is_available():
         torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+    dist.init_process_group("nccl" if torch.cuda.is_available() else "gloo")
+    atexit.register(dist.destroy_process_group)
     if rank:
         sys.stdout = open(os.devnull, "w")
 
