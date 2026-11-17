@@ -164,6 +164,18 @@ class TrainConfig(_Base):
     )
     log_every: int = Field(default=10, description="training-progress line every n updates")
     seed: int = Field(default=0, description="torch and frame-sampling seed (+ rank under torchrun)")
+    crops: dict[int, float] | None = Field(
+        default=None,
+        description="square crop size (multiple of 8, at most the frame size; the frame size = no crop) -> weight, "
+        "normalised; one size per update, the same on every rank; per clip a random window on the 8 px grid, the same "
+        "for its frames and fields; None = full frames; evaluation always full frames",
+    )
+
+    @model_validator(mode="after")
+    def _crops(self):
+        if bad := [s for s, w in (self.crops or {}).items() if s <= 0 or s % frames.ALIGN or w <= 0]:
+            raise ValueError(f"train.crops: sizes {bad} are not positive multiples of {frames.ALIGN} with weight > 0")
+        return self
 
 
 class VaeStageConfig(_Stage):
@@ -203,4 +215,6 @@ class VaeStageConfig(_Stage):
             raise ValueError(f"adapter.log_fields {logs} are already logs in dataset {self.data.dataset}")
         if self.loss.kl and self.train.vae_parts not in ("io", "all"):
             raise ValueError("loss.kl needs a trained encoder: train.vae_parts io or all")
+        if self.train.crops and self.data.latents:
+            raise ValueError("train.crops crops the round trip, not data.latents")
         return self

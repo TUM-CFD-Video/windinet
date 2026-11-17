@@ -16,6 +16,7 @@ from windinet.data.specs import EULERMQ, Spec
 from windinet.training.shockwave_data import ShockWaveDataset
 
 SYMMETRIES = 8  # D4: symmetries of the equations and the open boundaries of both datasets, `symmetry`
+ALIGN = 8  # the Wan VAE's spatial downsampling: crops on this grid keep the full frame's latent grid
 
 
 def sim_ids(h5_path: str | Path) -> list[str]:
@@ -185,6 +186,16 @@ def turn(x: torch.Tensor, k: int) -> torch.Tensor:
         if k & bit:
             x = x.flip(dim)
     return x
+
+
+def crop(fields: torch.Tensor, crops: dict[int, float], key: str) -> torch.Tensor:
+    """A square window per item of [B, ..., H, W], shared by its frames and fields: size by key, corner on ALIGN."""
+    size = random.Random(key).choices(list(crops), list(crops.values()))[0]
+    windows = []
+    for item in fields:
+        top, left = (ALIGN * random.randrange((n - size) // ALIGN + 1) for n in fields.shape[-2:])
+        windows.append(item[..., top : top + size, left : left + size])
+    return torch.stack(windows)
 
 
 def endless(loader):

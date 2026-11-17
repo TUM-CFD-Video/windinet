@@ -15,7 +15,7 @@ from windinet.data.specs import EULERMQ, SRBA_OOOO
 from windinet.experiment.config import load_config
 from windinet.experiment.log import log_metrics
 from windinet.experiment.metrics import Aggregate, vrmse
-from windinet.experiment.runs import run_dataset, write_index
+from windinet.experiment.runs import run_dataset, write_config, write_index
 from windinet.field_adapter import FieldAdapter, GroupedAdapter, load_adapter
 from windinet.field_adapter.bijections import PreNorm
 from windinet.field_adapter.grouping import shared_vector_stats
@@ -190,6 +190,24 @@ def test_stage_defaults_follow_the_dataset():
         for dataset in ("eulermq", "srba_oooo"):
             cfg = schema(**load_config(Path(f"configs/wan/{path}.yaml"), [*NAMED, f"data.dataset={dataset}"]))
             assert cfg.results_dir == f"results/wan/{dataset}/{stage}"
+
+
+def test_crops_default_off_and_validated(tmp_path):
+    def config(*sets):
+        return VaeStageConfig(**load_config(Path("configs/wan/srba_oooo/vae.yaml"), [*NAMED, *sets]))
+
+    assert config().train.crops is None
+    cropped = config("train.crops={128: 0.9, 256: 0.1}")
+    assert cropped.train.crops == {128: 0.9, 256: 0.1}
+    write_config(cropped.model_dump(), tmp_path / "config.yaml")  # the run's config.yaml re-runs it
+    assert VaeStageConfig(**load_config(tmp_path / "config.yaml", [])).train.crops == {128: 0.9, 256: 0.1}
+    for bad in ("{12: 1.0}", "{128: 0}", "{0: 1.0}"):
+        with pytest.raises(ValueError, match="train.crops"):
+            config(f"train.crops={bad}")
+    with pytest.raises(ValueError, match="data.latents"):
+        config("train.crops={128: 1}", "data.latents=x")
+    with pytest.raises(ValueError, match="crops"):  # the DiT stage has no crops
+        DitStageConfig(**load_config(Path("configs/wan/dit.yaml"), [*NAMED, "data.crops={128: 1}"]))
 
 
 def test_adapter_fields_must_be_in_the_dataset():

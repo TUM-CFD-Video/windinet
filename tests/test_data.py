@@ -1,10 +1,22 @@
+import random
+
 import h5py
 import numpy as np
 import pytest
 import torch
 from pydantic import BaseModel, ValidationError
 
-from windinet.data.frames import SYMMETRIES, FrameSampler, sim_ids, splits, symmetry, turn_vector, val_split
+from windinet.data.frames import (
+    ALIGN,
+    SYMMETRIES,
+    FrameSampler,
+    crop,
+    sim_ids,
+    splits,
+    symmetry,
+    turn_vector,
+    val_split,
+)
 from windinet.data.specs import EULERMQ, SPECS, SRBA_OOOO, Dataset
 
 SRBA_ID = "005_Mas1.30_sb1_Ax0.0129_Ay0.0081_Ar0.0035_BxNaN_ByNaN_BrNaN"
@@ -106,3 +118,24 @@ def test_turn_vector_turns_the_flow_as_symmetry_turns_the_fields():
         t = symmetry(fields, k, SRBA_OOOO)[0]
         assert (t[v, 0, 0].item(), t[u, 0, 0].item()) == table[k], k
         assert (t[p].diff(dim=-2).mean().item(), t[p].diff(dim=-1).mean().item()) == table[k], k
+
+
+def test_crop_one_size_per_step_on_every_rank_one_window_per_clip():
+    clips = torch.arange(3 * 5 * 4 * 32 * 32, dtype=torch.float).view(3, 5, 4, 32, 32)  # [B, k, C, H, W]
+    drawn = set()
+    for step in range(30):
+        sizes = set()
+        for rank in range(4):
+            random.seed(rank)  # the window draws differ per rank, the size must not
+            out = crop(clips, {8: 0.5, 16: 0.3, 32: 0.2}, f"0/{step}")
+            n = out.shape[-1]
+            sizes.add(n)
+            assert out.shape == (3, 5, 4, n, n)
+            for clip, window in zip(clips, out, strict=True):
+                top, left = divmod(int(window[0, 0, 0, 0] - clip[0, 0, 0, 0]), 32)
+                assert top % ALIGN == 0 and left % ALIGN == 0
+                assert torch.equal(window, clip[..., top : top + n, left : left + n])  # all frames and fields
+        assert len(sizes) == 1, step
+        drawn |= sizes
+    assert drawn == {8, 16, 32}
+    assert torch.equal(crop(clips, {32: 1.0}, "0/1"), clips)  # the frame size: no crop

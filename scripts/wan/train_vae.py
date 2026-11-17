@@ -34,7 +34,7 @@ import typer
 import yaml
 from torch.utils.data import DataLoader
 
-from windinet.data.frames import FrameSampler, endless, load_field_stats
+from windinet.data.frames import FrameSampler, crop, endless, load_field_stats
 from windinet.experiment.config import start_run
 from windinet.experiment.distributed import all_mean, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress
@@ -209,6 +209,10 @@ def main(
     train_loader = loader(cfg, cfg.data.h5_path, train_ids, cfg.data.frames_per_sim, True, "train")
     val_loader = loader(cfg, cfg.data.h5_path, eval_ids, cfg.data.frames_per_sim, False, "val")
     test_loader = loader(cfg, test_h5, test_ids, None, False, "test")
+    if crops := cfg.train.crops:  # own sampler: an h5 handle opened here would be forked into the loader workers
+        frame = min(FrameSampler(cfg.data.h5_path, train_ids[:1], 1, spec=cfg.data.spec).read(0, [0]).shape[-2:])
+        if max(crops) > frame:
+            raise typer.BadParameter(f"train.crops: {max(crops)} px is larger than the {frame} px frames")
     print(
         f"{len(train_ids)} train / {len(val_ids)} val ({len(eval_ids)} evaluated mid-run) / "
         f"{len(test_ids)} test sims (whole trajectories at the end), {world} x {device}"
@@ -240,10 +244,20 @@ def main(
     for step in range(1, cfg.train.steps + 1):
         t_step = time.time()
         frames, z = next(batches)
+        if cfg.train.crops:
+            frames = crop(frames, cfg.train.crops, f"{cfg.train.seed}/{step}")
         x = adapter.select(frames.flatten(0, 1).to(device))
         result = train_step(cfg, adapter, vaes, x, opt, sched, params, z.to(device) if rollouts else None)
         seconds = time.time() - t_step  # data wait + update, no evaluation
-        steps.append({"step": step, "loss": result["loss"], "update_ratio": result["update_ratio"], "seconds": seconds})
+        steps.append(
+            {
+                "step": step,
+                "loss": result["loss"],
+                "update_ratio": result["update_ratio"],
+                "seconds": seconds,
+                "size": frames.shape[-1],
+            }
+        )
         if step % cfg.train.log_every == 0:
             recent = steps[-cfg.train.log_every :]
             now, per_step = time.time(), (time.time() - t_log) / len(recent)
