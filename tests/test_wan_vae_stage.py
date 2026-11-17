@@ -7,7 +7,9 @@ import h5py
 import numpy as np
 import pytest
 import torch
+import typer
 import yaml
+from conftest import load_script
 from torch.utils.data import DataLoader
 
 from windinet.data.frames import SYMMETRIES, FrameSampler, load_field_stats, symmetry, val_split
@@ -411,6 +413,87 @@ def test_load_weights_without_adapter_takes_only_the_vae(tmp_path):
     torch.save(state, tmp_path / "vae.pt")  # no adapter.pt in the folder
     load_weights(tmp_path, None, [vae], torch.device("cpu"))
     assert (vae.vae.weight == 7).all()
+
+
+WIDE = {k: {"mean": 10.0, "std": 10.0, "min": -40.0, "max": 40.0} for k in (*SRBA_OOOO.fields, "log_pressure")}
+CHANGES = {k: {"mean": 0.3, "std": 0.5, "min": -2.0, "max": 2.0} for k in SRBA_OOOO.fields}
+SRBA_GROUPS = [list(g) for g in SRBA_OOOO.groups]
+
+
+def test_change_round_trip_is_exact_within_each_clip():
+    # three clips of five frames, 10 apart: a change taken across a clip boundary would hit the change range's clamp
+    x = torch.cat([10 * k + torch.randn(1, 4, 8, 8) + torch.randn(5, 4, 8, 8).cumsum(0) / 4 for k in range(3)])
+    a = GroupedAdapter(SRBA_GROUPS, WIDE, SRBA_OOOO, [], 0.999, change_stats=CHANGES)
+    x_hat, rgbs = round_trip(a, x, [], clip=5)
+    assert torch.allclose(x_hat, x, atol=1e-4)
+    assert torch.equal(rgbs[0][::5], a.adapters[0](x[::5][:, [3, 0]])) and rgbs[0].shape == (15, 3, 8, 8)
+    still = x[:5].clone()
+    still[:, :, :2] = still[:1, :, :2]  # two rows that do not change: exactly 0 in the change images, mean or not
+    assert all((r[1:, :, :2] == 0).all() for r in round_trip(a, still, [], clip=5)[1])
+
+
+def test_without_change_stats_the_round_trip_is_the_adapter():
+    x = torch.randn(10, 4, 8, 8)
+    a = GroupedAdapter(SRBA_GROUPS, WIDE, SRBA_OOOO)
+    assert a.changes is None
+    x_hat, rgbs = round_trip(a, x, [], clip=5)
+    assert torch.equal(x_hat, a.inverse(a(x))) and all(torch.equal(r, s) for r, s in zip(rgbs, a(x), strict=True))
+
+
+def test_change_adapter_is_saved_under_changes_and_kept_on_a_state_load():
+    a = GroupedAdapter(SRBA_GROUPS, WIDE, SRBA_OOOO, ["pressure"], change_stats=CHANGES)
+    assert any(k.startswith("changes.adapters.0.") for k in a.state_dict())
+    assert not a.changes.adapters[0].prenorm.log_mask.any() and a.adapters[0].prenorm.log_mask.any()
+    state = GroupedAdapter(SRBA_GROUPS, WIDE, SRBA_OOOO, ["pressure"])
+    with torch.no_grad():
+        state.adapters[0].mix.weight.add_(1)
+    a.load_state_dict(state.state_dict())
+    assert torch.equal(a.adapters[0].mix.weight, state.adapters[0].mix.weight)
+    assert torch.equal(a.changes.adapters[0].mix.weight, torch.eye(3, 2))
+    partial = {k: v for k, v in a.state_dict().items() if k != "changes.adapters.0.mix.weight"}
+    with pytest.raises(RuntimeError, match="changes.adapters.0.mix.weight"):  # a change run's adapter.pt is complete
+        a.load_state_dict(partial)
+
+
+def _change_json(path: Path, stride: int) -> str:
+    path.write_text(json.dumps({"stride": stride, "data_normalization_stats": CHANGES}))
+    return str(path)
+
+
+def test_change_stats_need_clips_at_their_stride(tmp_path):
+    def config(*sets):
+        return VaeStageConfig(**load_config(Path("configs/wan/srba_oooo/vae.yaml"), [*NAMED, *sets]))
+
+    stats = f"adapter.change_stats={_change_json(tmp_path / 'c.json', 2)}"
+    assert config(stats, "data.frame_stride=2").adapter.change_stats
+    for bad, match in (
+        (["data.frame_stride=1"], "stride 2"),
+        (["data.frame_stride=2", "data.clip=false"], "clips"),
+        (["data.frame_stride=2", "data.eval_single_frames=true"], "clips"),
+    ):
+        with pytest.raises(ValueError, match=match):
+            config(stats, *bad)
+
+
+def test_build_starts_the_change_adapter_of_a_loaded_state_run_from_data(srba_files, tmp_path):
+    train_vae = load_script("train_vae")
+    run = _run(tmp_path / "state", {"dataset": "srba_oooo"}, SRBA_STATS, _srba_adapter(), {"groups": SRBA_GROUPS})
+    data = {"dataset": "srba_oooo", "h5_path": str(srba_files[0]), "stats_json": str(run / "stats.json")}
+    cfg = VaeStageConfig(
+        name="t",
+        description="t",
+        vae="none",
+        load=str(run),
+        data=data | {"clip": True, "frame_stride": 2},
+        adapter={"change_stats": _change_json(tmp_path / "c.json", 2)},
+    )
+    adapter, _ = train_vae.build(cfg, ["000_Mas1.30_sb1_Ax0.0129_Ay0.0081_Ar0.0035_BxNaN_ByNaN_BrNaN"], "cpu")
+    saved = torch.load(run / "adapter.pt")
+    assert all(torch.equal(v, adapter.state_dict()[k]) for k, v in saved.items())
+    assert all((c.clip.log_scale != 0).all() for c in adapter.changes.adapters)
+    change_run = {"data": {"dataset": "srba_oooo"}, "adapter": {"groups": SRBA_GROUPS, "change_stats": "other.json"}}
+    with pytest.raises(typer.BadParameter, match="change_stats"):
+        train_vae.check_load(change_run, cfg)
 
 
 def test_index_and_log_show_the_dataset_symbols(tmp_path, capsys):

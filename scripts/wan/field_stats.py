@@ -1,5 +1,6 @@
 """Statistics of every field of one HDF5 file over all its sims (data.stats_json): mean, std, min, max and
-percentiles per spec field, per log_<f> of each positive field and per f of each log_<f> field."""
+percentiles per spec field, per log_<f> of each positive field and per f of each log_<f> field; with --stride s,
+of the change x[t + s] - x[t] of each spec field instead (adapter.change_stats)."""
 
 from __future__ import annotations
 
@@ -19,10 +20,14 @@ BINS = 2**20
 PERCENTILES = {"p0_1": 0.1, "p0_5": 0.5, "p1": 1.0, "p50": 50.0, "p99": 99.0, "p99_5": 99.5, "p99_9": 99.9}
 
 
-def quantities(h5: str, dataset: str, sid: str) -> dict[str, np.ndarray]:
+def quantities(h5: str, dataset: str, sid: str, stride: int = 0) -> dict[str, np.ndarray]:
     """One sim's spec fields, flat float64, plus log_<f> of each field not itself a log that is positive here, and the
-    stored f of each log_<f> (the figures show f)."""
+    stored f of each log_<f> (the figures show f); with `stride`, the spec fields' changes over `stride` frames."""
     fields = SPECS[dataset].fields
+    if stride:
+        with h5py.File(h5, "r") as f:
+            x = {name: read_field(f[sid], name, slice(None)) for name in fields}
+        return {name: (v[stride:] - v[:-stride]).ravel() for name, v in x.items()}
     stored = [n.removeprefix("log_") for n in fields if n.startswith("log_")]
     with h5py.File(h5, "r") as f:
         x = {name: read_field(f[sid], name, slice(None)).ravel() for name in (*fields, *stored)}
@@ -32,12 +37,12 @@ def quantities(h5: str, dataset: str, sid: str) -> dict[str, np.ndarray]:
     return x
 
 
-def sums(task: tuple[str, str, str]) -> dict[str, tuple]:
+def sums(task: tuple[str, str, str, int]) -> dict[str, tuple]:
     """Pass 1: n, sum, min, max per quantity."""
     return {k: (v.size, v.sum(), v.min(), v.max()) for k, v in quantities(*task).items()}
 
 
-def spread(task: tuple[str, str, str], ranges: dict[str, tuple[float, float, float]]) -> dict[str, tuple]:
+def spread(task: tuple[str, str, str, int], ranges: dict[str, tuple[float, float, float]]) -> dict[str, tuple]:
     """Pass 2: sum of squares around the global mean and a BINS-bin histogram over [min, max] per quantity."""
     x = quantities(*task)
     out = {}
@@ -53,12 +58,13 @@ def main(
     out: Path = typer.Argument(..., help="output JSON"),
     workers: int = typer.Option(8, help="processes, one sim per task"),
     sims: int | None = typer.Option(None, help="only the first n sims (sorted ids), for checks"),
+    stride: int = typer.Option(0, help="statistics of the change over this many stored frames (data.frame_stride)"),
 ) -> None:
     """Write the stats JSON in the shape windinet.data.frames.load_field_stats reads."""
     if dataset not in SPECS:
         raise typer.BadParameter(f"unknown dataset {dataset!r}, expected one of {list(SPECS)}")
     ids = sim_ids(h5)[:sims]
-    tasks = [(str(h5), dataset, sid) for sid in ids]
+    tasks = [(str(h5), dataset, sid, stride) for sid in ids]
     with Pool(workers) as pool:
         first = pool.map(sums, tasks)
         # a log stays only if every sim is positive, i.e. its global min is > 0
@@ -87,7 +93,10 @@ def main(
             stats[k][key] = float(lo[k] + (np.searchsorted(cdf, q / 100 * n[k]) + 0.5) * width)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
-        json.dumps({"source_h5": str(h5), "num_simulations": len(ids), "data_normalization_stats": stats}, indent=2)
+        json.dumps(
+            {"source_h5": str(h5), "num_simulations": len(ids), "stride": stride, "data_normalization_stats": stats},
+            indent=2,
+        )
     )
 
 

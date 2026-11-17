@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -128,6 +130,13 @@ class AdapterConfig(_Base):
         le=1,
         description="SoftClip init: this quantile of each channel's |value| lands at 0.9 of the range (1: the maximum)",
     )
+    change_stats: str | None = Field(
+        default=None,
+        description="stats JSON of the change between the frames used (scripts/wan/field_stats.py --stride = "
+        "data.frame_stride); set: each clip's first frame passes the adapter as a state, every later frame as its "
+        "change from the one before through a second adapter on these stats, and the decoded changes are summed back "
+        "to states; None = states",
+    )
 
 
 class LossConfig(_Base):
@@ -252,4 +261,15 @@ class VaeStageConfig(_Stage):
             raise ValueError("latent_channels > 16 needs vae wan and train.vae_parts all: the new channels must train")
         if self.data.eval_single_frames and self.data.latents:
             raise ValueError("data.eval_single_frames changes the round trip, data.latents only decodes")
+        return self
+
+    @model_validator(mode="after")
+    def _changes(self):
+        if self.adapter.change_stats is None:
+            return self
+        if not self.data.clip or self.data.eval_single_frames:
+            raise ValueError("adapter.change_stats needs clips: data.clip and no data.eval_single_frames")
+        stride = json.loads(Path(self.adapter.change_stats).read_text()).get("stride")
+        if stride != self.data.frame_stride:
+            raise ValueError(f"adapter.change_stats has stride {stride}, data.frame_stride is {self.data.frame_stride}")
         return self

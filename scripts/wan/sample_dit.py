@@ -46,6 +46,8 @@ def main(
     if cfg.source:  # the simulation as the adapter's first image, through the encoder
         h5, sid = cfg.source.rsplit(":", 1)
         adapter = load_adapter(cfg.adapter, device)
+        if adapter.changes is not None:
+            raise typer.BadParameter(f"{cfg.adapter} encodes changes; this script encodes states")
         spec = SPECS[run_dataset(cfg.adapter)]
         frames, _ = FrameSampler(h5, [sid], None, 0, consecutive=True, spec=spec)[0]
         init = vae.encode(adapter(adapter.select(frames.to(device)))[0].movedim(0, 1)[None])

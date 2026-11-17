@@ -1,5 +1,9 @@
 """Tiny HDF5 files shaped like the real datasets: 9 frames of 8×8, fields (T, 1, H, W) float64."""
 
+import importlib.util
+import sys
+from pathlib import Path
+
 import h5py
 import numpy as np
 import pytest
@@ -7,6 +11,14 @@ import pytest
 from windinet.data.specs import EULERMQ, SRBA_OOOO
 
 FRAMES, SIZE = 9, 8
+
+
+def load_script(name: str):
+    """scripts/wan/<name>.py as a module, registered so a process pool can pickle its functions."""
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).parents[1] / f"scripts/wan/{name}.py")
+    module = sys.modules[name] = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def make_h5(path, spec, ids, size=SIZE):

@@ -79,6 +79,15 @@ def encode_info(dir: str | Path) -> dict:
     return yaml.safe_load((Path(dir) / "encode.yaml").read_text())
 
 
+def check_encoding(dir: str | Path, change_stats: str | None) -> None:
+    """Refuse latents whose VAE run (encode.yaml's config.load) has another adapter.change_stats: states and changes
+    do not mix."""
+    run = Path(encode_info(dir)["config"]["load"])
+    theirs = yaml.safe_load((run / "config.yaml").read_text())["adapter"].get("change_stats")
+    if theirs != change_stats:
+        raise ValueError(f"{dir} was encoded with adapter.change_stats {theirs}, this VAE run has {change_stats}")
+
+
 def latent_id(sid: str, k: int = 0, start: int = 0) -> str:
     """File stem of a simulation's latents: the sim id as recorded, _s<k> under data.frames.symmetry k, _t<start>
     for the clip from that frame on."""

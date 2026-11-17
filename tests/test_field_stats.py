@@ -1,28 +1,24 @@
 """scripts/wan/field_stats.py against numpy on tiny synthetic files."""
 
-import importlib.util
 import json
-import sys
 from pathlib import Path
 
 import h5py
 import numpy as np
 import pytest
+from conftest import load_script
 
 from windinet.data.frames import load_field_stats
 from windinet.data.specs import SPECS
 
-spec = importlib.util.spec_from_file_location("field_stats", Path(__file__).parents[1] / "scripts/wan/field_stats.py")
-# registered so the pool can pickle the script's functions by module
-field_stats = sys.modules["field_stats"] = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(field_stats)
+field_stats = load_script("field_stats")
 
 
 SIMS = 4
 
 
-def run(dataset: str, h5: Path, out: Path) -> dict:
-    field_stats.main(dataset, h5, out, workers=2, sims=SIMS)
+def run(dataset: str, h5: Path, out: Path, stride: int = 0) -> dict:
+    field_stats.main(dataset, h5, out, workers=2, sims=SIMS, stride=stride)
     return json.loads(out.read_text())
 
 
@@ -51,3 +47,15 @@ def test_srba(srba_files, tmp_path):
 def test_eulermq(eulermq_file, tmp_path):
     stats = run("eulermq", eulermq_file, tmp_path / "stats.json")["data_normalization_stats"]
     assert list(stats) == [*SPECS["eulermq"].fields, "log_density", "log_pressure"]
+
+
+def test_stride_gives_the_change_statistics(srba_files, tmp_path):
+    h5 = srba_files[0]
+    out = run("srba_oooo", h5, tmp_path / "change.json", stride=2)
+    stats = out["data_normalization_stats"]
+    assert out["stride"] == 2 and list(stats) == list(SPECS["srba_oooo"].fields)
+    with h5py.File(h5, "r") as f:
+        x = [field_stats.read_field(f[sid], "log_density", slice(None)) for sid in sorted(f)[:SIMS]]
+    change = np.concatenate([(v[2:] - v[:-2]).ravel() for v in x])
+    assert stats["log_density"]["std"] == pytest.approx(change.std(), rel=1e-9)
+    assert stats["log_density"]["min"] == pytest.approx(change.min())

@@ -22,7 +22,7 @@ import yaml
 from windinet.experiment.distributed import rank, setup, shard, world
 from windinet.experiment.runs import provenance
 from windinet.field_adapter import load_adapter
-from windinet.wan.dit.latents import encode_info
+from windinet.wan.dit.latents import check_encoding, encode_info
 from windinet.wan.vae.roundtrip import decode
 from windinet.wan.weights import run_vaes
 
@@ -40,6 +40,7 @@ def main(
     adapter = load_adapter(vae, device)
     if encode_info(rollouts)["groups"] != adapter.groups:
         raise typer.BadParameter(f"{rollouts} was encoded with other groups than {vae}")
+    check_encoding(rollouts, yaml.safe_load((vae / "config.yaml").read_text())["adapter"].get("change_stats"))
     vaes = run_vaes(vae, device, adapter.channels)
     if rank == 0:
         out.mkdir(parents=True, exist_ok=True)

@@ -48,7 +48,14 @@ from windinet.wan.dit.delta import scales, to_delta
 from windinet.wan.dit.distill import Teacher, closeness
 from windinet.wan.dit.evaluate import evaluate, render
 from windinet.wan.dit.flow import clean_estimate, draw_sigmas, frame_sigmas, gated, noised, velocity_target
-from windinet.wan.dit.latents import LatentDataset, condition, encode_info, parse_latent_id, with_augmentations
+from windinet.wan.dit.latents import (
+    LatentDataset,
+    check_encoding,
+    condition,
+    encode_info,
+    parse_latent_id,
+    with_augmentations,
+)
 from windinet.wan.dit.model import WanDiT, autocast
 from windinet.wan.dit.prune import calibrate, choose, compose, importance, shrink
 from windinet.wan.dit.rollout import noise_seeds, rollout
@@ -101,6 +108,10 @@ def build(cfg: DitStageConfig, device: torch.device) -> tuple:
     encoder = vae_cfg["train"].get("vae_parts") in ("io", "all")  # a fine-tuned encoder: its own latents only
     if encoder and Path(info["config"]["load"]).resolve() != run.resolve():
         raise typer.BadParameter(f"{run} fine-tunes its encoder, but {cfg.latents.dir} was encoded by another run")
+    check_encoding(cfg.latents.dir, vae_cfg["adapter"].get("change_stats"))
+    windows = cfg.latents.ar_window is not None or cfg.train.pixel_window is not None
+    if vae_cfg["adapter"].get("change_stats") and (cfg.latents.delta or windows):
+        raise typer.BadParameter(f"{run} encodes changes after latent 0: latents.delta and windows need states")
     adapter = load_adapter(run, device)
     vaes = run_vaes(run, device, adapter.channels, checkpointing=cfg.train.pixel_loss > 0)
     adapter.requires_grad_(False)  # frozen in this stage; the pixel loss back-propagates through it

@@ -8,6 +8,7 @@ A field in no group is dropped; a field in several groups is averaged on the way
 
 from __future__ import annotations
 
+import dataclasses
 import math
 import string
 from pathlib import Path
@@ -51,7 +52,9 @@ def shared_vector_stats(stats: dict[str, dict], vector: tuple[str, str]) -> dict
 class GroupedAdapter(nn.Module):
     """One FieldAdapter per group; `fields` = the grouped dataset fields in dataset order; `channels` per image.
     The adapters log `log_fields` (None: the spec's); the loss space `base_norm` always logs the spec's.
-    With the spec's shared_vector_scale, adapters and loss space take the vector's components on shared_vector_stats."""
+    With the spec's shared_vector_scale, adapters and loss space take the vector's components on shared_vector_stats.
+    `change_stats` adds `changes`, the same groups on the statistics of the change between frames, without logs: the
+    change is taken on the dataset's fields, so a log_<f> field changes by a difference of logs already."""
 
     def __init__(
         self,
@@ -60,6 +63,7 @@ class GroupedAdapter(nn.Module):
         spec: Spec,
         log_fields: list[str] | None = None,
         clip_quantile: float = 0.98,
+        change_stats: dict[str, dict] | None = None,
     ):
         super().__init__()
         self.groups = groups
@@ -76,6 +80,18 @@ class GroupedAdapter(nn.Module):
             FieldAdapter(**_norm_args(g, stats, log), channels=self.channels, clip_quantile=clip_quantile)
             for g in groups
         )
+        self.changes = None
+        if change_stats is not None:
+            # mean 0: a pixel that does not change is exactly 0 in the image, not an offset the decoder must repeat
+            centred = {k: v | {"mean": 0.0} for k, v in change_stats.items()}
+            linear = dataclasses.replace(spec, log_fields=frozenset())
+            self.changes = GroupedAdapter(groups, centred, linear, [], clip_quantile)
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        key = prefix + "changes."
+        if self.changes is not None and not any(k.startswith(key) for k in state_dict):  # a state run's adapter.pt
+            state_dict.update({key + k: v for k, v in self.changes.state_dict().items()})
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
     def select(self, x: torch.Tensor) -> torch.Tensor:
         """Dataset fields [B, C, ...] -> the grouped ones [B, len(fields), ...]."""
@@ -115,6 +131,7 @@ def load_adapter(run: str | Path, device: torch.device | str) -> GroupedAdapter:
     spec = SPECS[cfg["data"].get("dataset", "eulermq")]
     stats = load_field_stats(cfg["data"]["stats_json"])
     a = cfg["adapter"]
-    adapter = GroupedAdapter(a["groups"], stats, spec, a.get("log_fields")).to(device)
+    changes = load_field_stats(a["change_stats"]) if a.get("change_stats") else None
+    adapter = GroupedAdapter(a["groups"], stats, spec, a.get("log_fields"), change_stats=changes).to(device)
     adapter.load_state_dict(torch.load(run / "adapter.pt", map_location=device))
     return adapter

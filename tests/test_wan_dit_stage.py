@@ -1,10 +1,11 @@
-import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 import torch
 import typer
+import yaml
+from conftest import load_script
 
 from windinet.data.specs import EULERMQ, SRBA_OOOO
 from windinet.experiment.config import load_config
@@ -393,11 +394,7 @@ def test_front_distance_and_shift_see_a_moved_front():
 
 def test_only_the_corrector_refuses_srba_oooo(monkeypatch, tmp_path):
     root, overrides = Path(__file__).parents[1], ["data.dataset=srba_oooo", f"results_dir={tmp_path}"]
-    modules = {}
-    for script in ("train_dit", "train_corrector"):
-        spec = importlib.util.spec_from_file_location(script, root / f"scripts/wan/{script}.py")
-        modules[script] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(modules[script])
+    modules = {script: load_script(script) for script in ("train_dit", "train_corrector")}
     with pytest.raises(typer.BadParameter, match="srba_oooo"):  # before start_run: no folder blocks the name
         modules["train_corrector"].main(root / "configs/wan/corrector.yaml", "x", "x", overrides, False)
     assert not (tmp_path / "x").exists()
@@ -452,3 +449,26 @@ def test_dit_evaluation_of_a_uniform_start_per_scalar(monkeypatch, tmp_path):
     for name, counts in (("mach", {1.3: 2, 1.7: 1, 2.1: 1}), ("bubbles", {1: 2, 2: 1, 3: 1})):
         means = sum(n * metrics[f"vrmse_mean_{name}{v:g}"] for v, n in counts.items()) / len(ids)
         assert means == pytest.approx(metrics["vrmse_mean"], rel=1e-6)
+
+
+def test_train_dit_refuses_latents_of_another_encoding_and_windows_on_changes(tmp_path):
+    groups = [list(g) for g in EULERMQ.groups]
+    runs = {}
+    for name, adapter in (("state", {}), ("change", {"change_stats": "c.json"})):
+        runs[name] = tmp_path / name
+        runs[name].mkdir()
+        (runs[name] / "config.yaml").write_text(yaml.safe_dump({"adapter": {"groups": groups, **adapter}, "train": {}}))
+    (tmp_path / "z").mkdir()
+    info = {"groups": groups, "config": {"data": {}, "load": str(runs["change"])}}
+    (tmp_path / "z/encode.yaml").write_text(yaml.safe_dump(info))
+    train_dit = load_script("train_dit")
+
+    def build(vae, *sets):
+        sets = ["name=t", "description=t", f"latents.dir={tmp_path / 'z'}", f"vae={vae}", *sets]
+        train_dit.build(DitStageConfig(**load_config(Path("configs/wan/dit.yaml"), sets)), torch.device("cpu"))
+
+    with pytest.raises(ValueError, match="change_stats"):
+        build(runs["state"])
+    for option in ("latents.delta=true", "latents.ar_window=3", "train.pixel_window=4"):
+        with pytest.raises(typer.BadParameter, match="encodes changes"):
+            build(runs["change"], option)

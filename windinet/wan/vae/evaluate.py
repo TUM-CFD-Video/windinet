@@ -10,7 +10,7 @@ from windinet.experiment.distributed import all_sum, gather, world
 from windinet.experiment.metrics import Aggregate, by_scalar
 from windinet.field_adapter import GroupedAdapter
 from windinet.wan.dit.benchmark import Benchmark
-from windinet.wan.vae.roundtrip import decode, encode, round_trip
+from windinet.wan.vae.roundtrip import decode, encode, round_trip, to_images
 
 
 @torch.no_grad()
@@ -82,7 +82,7 @@ def _reconstruct(adapter: GroupedAdapter, frames, z, vaes: list, clip: int | Non
     """x, x_hat [N, C, H, W] and the RGB images of one simulation, as `evaluate` scores it."""
     x = adapter.select(frames.flatten(0, 1).to(next(adapter.parameters()).device))
     if latents:
-        return x, decode(adapter, z.to(x.device), vaes).flatten(0, 1), adapter(x)
+        return x, decode(adapter, z.to(x.device), vaes).flatten(0, 1), to_images(adapter, x, 1)
     return x, *round_trip(adapter, x, vaes, 1 if single else clip or len(x))
 
 

@@ -45,7 +45,7 @@ from windinet.experiment.optim import adamw, rel_change
 from windinet.experiment.runs import provenance, write_index
 from windinet.field_adapter import GroupedAdapter, group_tag
 from windinet.wan.dit.benchmark import Benchmark
-from windinet.wan.dit.latents import WithLatents
+from windinet.wan.dit.latents import WithLatents, check_encoding
 from windinet.wan.figures import save_adapter_rgb, save_examples, save_panel, save_vae_curves
 from windinet.wan.vae.config import TrainConfig, VaeStageConfig
 from windinet.wan.vae.evaluate import evaluate, latent_stats, render
@@ -87,13 +87,28 @@ def check_load(run: dict, cfg: VaeStageConfig) -> None:
         theirs, ours = run.get("adapter", {}).get(key, missing), getattr(cfg.adapter, key)
         if theirs != ours:
             raise typer.BadParameter(f"load: {cfg.load} has adapter.{key}={theirs}, this config {ours}")
+    theirs, ours = run.get("adapter", {}).get("change_stats"), cfg.adapter.change_stats
+    if theirs and theirs != ours:  # a state run may start a change run
+        raise typer.BadParameter(f"load: {cfg.load} has adapter.change_stats={theirs}, this config {ours}")
+
+
+def probe(cfg: VaeStageConfig, train_ids: list[str], changes: bool = False) -> torch.Tensor:
+    """The SoftClip init's sample, 2 frames of 100 fixed train sims: large enough that the init does not depend on the
+    draw; `changes`: the change between two frames data.frame_stride apart."""
+    d = cfg.data
+    ids = train_ids[:: max(1, len(train_ids) // 100)][:100]
+    sampler = FrameSampler(d.h5_path, ids, 2, 0, changes, d.frame_stride, d.symmetries, spec=d.spec)
+    x = [sampler[i][0] for i in range(len(sampler))]
+    return torch.cat([f.diff(dim=0) for f in x] if changes else x)
 
 
 def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tuple[GroupedAdapter, list]:
-    """Adapter and VAEs with their weights (from `cfg.load`, else data-initialised; VAEs from `cfg.vae_load`)."""
+    """Adapter and VAEs with their weights (from `cfg.load`, else data-initialised; VAEs from `cfg.vae_load`). A change
+    adapter not in `cfg.load` (a state run) starts from the data."""
     stats = load_field_stats(cfg.data.stats_json)
     a = cfg.adapter
-    adapter = GroupedAdapter(a.groups, stats, cfg.data.spec, a.log_fields, a.clip_quantile)
+    changes = load_field_stats(a.change_stats) if a.change_stats else None
+    adapter = GroupedAdapter(a.groups, stats, cfg.data.spec, a.log_fields, a.clip_quantile, changes)
     adapter = adapter.to(device)
     adapter.requires_grad_(cfg.train.adapter_lr > 0)  # fixed adapter: no gradient through the encoder for it
     vaes = []
@@ -105,13 +120,14 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
         checkpointing = t.checkpointing and t.vae_parts != "none"
         kw = {"channels": adapter.channels, "latent_channels": cfg.latent_channels, "precision": t.precision}
         vaes = [WanVAE(device, train=t.vae_parts, checkpointing=checkpointing, **kw) for _ in range(n_vaes)]
+    loaded = yaml.safe_load((Path(cfg.load) / "config.yaml").read_text()) if cfg.load else {}
     if cfg.load:
-        check_load(yaml.safe_load((Path(cfg.load) / "config.yaml").read_text()), cfg)
+        check_load(loaded, cfg)
         load_weights(Path(cfg.load), adapter, [] if cfg.vae_load else vaes, device)
-    else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw
-        ids = train_ids[:: max(1, len(train_ids) // 100)][:100]
-        probe = FrameSampler(cfg.data.h5_path, ids, 2, seed=0, augment=cfg.data.symmetries, spec=cfg.data.spec)
-        adapter.init_from_data(adapter.select(torch.cat([probe[i][0] for i in range(len(probe))])).to(device))
+    else:
+        adapter.init_from_data(adapter.select(probe(cfg, train_ids)).to(device))
+    if adapter.changes is not None and not loaded.get("adapter", {}).get("change_stats"):
+        adapter.changes.init_from_data(adapter.select(probe(cfg, train_ids, changes=True)).to(device))
     if cfg.vae_load:  # VAE i takes vae_<i-th letter>.pt, else vae.pt: groups are matched by position, not by name
         run, n = Path(cfg.vae_load), len(vaes)
         if not n or not all((run / vae_file(i, n)).exists() or (run / "vae.pt").exists() for i in range(n)):
@@ -212,6 +228,8 @@ def main(
     started = time.time()
     cfg, run_dir, device = start_run(VaeStageConfig, config_path, name, desc, set_, overwrite)
 
+    if cfg.data.latents:
+        check_encoding(cfg.data.latents, cfg.adapter.change_stats)
     sets = cfg.data.splits()
     (_, train_ids), (_, val_ids), (test_h5, test_ids) = sets["train"], sets["val"], sets["test"]
     test_ids, eval_ids = test_ids[: cfg.data.test_sims], val_ids[: cfg.data.eval_sims]
