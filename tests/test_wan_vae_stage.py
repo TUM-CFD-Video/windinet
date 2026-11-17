@@ -14,7 +14,7 @@ from windinet.data.frames import SYMMETRIES, FrameSampler, load_field_stats, sym
 from windinet.data.specs import EULERMQ, SRBA_OOOO
 from windinet.experiment.config import load_config
 from windinet.experiment.log import log_metrics
-from windinet.experiment.metrics import Aggregate, vrmse
+from windinet.experiment.metrics import Aggregate, extremes, vrmse
 from windinet.experiment.runs import run_dataset, write_config, write_index
 from windinet.field_adapter import FieldAdapter, GroupedAdapter, load_adapter
 from windinet.field_adapter.bijections import PreNorm
@@ -23,8 +23,9 @@ from windinet.losses import vrms_per_channel
 from windinet.wan.corrector.config import CorrectorStageConfig
 from windinet.wan.dit.config import DitStageConfig
 from windinet.wan.vae.config import LossConfig, VaeStageConfig
-from windinet.wan.vae.evaluate import evaluate
+from windinet.wan.vae.evaluate import evaluate, render
 from windinet.wan.vae.loss import loss_terms
+from windinet.wan.vae.roundtrip import round_trip
 from windinet.wan.weights import load_weights
 
 FIELDS = ["density", "momentum_x", "momentum_y", "pressure", "log_density", "log_pressure"]
@@ -82,16 +83,50 @@ def test_widened_vae_starts_as_the_pretrained_one():
     assert a.channels == 4 and a(torch.rand(2, 4, 8, 8) + 0.1)[0].shape[1] == 4
 
 
-def test_kl_off_keeps_the_mean_latents_and_on_trains_the_encoder(tmp_path):
+def _tiny_vae(tmp_path, train="none", latent_channels=16):
+    """A randomly initialised Wan VAE of few channels on the CPU, with latents_mean 0.1 and latents_std 2."""
     from diffusers import AutoencoderKLWan
 
     from windinet.wan.vae.model import WanVAE
 
     torch.manual_seed(0)
-    tiny = AutoencoderKLWan(base_dim=8, num_res_blocks=1, dim_mult=[1, 1, 1, 1], z_dim=4)
-    tiny.register_to_config(latents_mean=[0.1] * 4, latents_std=[2.0] * 4)
+    tiny = AutoencoderKLWan(base_dim=8, num_res_blocks=1, dim_mult=[1, 1, 1, 1], z_dim=16)  # Wan's 16 latent channels
+    tiny.register_to_config(latents_mean=[0.1] * 16, latents_std=[2.0] * 16)
     tiny.save_pretrained(tmp_path / "vae")
-    vae = WanVAE("cpu", repo=str(tmp_path), train="all")
+    return WanVAE("cpu", repo=str(tmp_path), train=train, latent_channels=latent_channels)
+
+
+def test_wider_latents_start_as_the_pretrained_vae(tmp_path):
+    vae, wide = _tiny_vae(tmp_path), _tiny_vae(tmp_path, "all", 32)
+    rgb = torch.rand(1, 3, 5, 16, 16) * 2 - 1
+    with torch.no_grad():
+        (z, kl), (zw, klw) = vae.posterior(rgb), wide.posterior(rgb)
+        torch.testing.assert_close(zw, torch.cat([z, z], 1))  # the new channels copy the old ones
+        torch.testing.assert_close(klw, kl)
+        torch.testing.assert_close(wide.decode(zw), vae.decode(z))  # decode(encode(x)) unchanged
+    zw = wide.encode(rgb)
+    wide.decode(zw).square().mean().backward()
+    assert wide.vae.decoder.conv_in.weight.grad[:, 16:].abs().sum() > 0  # the decoder learns to read them
+    v = wide.vae
+    widened = [v.encoder.conv_out, v.quant_conv, v.post_quant_conv, v.decoder.conv_in]
+    io = {id(p) for p in wide.io_params}
+    assert all(id(p) in io for m in widened for p in m.parameters())  # trained at io_lr
+    assert len(_tiny_vae(tmp_path, "all").io_params) == 4  # 16 channels: conv_in and conv_out alone
+
+
+def test_latent_channels_and_orientations_validated():
+    data = {"h5_path": "x", "stats_json": "x"}
+    with pytest.raises(ValueError, match="multiple of 16"):
+        VaeStageConfig(name="x", description="x", data=data, latent_channels=24, train={"vae_parts": "all"})
+    with pytest.raises(ValueError, match="vae_parts all"):
+        VaeStageConfig(name="x", description="x", data=data, latent_channels=32, train={"vae_parts": "decoder"})
+    VaeStageConfig(name="x", description="x", data=data, latent_channels=32, train={"vae_parts": "all"})
+    with pytest.raises(ValueError, match="flow direction"):
+        VaeStageConfig(name="x", description="x", data=data | {"orientations": "flow"})
+
+
+def test_kl_off_keeps_the_mean_latents_and_on_trains_the_encoder(tmp_path):
+    vae = _tiny_vae(tmp_path, "all")
     a = GroupedAdapter([["density", "momentum_x", "momentum_y"]], STATS, EULERMQ)
     x = a.select(torch.rand(2, 4, 16, 16) + 0.1)
     a.init_from_data(x)
@@ -142,6 +177,45 @@ def test_uniform_start_scored_over_the_trajectory_variance(tmp_path):
     adapter = _srba_adapter()
     val, *_ = evaluate(adapter, DataLoader(sims, 1), [], 1, spec=SRBA_OOOO, variances={sims.ids[0]: var})
     assert val and all(k.startswith("vrmse") for k in val) and val["vrmse_mean"] < 1e-2
+
+
+def test_single_frame_evaluation_passes_each_frame_alone(tmp_path):
+    sims, x, _ = _uniform_start(tmp_path)
+    adapter, vae, loader = _srba_adapter(), _tiny_vae(tmp_path), DataLoader(sims, 1)
+    adapter.init_from_data(x)
+    (_, _, single), (_, _, clip) = (
+        next(iter(evaluate(adapter, loader, [vae], None, spec=SRBA_OOOO, single=s)[2].values())) for s in (True, False)
+    )
+    with torch.no_grad():
+        alone = torch.cat([round_trip(adapter, f[None], [vae])[0] for f in x])
+    torch.testing.assert_close(single, alone)
+    assert not torch.allclose(clip, alone, atol=1e-3)  # the whole trajectory as one clip: time compression
+
+
+def test_best_and_worst_test_sims_reconstructed_as_scored(tmp_path):
+    sims, x, _ = _uniform_start(tmp_path)
+    adapter, vae, loader = _srba_adapter(), _tiny_vae(tmp_path), DataLoader(sims, 1)
+    adapter.init_from_data(x)
+    final, _, examples = evaluate(adapter, loader, [vae], None, spec=SRBA_OOOO, single=True)
+    sid = sims.ids[0]
+    assert extremes(final["per_sim"]) == {"worst": sid, "best": sid}
+    scored, again = next(iter(examples.values())), render(adapter, loader, [vae], False, True)[sid]
+    assert all(torch.equal(a, b) for a, b in zip(scored[1:], again[1:], strict=True))
+    assert extremes({"a": {"vrmse": 2}, "b": {"vrmse": 1}}) == {"worst": "a", "best": "b"}
+
+
+def test_lola_span_scored_over_its_own_variance(tmp_path):
+    sims, x, _ = _uniform_start(tmp_path)  # 9 frames, the shock from frame 4
+    adapter, loader = _srba_adapter(), DataLoader(sims, 1)
+    adapter.init_from_data(x)
+    assert "lola_vrmse_mean" not in evaluate(adapter, loader, [], None, spec=SRBA_OOOO)[0]  # 9 frames end before 12
+    spec = dataclasses.replace(SRBA_OOOO, lola_from=4)
+    metrics = evaluate(adapter, loader, [], None, spec=spec)[0]
+    with torch.no_grad():
+        x_hat = round_trip(adapter, x, [])[0]
+    late = vrmse(x_hat[4:], x[4:], x[4:].var((0, 2, 3), unbiased=False))
+    assert metrics["lola_from"] == 4 and metrics["lola_vrmse_mean"] == pytest.approx(late.mean().item())
+    assert metrics["lola_vrmse_mean"] != pytest.approx(metrics["vrmse_mean"])
 
 
 def test_eulermq_scores_unchanged(make_h5, tmp_path):

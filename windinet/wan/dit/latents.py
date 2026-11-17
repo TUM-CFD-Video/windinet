@@ -92,7 +92,8 @@ def parse_latent_id(stem: str) -> tuple[str, int, int]:
 
 
 def with_augmentations(dir: str | Path, ids: list[str]) -> list[str]:
-    """`ids` plus the symmetric copies and the later starts the folder holds (encode.yaml: data.augment, starts)."""
+    """`ids` plus the symmetric copies and the later starts the folder holds (encode.yaml: orientations, starts;
+    folders before orientations: all 8 with data.augment)."""
     info = encode_info(dir)
-    n = SYMMETRIES if info["config"]["data"].get("augment") else 1
-    return [latent_id(sid, k, t) for sid in ids for k in range(n) for t in info.get("starts", [0])]
+    ks = info.get("orientations", range(SYMMETRIES if info["config"]["data"].get("augment") else 1))
+    return [latent_id(sid, k, t) for sid in ids for k in ks for t in info.get("starts", [0])]

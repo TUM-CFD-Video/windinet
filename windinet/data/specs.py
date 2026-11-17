@@ -37,6 +37,7 @@ class Spec:
     ranges: dict[str, tuple[float, float]]  # per scalar, in `scalars` order: the DiT's conditioning maps it to [0, 1]
     val_per_cell: int  # >0: this many val sims per cell of equal scalars; 0: data.val_sims at random
     uniform_start: bool  # uniform before the shock arrives: short samples are scored over the trajectory's variance
+    lola_from: int | None  # LoLA's autoencoder test scores the original frames from here on; None: no LoLA baseline
     display: Display
 
     def first(self, sid: str) -> float:
@@ -61,6 +62,7 @@ EULERMQ = Spec(
     ranges={"gamma": (1.0, 2.0)},  # with margin around the data (1.13-1.76); every eulermq run used it
     val_per_cell=0,
     uniform_start=False,
+    lola_from=None,
     display=Display(
         symbols={"density": "ρ", "momentum_x": "m_x", "momentum_y": "m_y", "pressure": "p"},
         frame_dt=0.015,
@@ -83,6 +85,7 @@ SRBA_OOOO = Spec(
     ranges={"mach": (1.0, 2.5), "bubbles": (0.0, 6.0)},  # with margin around the data (1.3-2.1, 1-5)
     val_per_cell=2,
     uniform_start=True,
+    lola_from=12,
     display=Display(
         symbols={"pressure": "p", "velocityX": "u", "velocityY": "v", "log_density": "ln ρ"},
         frame_dt=0.7,

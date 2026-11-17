@@ -57,6 +57,11 @@ class DataConfig(_Base):
     clip: bool = Field(
         default=False, description="the frames are consecutive and pass the VAE as one clip, not as single frames"
     )
+    eval_single_frames: bool = Field(
+        default=False,
+        description="VAE-stage evaluation (validation, test, latent statistics, videos) passes each frame through the "
+        "VAE alone, without time compression, instead of the clip or whole trajectory as one clip; training unchanged",
+    )
     frame_stride: int = Field(
         default=1,
         description="every n-th frame: in clips, and in whole trajectories (evaluation, latent encoding; 4k + 1 kept)",
@@ -66,6 +71,11 @@ class DataConfig(_Base):
         description="training data under the dataset's symmetries (data.frames.symmetry): VAE-stage frames and clips "
         "under a random one, latent encoding stores every one, corrector: the Wan/truth pairs under one random one; "
         "evaluation never",
+    )
+    orientations: Literal["all", "flow"] = Field(
+        default="all",
+        description="with augment: all 8 D4 elements, or flow: only those that keep the dataset's flow direction "
+        "(spec.direction; srba_oooo: identity and the flip of H)",
     )
     num_workers: int = Field(default=4, description="data-loader worker processes per training process")
     latents: str | None = Field(
@@ -77,6 +87,17 @@ class DataConfig(_Base):
     @property
     def spec(self) -> Spec:
         return SPECS[self.dataset]
+
+    @model_validator(mode="after")
+    def _orientations(self):
+        if self.orientations == "flow" and self.spec.direction is None:
+            raise ValueError(f"data.orientations flow: dataset {self.dataset} has no flow direction")
+        return self
+
+    @property
+    def symmetries(self) -> list[int]:
+        """The D4 elements augment draws from (data.frames.symmetry); none without augment."""
+        return frames.orientations(self.spec, self.orientations) if self.augment else []
 
     @property
     def clip_len(self) -> int:
@@ -149,7 +170,9 @@ class TrainConfig(_Base):
     )
     vae_lr: float = Field(default=5e-5, description="peak lr of the VAE parameters")
     io_lr: float | None = Field(
-        default=None, description="peak lr of the VAE's in and out convolutions (the field interface); None = vae_lr"
+        default=None,
+        description="peak lr of the VAE's in and out convolutions (the field interface) and, with latent_channels > "
+        "16, of the widened latent layers; None = vae_lr",
     )
     warmup_steps: int = Field(
         default=0,
@@ -183,6 +206,12 @@ class VaeStageConfig(_Stage):
     name: str = Field(description="short run name: the results folder")
     description: str = Field(min_length=1, description="one sentence: what this run tests; shown in the results index")
     vae: Literal["none", "wan"] = Field(default="wan", description="'none' skips the VAE: adapter round trip only")
+    latent_channels: int = Field(
+        default=16,
+        description="latent channels per VAE, a multiple of Wan's 16: the new ones start as copies of the pretrained "
+        "ones that the decoder ignores (model.widen_latents), so the round trip starts as the pretrained one; the "
+        "widened layers train at train.io_lr; > 16 needs train.vae_parts all",
+    )
     data: DataConfig
     adapter: AdapterConfig = AdapterConfig()
     loss: LossConfig = LossConfig()
@@ -217,4 +246,10 @@ class VaeStageConfig(_Stage):
             raise ValueError("loss.kl needs a trained encoder: train.vae_parts io or all")
         if self.train.crops and self.data.latents:
             raise ValueError("train.crops crops the round trip, not data.latents")
+        if self.latent_channels < 16 or self.latent_channels % 16:
+            raise ValueError(f"latent_channels {self.latent_channels} is not a positive multiple of 16")
+        if self.latent_channels > 16 and (self.vae != "wan" or self.train.vae_parts != "all"):
+            raise ValueError("latent_channels > 16 needs vae wan and train.vae_parts all: the new channels must train")
+        if self.data.eval_single_frames and self.data.latents:
+            raise ValueError("data.eval_single_frames changes the round trip, data.latents only decodes")
         return self

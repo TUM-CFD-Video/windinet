@@ -1,6 +1,6 @@
 """Wan 2.1 VAE with normalised latents, frozen unless `train` says otherwise.
 
-    rgb [B, 3, F, H, W] in (-1, 1), F = 4k + 1   --encode-->   z [B, 16, (F-1)/4 + 1, H/8, W/8]
+    rgb [B, 3, F, H, W] in (-1, 1), F = 4k + 1   --encode-->   z [B, 16, (F-1)/4 + 1, H/8, W/8]   (16: latent_channels)
 
 `encode` standardises with the checkpoint's own latents_mean / latents_std (what the Wan pipeline feeds its
 transformer, so natural-video latents look like N(0, 1) per channel); `decode` undoes that.
@@ -25,8 +25,10 @@ TEMPORAL = 4  # frames per latent frame
 class WanVAE:
     """`train`: 'none' (frozen), 'io' (encoder.conv_in and decoder.conv_out, the field interface), 'decoder'
     (decoder + post_quant_conv, latents unchanged) or 'all'. `channels` > 3: the VAE reads and writes that many
-    channels (`widen_io`). `checkpointing`: recompute the blocks in backward (memory for time). `precision` 'mixed':
-    bf16 autocast inside encode and decode when gradients flow, fp32 weights and outputs."""
+    channels (`widen_io`); `latent_channels` > 16: that many latent channels (`widen_latents`), the widened layers
+    in the io group. `checkpointing`:
+    recompute the blocks in backward (memory for time). `precision` 'mixed': bf16 autocast inside encode and decode
+    when gradients flow, fp32 weights and outputs."""
 
     def __init__(
         self,
@@ -35,20 +37,27 @@ class WanVAE:
         repo: str = REPO,
         train: str = "none",
         channels: int = 3,
+        latent_channels: int = 16,
         checkpointing: bool = False,
         precision: str = "fp32",
     ):
         # fp32 on purpose: the Wan pipeline keeps its VAE in fp32
         vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=dtype)
+        self.copies = latent_channels // vae.config.z_dim  # of Wan's 16 channels; the config keeps its 16 statistics
         if channels > 3:
             widen_io(vae, channels)
+        widened = ()
+        if self.copies > 1:
+            widen_latents(vae, latent_channels)
+            widened = (vae.encoder.conv_out, vae.quant_conv, vae.post_quant_conv, vae.decoder.conv_in)
         self.vae = vae.to(device).eval().requires_grad_(False)
         io = (vae.encoder.conv_in, vae.decoder.conv_out)  # the field interface: its own lr in the VAE stage
         trainable = {"none": [], "io": io, "decoder": [vae.decoder, vae.post_quant_conv], "all": [vae]}[train]
         for module in trainable:
             module.requires_grad_(True)
         self.trainable_params = [p for p in vae.parameters() if p.requires_grad]
-        self.io_params = [p for m in io for p in m.parameters() if p.requires_grad]
+        # widened latent layers too: their new weights start at zero or as copies and need the higher lr
+        self.io_params = [p for m in (*io, *widened) for p in m.parameters() if p.requires_grad]
         if precision == "mixed":  # bf16 rounding of the output, amplified by the adapter's atanh, wrecks conv_out
             for conv in io:
                 conv.forward = _fp32(conv.forward)
@@ -58,8 +67,10 @@ class WanVAE:
         self.dtype = dtype
         self.precision, self.device = precision, torch.device(device)
         shape = (1, -1, 1, 1, 1)
-        self.latents_mean = torch.tensor(vae.config.latents_mean, device=device, dtype=dtype).view(shape)
-        self.latents_std = torch.tensor(vae.config.latents_std, device=device, dtype=dtype).view(shape)
+        self.latents_mean, self.latents_std = (
+            torch.tensor(v, device=device, dtype=dtype).repeat(self.copies).view(shape)
+            for v in (vae.config.latents_mean, vae.config.latents_std)
+        )
 
     def _autocast(self) -> torch.autocast:
         """bf16 only where gradients flow: evaluation stays fp32, comparable across runs."""
@@ -101,6 +112,31 @@ def widen_io(vae: AutoencoderKLWan, channels: int) -> None:
         if dim == 0:
             conv.bias = nn.Parameter(pad(conv.bias, (0, extra)))
         conv.in_channels, conv.out_channels = conv.weight.shape[1], conv.weight.shape[0]
+
+
+def widen_latents(vae: AutoencoderKLWan, channels: int) -> None:
+    """`channels` latent channels, a multiple of z_dim: every new channel copies an old one in the encoder (mean and
+    logvar rows of encoder.conv_out, quant_conv and post_quant_conv block-diagonal per copy) and starts ignored by the
+    decoder (zero columns of decoder.conv_in), so the round trip is the pretrained one."""
+    n = vae.config.z_dim
+    copies = channels // n
+    means = torch.arange(n).repeat(copies)
+    posterior = torch.cat([means, means + n])  # chunk(2): means, then logvars
+    _copy_rows(vae.encoder.conv_out, posterior)
+    for conv, index in ((vae.quant_conv, posterior), (vae.post_quant_conv, means)):
+        _copy_rows(conv, index)
+        own = torch.arange(len(index)) // n % copies  # which copy each channel belongs to
+        block = (own[:, None] == own[None, :]).to(conv.weight)[..., None, None, None]
+        conv.weight = nn.Parameter(conv.weight.data[:, index] * block)
+    conv = vae.decoder.conv_in
+    conv.weight = nn.Parameter(pad(conv.weight, [0, 0] * 3 + [0, channels - n]))
+    for c in (vae.encoder.conv_out, vae.quant_conv, vae.post_quant_conv, conv):
+        c.in_channels, c.out_channels = c.weight.shape[1], c.weight.shape[0]
+
+
+def _copy_rows(conv: nn.Conv3d, index: torch.Tensor) -> None:
+    """The output channels of `conv` become its channels `index`."""
+    conv.weight, conv.bias = nn.Parameter(conv.weight.data[index]), nn.Parameter(conv.bias.data[index])
 
 
 def _fp32(forward):

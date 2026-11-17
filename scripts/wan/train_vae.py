@@ -11,12 +11,14 @@ Usage:
     torchrun --standalone --nproc_per_node=8 scripts/wan/train_vae.py ...   # one process per GPU, same config:
     train.batch_sims is the global batch, split over the ranks; evaluation is sharded; rank 0 logs and writes.
 Every run needs a name and a one-sentence description. Writes
-<results_dir>/<name>/{config.yaml, metrics.json, panel.png, curves.png, adapter.pt[, vae.pt]} and regenerates
+<results_dir>/<name>/{config.yaml, metrics.json, panel.png, curves.png, adapter.pt[, vae.pt]}, the test videos (the
+first sim at the lowest and the highest first scalar, the worst and the best sim by VRMSE) and regenerates
 the results_dir README.md index. config.yaml is the resolved config and re-runs as is; metrics.json carries the
 provenance (commit, command, versions, GPU, wall time).
 
 Evaluation: mid-run on data.eval_sims validation sims with the training clip length ("val"); at the end on every
-test simulation's whole trajectory ("final"), the metric of the LTX baseline (thesis eq. 5.11).
+test simulation's whole trajectory ("final"), the metric of the LTX baseline (thesis eq. 5.11); with
+data.eval_single_frames each frame passes the VAE alone (no time compression).
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ from windinet.data.frames import FrameSampler, crop, endless, load_field_stats
 from windinet.experiment.config import start_run
 from windinet.experiment.distributed import all_mean, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress
+from windinet.experiment.metrics import extremes
 from windinet.experiment.optim import adamw, rel_change
 from windinet.experiment.runs import provenance, write_index
 from windinet.field_adapter import GroupedAdapter, group_tag
@@ -45,24 +48,25 @@ from windinet.wan.dit.benchmark import Benchmark
 from windinet.wan.dit.latents import WithLatents
 from windinet.wan.figures import save_adapter_rgb, save_examples, save_panel, save_vae_curves
 from windinet.wan.vae.config import TrainConfig, VaeStageConfig
-from windinet.wan.vae.evaluate import evaluate, latent_stats
+from windinet.wan.vae.evaluate import evaluate, latent_stats, render
 from windinet.wan.vae.loss import loss_terms
 from windinet.wan.weights import load_weights, save_weights, vae_file
 
 
-def loader(cfg: VaeStageConfig, h5: str, sims: list[str], frames: int | None, train: bool, split: str) -> DataLoader:
+def loader(
+    cfg: VaeStageConfig, h5: str, sims: list[str], frames: int | None, train: bool, split: str, sharded: bool = True
+) -> DataLoader:
     """Training: random frames per access, this rank's share of the global batch. Evaluation: fixed frames, one sim
-    per item; `frames` None = whole trajectories. With data.latents: whole trajectories with their rollout latents."""
-    d = cfg.data
+    per item; `frames` None = whole trajectories. With data.latents: whole trajectories with their rollout latents.
+    `sharded` False: every sim on this rank."""
+    d, pick = cfg.data, shard if sharded else list
     if d.latents:
-        sims = [s for s in sims if (Path(d.latents) / split / f"{s}.pt").exists()]
-        sampler = WithLatents(
-            FrameSampler(h5, shard(sims), None, 0, stride=d.frame_stride, spec=d.spec), d.latents, split
-        )
+        sims = pick([s for s in sims if (Path(d.latents) / split / f"{s}.pt").exists()])
+        sampler = WithLatents(FrameSampler(h5, sims, None, 0, stride=d.frame_stride, spec=d.spec), d.latents, split)
     else:
-        sampler = FrameSampler(
-            h5, shard(sims), frames, None if train else 0, d.clip, d.frame_stride, train and d.augment, spec=d.spec
-        )
+        augment = d.symmetries if train else []
+        sims = pick(sims)
+        sampler = FrameSampler(h5, sims, frames, None if train else 0, d.clip, d.frame_stride, augment, spec=d.spec)
     batch = max(1, cfg.train.batch_sims // world) if train else 1  # max: an eval-only run never draws a batch
     return DataLoader(
         sampler,
@@ -99,18 +103,14 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
         n_vaes = len(cfg.adapter.groups) if cfg.train.vae_per_group else 1
         t = cfg.train
         checkpointing = t.checkpointing and t.vae_parts != "none"
-        vaes = [
-            WanVAE(
-                device, train=t.vae_parts, channels=adapter.channels, checkpointing=checkpointing, precision=t.precision
-            )
-            for _ in range(n_vaes)
-        ]
+        kw = {"channels": adapter.channels, "latent_channels": cfg.latent_channels, "precision": t.precision}
+        vaes = [WanVAE(device, train=t.vae_parts, checkpointing=checkpointing, **kw) for _ in range(n_vaes)]
     if cfg.load:
         check_load(yaml.safe_load((Path(cfg.load) / "config.yaml").read_text()), cfg)
         load_weights(Path(cfg.load), adapter, [] if cfg.vae_load else vaes, device)
     else:  # tanh scales from 100 fixed sims x 2 frames: large enough that the init does not depend on the draw
         ids = train_ids[:: max(1, len(train_ids) // 100)][:100]
-        probe = FrameSampler(cfg.data.h5_path, ids, 2, seed=0, augment=cfg.data.augment, spec=cfg.data.spec)
+        probe = FrameSampler(cfg.data.h5_path, ids, 2, seed=0, augment=cfg.data.symmetries, spec=cfg.data.spec)
         adapter.init_from_data(adapter.select(torch.cat([probe[i][0] for i in range(len(probe))])).to(device))
     if cfg.vae_load:  # VAE i takes vae_<i-th letter>.pt, else vae.pt: groups are matched by position, not by name
         run, n = Path(cfg.vae_load), len(vaes)
@@ -121,11 +121,11 @@ def build(cfg: VaeStageConfig, train_ids: list[str], device: torch.device) -> tu
     return adapter, vaes
 
 
-def start_copies(vaes: list, channels: int, device: torch.device) -> list:
+def start_copies(vaes: list, channels: int, latent_channels: int, device: torch.device) -> list:
     """Frozen copies of the VAEs as the run starts: the reference of the latent drift."""
     from windinet.wan.vae.model import WanVAE
 
-    copies = [WanVAE(device, channels=channels) for _ in vaes]
+    copies = [WanVAE(device, channels=channels, latent_channels=latent_channels) for _ in vaes]
     for c, v in zip(copies, vaes, strict=True):
         c.vae.load_state_dict(v.vae.state_dict())
     return copies
@@ -180,13 +180,22 @@ def drift_per_block(vaes: list, w0: list) -> dict[str, float]:
 
 
 def write_outputs(
-    cfg: VaeStageConfig, run_dir: Path, adapter, vaes, record: dict, drift: dict, rgbs: list, examples: dict
+    cfg: VaeStageConfig,
+    run_dir: Path,
+    adapter,
+    vaes,
+    record: dict,
+    drift: dict,
+    rgbs: list,
+    examples: dict,
+    picks: dict,
 ) -> None:
-    """Figures, videos, metrics.json and the results index; the weights were saved at their validation."""
+    """Figures, videos (`examples` by first scalar, `picks` by label), metrics.json and the results index; the
+    weights were saved at their validation."""
     save_panel(examples, adapter.fields, cfg.data, run_dir / "panel.png")
     save_adapter_rgb(rgbs, run_dir / "adapter_rgb.png")
     kind = "rollout" if cfg.data.latents else "recon"
-    save_examples(examples, adapter.fields, cfg.data, run_dir, cfg.weights_dir, kind)
+    save_examples(examples | picks, adapter.fields, cfg.data, run_dir, cfg.weights_dir, kind)
     save_vae_curves(record["steps"], record["history"], adapter.fields, run_dir / "curves.png", drift)
     (run_dir / "metrics.json").write_text(json.dumps(record, indent=1))
     write_index(Path(cfg.results_dir))
@@ -219,8 +228,8 @@ def main(
     )
 
     adapter, vaes = build(cfg, train_ids, device)
-    start_vaes = start_copies(vaes, adapter.channels, device)
-    clip, spec = cfg.data.clip_len, cfg.data.spec
+    start_vaes = start_copies(vaes, adapter.channels, cfg.latent_channels, device)
+    clip, spec, single = cfg.data.clip_len, cfg.data.spec, cfg.data.eval_single_frames
     rollouts = bool(cfg.data.latents)
     val_args = (None, cfg.data.frame_stride, True) if rollouts else (clip,)  # rollouts: whole trajectories
     variances = None
@@ -228,7 +237,8 @@ def main(
         val = val_loader.dataset
         reads = DataLoader(range(len(val)), None, num_workers=cfg.data.num_workers, collate_fn=val.variance)
         variances = dict(zip(val.ids, reads, strict=True))
-    init, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances)
+    init, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances, single=single)
+    init.pop("per_sim", None)  # the test's alone
     log_metrics("init", init)
     best = (init["vrmse_mean"], 0, init)  # validation vrmse_mean, step and metrics of the saved weights
     if rank == 0:
@@ -273,7 +283,8 @@ def main(
                 f"{sum(s['seconds'] for s in recent) / len(recent):.2f} s/update",
             )
         if step % cfg.train.eval_every == 0 or step == cfg.train.steps:
-            metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances)
+            metrics, *_ = evaluate(adapter, val_loader, vaes, *val_args, spec=spec, variances=variances, single=single)
+            metrics.pop("per_sim", None)
             if w0:
                 metrics["vae_drift"] = rel_change(vae_params, w0)
             history.append({"step": step, "train": {k: result[k] for k in ("rmse", "h1", "latent", "kl")}, **metrics})
@@ -293,12 +304,14 @@ def main(
 
     stride = cfg.data.frame_stride
     bench = None if rollouts else Benchmark(cfg.data.stats_json, adapter.fields, stride, device, "bench_vae")
-    final, rgbs, examples = evaluate(adapter, test_loader, vaes, None, stride, rollouts, spec=spec, bench=bench)
+    final, rgbs, examples = evaluate(
+        adapter, test_loader, vaes, None, stride, rollouts, spec=spec, bench=bench, single=single
+    )
     log_metrics(f"test {len(test_ids)} sims, whole trajectories", final, elapsed=time.time() - t0)
     latent_start = None
     if vaes and not rollouts:
-        final |= latent_stats(adapter, test_loader, vaes, start_vaes)
-        latent_start = latent_stats(adapter, test_loader, start_vaes, start_vaes)
+        final |= latent_stats(adapter, test_loader, vaes, start_vaes, single=single)
+        latent_start = latent_stats(adapter, test_loader, start_vaes, start_vaes, single=single)
         print(
             f"latents: |mean| {final['latent_mean_abs']:.3f} (start {latent_start['latent_mean_abs']:.3f}), std "
             f"{final['latent_std_mean']:.3f} (start {latent_start['latent_std_mean']:.3f}), drift from start "
@@ -306,6 +319,10 @@ def main(
         )
     if rank != 0:
         return
+    picked = extremes(final["per_sim"])  # reconstructed again here: the sims may live on other ranks
+    picked_loader = loader(cfg, test_h5, list(picked.values()), None, False, "test", sharded=False)
+    sims = render(adapter, picked_loader, vaes, rollouts, single)
+    picks = {label: sims[sid] for label, sid in picked.items()}
     record = {
         "config": cfg.model_dump(),
         "provenance": provenance(started, world),
@@ -318,7 +335,8 @@ def main(
         "steps": steps,
         "n_params": sum(p.numel() for p in adapter.parameters()),
     }
-    write_outputs(cfg, run_dir, adapter, vaes, record, drift_per_block(vaes, w0) if w0 else {}, rgbs, examples)
+    drift = drift_per_block(vaes, w0) if w0 else {}
+    write_outputs(cfg, run_dir, adapter, vaes, record, drift, rgbs, examples, picks)
 
 
 if __name__ == "__main__":

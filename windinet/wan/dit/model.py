@@ -95,7 +95,7 @@ class WanDiT:
         self.transformer = WanTransformer3DModel.from_pretrained(
             repo, subfolder="transformer", torch_dtype=dtype, local_files_only=True
         )
-        self.widened = num_latents > 1
+        self.num_latents, self.widened = num_latents, num_latents > 1
         if self.widened:
             widen_patchify(self.transformer, num_latents)
         if pruned:  # the shapes of a pruned run (windinet.wan.dit.prune), its weights come from `load`

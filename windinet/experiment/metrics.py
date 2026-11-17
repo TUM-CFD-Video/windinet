@@ -241,6 +241,12 @@ class Aggregate:
         return out
 
 
+def extremes(per_sim: dict[str, dict]) -> dict[str, str]:
+    """{"worst": sim id, "best": sim id}: the highest and the lowest VRMSE (mean over fields) of `per_sim`."""
+    ranked = sorted(per_sim, key=lambda sid: per_sim[sid]["vrmse"])
+    return {"worst": ranked[-1], "best": ranked[0]}
+
+
 def by_scalar(per_sim: list[torch.Tensor], scalars: list[dict[str, float]]) -> dict[str, float]:
     """vrmse_mean_<scalar><value>: the mean over the sims of each value of their VRMSE, mean over fields."""
     groups: dict[str, dict[float, list[float]]] = {}

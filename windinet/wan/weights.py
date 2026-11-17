@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import torch
+import yaml
 
 from windinet.field_adapter import GroupedAdapter, group_tag
 
@@ -52,3 +53,16 @@ def load_weights(run: Path, adapter: GroupedAdapter | None, vaes: list, device: 
             if (run / name).exists():
                 vae.vae.load_state_dict(torch.load(run / name, map_location=device), strict=False)
                 break
+
+
+def run_vaes(run: Path, device: torch.device, channels: int, **kw) -> list:
+    """The VAEs of a VAE-stage run with its fine-tuned weights, frozen unless `kw` says otherwise: one per adapter group
+    with train.vae_per_group, latent_channels from its config.yaml (runs before these fields: one, 16)."""
+    from windinet.wan.vae.model import WanVAE  # diffusers only when a VAE is used
+
+    cfg = yaml.safe_load((run / "config.yaml").read_text())
+    n = len(cfg["adapter"]["groups"]) if cfg["train"].get("vae_per_group") else 1
+    latent = cfg.get("latent_channels", 16)
+    vaes = [WanVAE(device, channels=channels, latent_channels=latent, **kw) for _ in range(n)]
+    load_weights(run, None, vaes, device)  # a frozen VAE's run has no vae.pt: the pretrained one
+    return vaes

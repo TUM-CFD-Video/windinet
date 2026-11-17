@@ -38,6 +38,7 @@ from windinet.data.frames import FrameSampler, endless
 from windinet.experiment.config import start_run
 from windinet.experiment.distributed import all_mean, all_sum, rank, shard, sync, world
 from windinet.experiment.log import log_metrics, log_progress
+from windinet.experiment.metrics import extremes
 from windinet.experiment.optim import EMA, adamw
 from windinet.experiment.runs import provenance, write_index
 from windinet.field_adapter import load_adapter
@@ -53,8 +54,7 @@ from windinet.wan.dit.prune import calibrate, choose, compose, importance, shrin
 from windinet.wan.dit.rollout import noise_seeds, rollout
 from windinet.wan.figures import save_dit_curves, save_examples
 from windinet.wan.vae.loss import pixel_loss
-from windinet.wan.vae.model import WanVAE
-from windinet.wan.weights import load_weights, save_state
+from windinet.wan.weights import run_vaes, save_state
 
 
 def train_loader(cfg: DitStageConfig, ids: list[str]) -> DataLoader:
@@ -102,12 +102,10 @@ def build(cfg: DitStageConfig, device: torch.device) -> tuple:
     if encoder and Path(info["config"]["load"]).resolve() != run.resolve():
         raise typer.BadParameter(f"{run} fine-tunes its encoder, but {cfg.latents.dir} was encoded by another run")
     adapter = load_adapter(run, device)
-    n_vaes = len(adapter.groups) if vae_cfg["train"]["vae_per_group"] else 1
-    checkpointing = cfg.train.pixel_loss > 0
-    vaes = [WanVAE(device=device, channels=adapter.channels, checkpointing=checkpointing) for _ in range(n_vaes)]
-    load_weights(run, adapter, vaes, device)
+    vaes = run_vaes(run, device, adapter.channels, checkpointing=cfg.train.pixel_loss > 0)
     adapter.requires_grad_(False)  # frozen in this stage; the pixel loss back-propagates through it
-    dit, cond = load_dit(cfg, device, cfg.load, cfg.load_step, len(groups), train=cfg.train.steps > 0)
+    num_latents = len(groups) * vaes[0].copies  # one DiT latent per 16 channels
+    dit, cond = load_dit(cfg, device, cfg.load, cfg.load_step, num_latents, train=cfg.train.steps > 0)
     return adapter, vaes, dit, cond
 
 
@@ -392,7 +390,7 @@ def main(
         (run_dir / "prune.json").write_text(json.dumps({"spec": spec, "report": prune_report}, indent=1))
     teacher, close = None, None
     if cfg.distill:
-        teacher_dit, teacher_cond = load_dit(cfg, device, cfg.distill.teacher, None, len(adapter.groups), False)
+        teacher_dit, teacher_cond = load_dit(cfg, device, cfg.distill.teacher, None, dit.num_latents, False)
         teacher = Teacher(teacher_dit, teacher_cond, dit, spec, cfg.distill.features > 0)
         reference = probe_velocity(cfg, teacher.velocity, probe)
 
@@ -504,8 +502,7 @@ def main(
     log_metrics(f"test {len(test_ids)} sims", final, elapsed=time.time() - t0)
     if rank != 0:
         return
-    ranked = sorted(final["per_sim"], key=lambda sid: final["per_sim"][sid]["vrmse"])
-    picks = {k: ranked[i] for k, i in (("worst", -1), ("best", 0)) if k in cfg.examples}
+    picks = {k: sid for k, sid in extremes(final["per_sim"]).items() if k in cfg.examples}
     examples = {v: e for v, e in examples.items() if "gamma" in cfg.examples}
     if picks:
         loaders = eval_loaders(cfg, "test", test_h5, list(picks.values()), sharded=False)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import random
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import h5py
@@ -97,7 +97,7 @@ class FrameSampler(ShockWaveDataset):
     Only the chosen frames are read from HDF5. `seed` None: random frames per access (training), else fixed
     (evaluation). `consecutive`: a clip (every `stride`-th frame) instead of frames spread over the trajectory.
     `frames_per_item` None: the whole trajectory in order (every `stride`-th frame, 4k + 1 of them). `augment`: every
-    item under a random one of the dataset's symmetries."""
+    item under a random one of these elements of `symmetry` (`orientations`); empty = none."""
 
     def __init__(
         self,
@@ -107,7 +107,7 @@ class FrameSampler(ShockWaveDataset):
         seed: int | None = None,
         consecutive: bool = False,
         stride: int = 1,
-        augment: bool = False,
+        augment: Sequence[int] = (),
         *,
         spec: Spec,
     ):
@@ -139,7 +139,7 @@ class FrameSampler(ShockWaveDataset):
                 frames = sorted(rng.sample(range(n_frames), k))
         fields = self.read(idx, frames)
         if self.augment:
-            fields = symmetry(fields, random.randrange(SYMMETRIES), self.spec)
+            fields = symmetry(fields, random.choice(self.augment), self.spec)
         return fields, torch.tensor(list(self.spec.scalars(sid).values()), dtype=torch.float32)
 
     def read(self, idx: int, frames: list[int]) -> torch.Tensor:
@@ -170,6 +170,11 @@ def symmetry(fields: torch.Tensor, k: int, spec: Spec) -> torch.Tensor:
         if k & bit:  # turn flipped a copy, so the sign change leaves the input alone
             fields[..., c, :, :] = -fields[..., c, :, :]
     return fields
+
+
+def orientations(spec: Spec, which: str = "all") -> list[int]:
+    """The elements of `symmetry` to augment with: all, or (flow) those that keep `spec.direction`."""
+    return [k for k in range(SYMMETRIES) if which == "all" or turn_vector(spec.direction, k) == spec.direction]
 
 
 def turn_vector(v: tuple[float, float], k: int) -> tuple[float, float]:

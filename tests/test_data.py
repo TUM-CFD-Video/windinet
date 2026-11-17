@@ -11,6 +11,7 @@ from windinet.data.frames import (
     SYMMETRIES,
     FrameSampler,
     crop,
+    orientations,
     sim_ids,
     splits,
     symmetry,
@@ -62,8 +63,10 @@ def test_frame_sampler_reads_log_density_and_returns_scalars(srba_files):
     assert torch.equal(fields[:, 3], torch.from_numpy(np.log(density)).float())
     assert torch.equal(fields[:, 0], torch.from_numpy(pressure).float())
     assert scalars.dtype == torch.float32 and scalars.tolist() == [pytest.approx(1.3), 1.0]
-    augmented = FrameSampler(train, [sid], None, 0, augment=True, spec=SRBA_OOOO)[0][0]
-    assert any(torch.equal(augmented, symmetry(fields, k, SRBA_OOOO)) for k in range(SYMMETRIES))
+    assert orientations(SRBA_OOOO) == list(range(SYMMETRIES)) and orientations(SRBA_OOOO, "flow") == [0, 2]
+    for _ in range(4):  # flow: unchanged or flipped along H (y), never along the shock
+        augmented = FrameSampler(train, [sid], None, 0, augment=[0, 2], spec=SRBA_OOOO)[0][0]
+        assert any(torch.equal(augmented, symmetry(fields, k, SRBA_OOOO)) for k in (0, 2))
 
 
 def test_srba_split_holds_out_two_sims_per_cell(srba_files):

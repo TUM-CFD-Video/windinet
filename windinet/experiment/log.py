@@ -63,6 +63,10 @@ def log_metrics(tag: str, metrics: dict[str, float], loss: float | None = None, 
     lines += [f"{pad} | {'per ' + name:<10} {'  '.join(values)}" for name, values in by_scalar.items()]
     if windows := _windows(metrics):
         lines.append(f"{pad} | per frame  {windows}")
+    if "lola_vrmse_mean" in metrics:
+        per = "  ".join(f"{SYMBOLS[f]} {num(metrics[f'lola_vrmse_{f}'])}" for f in fields)
+        head = f"frames {metrics['lola_from']}+ VRMSE {num(metrics['lola_vrmse_mean'])}"
+        lines.append(f"{pad} | LoLA span  {head}  {per}")
     if "h1_mean" in metrics:
         spectral = "  ".join(f"{b} {num(metrics[f'spectral_{b}_mean'])}" for b in BINS)
         lines.append(

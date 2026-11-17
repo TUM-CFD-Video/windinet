@@ -5,10 +5,10 @@
         --load results/wan/eulermq/vae/res256/rgb3/adapter --out $WINDINET_WORK/latents/rgb3
 
 Takes the VAE-stage YAML for the data files and the split, the adapter and the fine-tuned VAE(s) from `--load`. Writes
-<out>/<train|val|test>/<sim id>.pt = {"latents": [groups, 16, F/4 + 1, H/8, W/8] fp32 normalised Wan latents
-(posterior mean, the whole trajectory as one clip), "scalars"[, "direction" in the file's orientation]} and
-<out>/encode.yaml (what produced them). With data.augment every train sim is also encoded under the dataset's other
-symmetries (<sim id>_s<k>.pt), with --all-starts also from every chunk boundary of its first half
+<out>/<train|val|test>/<sim id>.pt = {"latents": [groups, latent_channels, F/4 + 1, H/8, W/8] fp32 normalised Wan
+latents (posterior mean, the whole trajectory as one clip), "scalars"[, "direction" in the file's orientation]} and
+<out>/encode.yaml (what produced them). With data.augment every train sim is also encoded under the other symmetries of
+data.orientations (<sim id>_s<k>.pt), with --all-starts also from every chunk boundary of its first half
 (<sim id>_t<frame>.pt). Sharded over torchrun ranks; existing files are skipped, so a killed job resumes.
 """
 
@@ -22,7 +22,7 @@ import typer
 import yaml
 from torch.utils.data import DataLoader
 
-from windinet.data.frames import SYMMETRIES, FrameSampler, symmetry
+from windinet.data.frames import FrameSampler, symmetry
 from windinet.experiment.config import load_config
 from windinet.experiment.distributed import rank, setup, shard, world
 from windinet.experiment.runs import provenance
@@ -31,14 +31,16 @@ from windinet.wan.dit.config import EncodeConfig
 from windinet.wan.dit.latents import condition, latent_id
 from windinet.wan.vae.model import WanVAE
 from windinet.wan.vae.roundtrip import encode
-from windinet.wan.weights import load_weights
+from windinet.wan.weights import run_vaes
 
 
-def latent_files(out_dir: Path, split: str, sid: str, augment: bool, starts: list[int]) -> dict[Path, tuple[int, int]]:
+def latent_files(
+    out_dir: Path, split: str, sid: str, symmetries: list[int], starts: list[int]
+) -> dict[Path, tuple[int, int]]:
     """The files of one simulation, path -> (symmetry k, first frame): its latents and, in the train split, the
-    symmetric copies (`augment`) and the clips from the later `starts`."""
+    copies under `symmetries` and the clips from the later `starts`."""
     train = split == "train"
-    copies = range(SYMMETRIES if augment and train else 1)
+    copies = (symmetries if train else []) or [0]
     return {out_dir / split / f"{latent_id(sid, k, t)}.pt": (k, t) for k in copies for t in (starts if train else [0])}
 
 
@@ -49,7 +51,7 @@ def encode_sim(adapter, vaes: list[WanVAE], frames: torch.Tensor, sid: str, file
         if path.exists():
             continue
         x = adapter.select(symmetry(frames[t:], k, spec).to(device))  # [F - t, C, H, W]
-        z = encode(adapter, x, vaes, len(x))[0]  # [1, G, 16, F', h, w]
+        z = encode(adapter, x, vaes, len(x))[0]  # [1, G, latent channels, F', h, w]
         torch.save({"latents": z[0].cpu(), **condition(spec, sid, k)}, path)
 
 
@@ -68,21 +70,20 @@ def main(
     setup()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     adapter = load_adapter(run, device)
-    per_group = yaml.safe_load((run / "config.yaml").read_text())["train"].get("vae_per_group", False)  # old runs: none
-    vaes = [WanVAE(device=device, channels=adapter.channels) for _ in range(len(adapter.groups) if per_group else 1)]
-    load_weights(run, None, vaes, device)  # a frozen encoder's run has no vae.pt: the pretrained one
+    vaes = run_vaes(run, device, adapter.channels)
     sets = {k: (h5, ids[: cfg.sims]) for k, (h5, ids) in cfg.data.splits().items()}
     h5, ids = sets["train"]
     n_frames = len(FrameSampler(h5, ids[:1], None, 0, stride=stride, spec=spec)[0][0])  # 4k + 1 per trajectory
     starts = list(range(0, n_frames // 2 + 1, 4)) if cfg.all_starts else [0]
     if rank == 0:
         out_dir.mkdir(parents=True, exist_ok=True)
-        record = {"config": cfg.model_dump(), "groups": adapter.groups, "starts": starts}
+        orientations = cfg.data.symmetries or [0]
+        record = {"config": cfg.model_dump(), "groups": adapter.groups, "starts": starts, "orientations": orientations}
         record["provenance"] = provenance(started, world)
         (out_dir / "encode.yaml").write_text(yaml.safe_dump(record))
     for split, (h5, ids) in sets.items():
         (out_dir / split).mkdir(parents=True, exist_ok=True)  # every rank: rank 0 may not have made out_dir yet
-        files = {sid: latent_files(out_dir, split, sid, cfg.data.augment, starts) for sid in shard(ids)}
+        files = {sid: latent_files(out_dir, split, sid, cfg.data.symmetries, starts) for sid in shard(ids)}
         todo = [sid for sid, paths in files.items() if not all(p.exists() for p in paths)]
         loader = DataLoader(FrameSampler(h5, todo, None, 0, stride=stride, spec=spec), num_workers=2)
         t0 = time.time()

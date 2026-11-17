@@ -44,6 +44,8 @@ def test_latent_dataset_reads_files_and_truncates(tmp_path):
     assert torch.equal(data[1][1], torch.tensor([1.4]))  # a file before the scalars: gamma alone
     (tmp_path / "encode.yaml").write_text("config: {data: {augment: true}}\n")
     assert with_augmentations(tmp_path, ["a_gamma1.13"]) == ["a_gamma1.13"] + [f"a_gamma1.13_s{k}" for k in range(1, 8)]
+    (tmp_path / "encode.yaml").write_text("config: {data: {augment: true}}\norientations: [0, 2]\n")
+    assert with_augmentations(tmp_path, ["a_gamma1.13"]) == ["a_gamma1.13", "a_gamma1.13_s2"]
 
 
 def test_latent_files_keep_the_scalars_and_the_turned_direction(tmp_path):
@@ -236,7 +238,7 @@ def test_frame_sampler_stride_keeps_4k_plus_1_frames(tmp_path):
     clip = clip[:, 0, 0, 0]
     assert clip[1] - clip[0] == 2 and clip[2] - clip[1] == 2 and clip[-1] <= 10
     plain = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, spec=EULERMQ)[0][0]
-    augmented = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, augment=True, spec=EULERMQ)[0][0]
+    augmented = FrameSampler(tmp_path / "t.h5", ["0000_gamma1.3"], None, 0, augment=range(8), spec=EULERMQ)[0][0]
     assert any(torch.equal(augmented, symmetry(plain, k, EULERMQ)) for k in range(8))
 
 
