@@ -127,8 +127,10 @@ per dataset and channel in the shared statistics file; absent keys fall back to 
 numbers, the same for every sim, model and frame. Orientation (`--origin lower`: y up) and time unit (`--time-unit`,
 with `--slowdown` in video seconds per that unit) are arguments. Rule for 2D-SRBA-OOOO: lower bound = training
 minimum, upper bound = 99.9th percentile, signed fields symmetric $\pm\max(|Q_{0.001}|, |Q_{0.999}|)$; pressure asinh
-centred at the lower bound with width 0.5σ, velocity y width 1σ, velocity x and log density linear (a large width);
-y axis up; time in µs. Why: heavy tails and three Mach regimes; with mean ± 2σ up to 33 % of a pressure frame is out
+centred at the lower bound with width 0.5σ, velocity y width 1σ, velocity x linear (a large width); y axis up; time
+in µs. Density is shown as ρ with the pressure rule (asinh centred at the lower bound, width 0.5σ, statistics of ρ):
+the models work on ln ρ and the metrics stay on ln ρ, only the figures and videos exponentiate
+(`windinet/wan/figures.py`, widths in `windinet/data/specs.py`). Why: heavy tails and three Mach regimes; with mean ± 2σ up to 33 % of a pressure frame is out
 of range, with min..p99.9 at most 2.3 % (measured on 9 training sims, 3 Mach × 1/3/5 bubbles, × 5 frames in a scratch
 analysis of 2026-11-13 that is not in the repo). Original text: [docs/references/harish_video_spec.md](references/harish_video_spec.md).
 
