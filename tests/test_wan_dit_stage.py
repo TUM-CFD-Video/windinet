@@ -15,6 +15,7 @@ from windinet.experiment.runs import settings
 from windinet.wan.dit import evaluate
 from windinet.wan.dit.conditioning import GammaModulation, ScalarTokens, build
 from windinet.wan.dit.config import CondConfig, DitStageConfig
+from windinet.wan.dit.delta import change_stats, from_delta, load_stats, to_delta
 from windinet.wan.dit.flow import clean_estimate, draw_sigmas, frame_sigmas, gated, noised, velocity_target
 from windinet.wan.dit.latents import LatentDataset, condition, latent_id, with_augmentations
 from windinet.wan.dit.model import Modulation, widen_patchify
@@ -301,7 +302,7 @@ def test_rollout_chunks_regrow_the_history():
 
     calls = []
     sample = lambda c, u, shape, *a, **k: calls.append(k["context"]) or torch.full(shape, float(len(calls)))  # noqa: E731
-    dit = NS(device=torch.device("cpu"), sample=sample, delta_scale=None)
+    dit = NS(device=torch.device("cpu"), sample=sample, delta_stats=None)
     for chunk, k, contexts in ((4, 1, [1, 5, 9]), (6, 1, [1, 7]), (4, 2, [2, 6, 10]), (None, 1, [1])):
         calls.clear()
         cfg = NS(cond=NS(context=k), sampling=NS(steps=1, guidance=1.0, chunk=chunk, history_noise=0.0, stochastic=0.0))
@@ -433,7 +434,7 @@ def stand_in_evaluation(monkeypatch, module, spec, ids, truth, tmp_path, labels)
     conditions = TensorDataset(latents, torch.tensor([list(spec.scalars(i).values()) for i in ids]))
     conditions.ids = ids
     loaders = DataLoader(conditions, len(ids)), DataLoader(TensorDataset(truth, truth), len(ids))
-    dit = NS(device=torch.device("cpu"), sample=sample, delta_scale=None)
+    dit = NS(device=torch.device("cpu"), sample=sample, delta_stats=None)
     adapter = NS(fields=list(spec.fields), select=lambda x: x)
     return module.evaluate(dit, cond, adapter, [], loaders, labels, cfg)
 
@@ -472,3 +473,33 @@ def test_train_dit_refuses_latents_of_another_encoding_and_windows_on_changes(tm
     for option in ("latents.delta=true", "latents.ar_window=3", "train.pixel_window=4"):
         with pytest.raises(typer.BadParameter, match="encodes changes"):
             build(runs["change"], option)
+
+
+def test_delta_stats_pool_every_training_copy_and_invert_exactly(tmp_path):
+    (tmp_path / "train").mkdir()
+    (tmp_path / "encode.yaml").write_text("config: {data: {augment: true}}\norientations: [0, 2]\n")
+    files = {"a_gamma1.3": 1.0, "a_gamma1.3_s2": 5.0, "b_gamma1.4": -2.0, "b_gamma1.4_s2": 0.5}
+    for stem, shift in files.items():
+        z = torch.randn(2, 16, 5, 2, 2).cumsum(2) * shift + shift * torch.arange(5.0)[:, None, None]
+        torch.save({"latents": z, "gamma": 1.3}, tmp_path / "train" / f"{stem}.pt")
+    sets = ["name=t", "description=t", f"latents.dir={tmp_path}", "train.batch_sims=3", "data.num_workers=0"]
+    cfg = DitStageConfig(**load_config(Path("configs/wan/dit.yaml"), sets))
+    stats = change_stats(load_script("train_dit").train_loader(cfg, ["a_gamma1.3", "b_gamma1.4"]), torch.device("cpu"))
+    every = torch.stack([torch.load(tmp_path / "train" / f"{s}.pt")["latents"].flatten(0, 1) for s in files])
+    change = every.diff(dim=2)
+    for i, part in enumerate((change[:, :, :1], change[:, :, 1:])):
+        flat = part.transpose(0, 1).flatten(1).double()
+        assert torch.allclose(stats[:, i], torch.stack([flat.mean(1), flat.std(1, correction=0)]).float(), atol=1e-5)
+    z = torch.randn(3, 32, 13, 4, 4)
+    stats = torch.stack([torch.randn(2, 32), torch.rand(2, 32) + 0.1])
+    d = to_delta(z, stats)
+    assert torch.equal(d[:, :, 0], z[:, :, 0]) and torch.allclose(from_delta(d, stats), z, atol=1e-5)
+    mean, std = stats[:, 0, :, None, None]  # of the change into latent 1
+    assert torch.allclose(d[:, :, 1], (z[:, :, 1] - z[:, :, 0] - mean) / std)
+
+
+def test_old_delta_file_of_stds_loads_with_mean_zero(tmp_path):
+    std = torch.rand(2, 32) + 0.1
+    torch.save(std, tmp_path / "delta.pt")
+    stats = load_stats(tmp_path / "delta.pt", torch.device("cpu"))
+    assert stats.shape == (2, 2, 32) and torch.equal(stats[1], std) and not stats[0].any()

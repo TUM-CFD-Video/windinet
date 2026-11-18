@@ -26,8 +26,8 @@ def rollout(
     latents stacked in the channels); same shape back. With sampling.chunk, the whole trajectory is generated again
     for every chunk, the history being the frames kept so far (predicted ones re-noised to sampling.history_noise)."""
     z, k, s = latents.flatten(1, 2), cfg.cond.context, cfg.sampling
-    if dit.delta_scale is not None:  # the model generates scaled changes (latents.delta): sampled as such, summed up
-        z = to_delta(z, dit.delta_scale)
+    if dit.delta_stats is not None:  # the model generates changes (latents.delta): sampled as such, summed up
+        z = to_delta(z, dit.delta_stats)
 
     def sample(init: torch.Tensor, context: int, i: int) -> torch.Tensor:
         with autocast(cfg.model.precision, dit.device):
@@ -47,8 +47,8 @@ def rollout(
     out, chunk = sample(z, k, 0), s.chunk or z.shape[2]
     for i, n in enumerate(range(k + chunk, z.shape[2], chunk), 1):  # history: the first n frames kept so far
         out = torch.cat([out[:, :, :n], sample(torch.cat([out[:, :, :n], z[:, :, n:]], 2), n, i)[:, :, n:]], 2)
-    if dit.delta_scale is not None:
-        out = from_delta(out, dit.delta_scale)
+    if dit.delta_stats is not None:
+        out = from_delta(out, dit.delta_stats)
     return out.unflatten(1, latents.shape[1:3])
 
 

@@ -111,7 +111,7 @@ class WanDiT:
         self.modulation = Modulation()
         self.transformer.condition_embedder.time_embedder.register_forward_hook(self.modulation)
         self.device, self.dtype = torch.device(device), dtype
-        self.delta_scale: torch.Tensor | None = None  # [2, C] when it generates scaled changes (dit/delta.py)
+        self.delta_stats: torch.Tensor | None = None  # [2, 2, C] when it generates changes (dit/delta.py)
         self.noise: torch.Tensor | None = None  # [C, F', h, w] every sample starts from (cfg.noise); None = drawn
 
     @property

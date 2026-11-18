@@ -44,7 +44,7 @@ from windinet.experiment.runs import provenance, write_index
 from windinet.field_adapter import load_adapter
 from windinet.wan.dit import conditioning
 from windinet.wan.dit.config import DitStageConfig
-from windinet.wan.dit.delta import scales, to_delta
+from windinet.wan.dit.delta import change_stats, load_stats, to_delta
 from windinet.wan.dit.distill import Teacher, closeness
 from windinet.wan.dit.evaluate import evaluate, render
 from windinet.wan.dit.flow import clean_estimate, draw_sigmas, frame_sigmas, gated, noised, velocity_target
@@ -203,8 +203,8 @@ def train_step(
     opt.zero_grad(set_to_none=True)
     z_all = latents.flatten(1, 2)  # a sample's latents in channels
     terms = {"loss": 0.0, "pixel": 0.0, "front": 0.0, "flow": 0.0, "kd_velocity": 0.0, "kd_features": 0.0}
-    if dit.delta_scale is not None:
-        z_all = to_delta(z_all, dit.delta_scale)
+    if dit.delta_stats is not None:
+        z_all = to_delta(z_all, dit.delta_stats)
     t, groups, kd = cfg.train, latents.shape[1], cfg.distill
     mb = t.micro_batch
     for i, (z, c) in enumerate(zip(z_all.split(mb), c_all.split(mb), strict=True)):
@@ -411,17 +411,17 @@ def main(
 
         sizes = n_params(dit.transformer) / 1e6, n_params(teacher_dit.transformer) / 1e6
         print("student {:.1f} M, teacher {:.1f} M parameters".format(*sizes))
-    if cfg.latents.delta:  # the delta scale of the run continued from, else measured on the train latents
+    if cfg.latents.delta:  # the statistics of the run continued from, else measured on what training draws
         loaded = Path(cfg.load or "") / "delta.pt"
         if cfg.load and loaded.exists():
-            dit.delta_scale = torch.load(loaded, map_location=device)
+            dit.delta_stats = load_stats(loaded, device)
         else:
-            sims = LatentDataset(cfg.latents.dir, "train", shard(train_ids), cfg.latents.frames)
-            dit.delta_scale = scales(DataLoader(sims, 8, num_workers=cfg.data.num_workers), device)
-        if rank == 0:  # with the run from the start: every eval point (load_step) uses the same scale
-            torch.save(dit.delta_scale.cpu(), run_dir / "delta.pt")
-        first, later = dit.delta_scale.median(1).values.tolist()
-        print(f"delta scales (median over channels): into latent 1 {first:.3g}, later {later:.3g}")
+            with torch.random.fork_rng(devices=[]):  # the measuring pass draws no batch order from the run's seed
+                dit.delta_stats = change_stats(train_loader(cfg, train_ids), device)
+        if rank == 0:  # with the run from the start: every eval point (load_step) uses the same statistics
+            torch.save(dit.delta_stats.cpu(), run_dir / "delta.pt")
+        (m1, ml), (s1, sl) = dit.delta_stats.median(2).values.tolist()
+        print(f"delta stats (median over channels): into latent 1 mean {m1:.3g} std {s1:.3g}, later {ml:.3g} {sl:.3g}")
     if cfg.rollouts:
         write_rollouts(
             cfg, dit, cond, {"test": (test_h5, test_ids), "val": (val_h5, eval_ids), "train": (train_h5, train_ids)}
