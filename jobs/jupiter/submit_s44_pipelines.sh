@@ -5,8 +5,8 @@
 #   baseline   finetune_vae_jupiter_baseline_s44_256res (already trained by
 #              submit_stability_s44.sh) + train_dit_jupiter_baseline_s44:
 #              SKIP_VAE=1 -> encode + DiT + diteval (3 jobs)
-#   KL         finetune_vae_jupiter_kl_1e{7,5,3}_s44_256res + train_dit_jupiter_kl_1e{7,5,3}_s44:
-#              full chains (5 jobs each)
+#   KL         (removed) used the old summed-KL implementation and collapsed;
+#              the KL sweep is now submit_klmean.sh (KL averaged over latent elements)
 #   DiT LR     train_dit_jupiter_baseline_s44_lr{3e6,3e5,1e4} on the baseline's
 #              latents (1e-5 is the baseline DiT itself): DiT + diteval only,
 #              waiting on the baseline's encode job (2 jobs each)
@@ -14,10 +14,9 @@
 #              integration steps instead of configs/dit/inference_dit.yaml's 20
 #              (inference only, afterok on the baseline's DiT job; 2 jobs)
 #
-# 26 jobs. Round 1 (seed 42) lost the baseline and the KL arms to a mid-training
-# VAE collapse; seed 44 trained the baseline cleanly, so this reruns the KL sweep
-# on seed 44 and gives it a baseline DiT on the same seed.
-# ONLY=<names> (space-separated, e.g. ONLY="kl_1e5") submits a subset;
+# 11 jobs. Round 1 (seed 42) lost the baseline to a mid-training VAE collapse;
+# seed 44 trained the baseline cleanly, so this gives it a baseline DiT on the same seed.
+# ONLY=<names> (space-separated, e.g. ONLY="baseline lr1e4") submits a subset;
 # "lr3e6"/"lr3e5"/"lr1e4"/"steps" need the baseline in the same call (they chain
 # on its encode / DiT job).
 #
@@ -25,7 +24,7 @@
 #   bash jobs/jupiter/submit_s44_pipelines.sh 2>&1 | tee logs/jupiter/submit_s44_pipelines_$(date +%Y%m%d_%H%M).txt
 set -euo pipefail
 
-ONLY=${ONLY:-"baseline kl_1e7 kl_1e5 kl_1e3 lr3e6 lr3e5 lr1e4 steps"}
+ONLY=${ONLY:-"baseline lr3e6 lr3e5 lr1e4 steps"}
 want() { [[ " $ONLY " == *" $1 "* ]]; }
 V=configs/finetune_vae
 D=configs/dit
@@ -40,10 +39,6 @@ if want baseline; then
     pre_baseline=$(awk '/^encode: /{print $2}' <<<"$out")
     dit_baseline=$(awk '/^dit: /{print $2}' <<<"$out")
 fi
-for arm in kl_1e7 kl_1e5 kl_1e3; do
-    want "$arm" && bash jobs/jupiter/submit_pipeline.sh \
-        $V/finetune_vae_jupiter_${arm}_s44_256res.yaml $D/train_dit_jupiter_${arm}_s44.yaml
-done
 for lr in lr3e6 lr3e5 lr1e4; do
     want "$lr" || continue
     if [ -z "$pre_baseline" ]; then
