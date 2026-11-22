@@ -24,7 +24,7 @@ want() { [[ " $ONLY " == *" $1 "* ]]; }
 
 if [[ "${SKIP_CHECK:-0}" != "1" ]]; then
     # Gate: flip_y must mirror the axis velocityY points along (scripts/check_flip_axis.py).
-    python scripts/check_flip_axis.py /e/project1/e-dev-2026d09-262/neptuna_datasets/2D_SRBA_OOOO/256x256/train.h5
+    PYTHONPATH="${PWD}:${PYTHONPATH:-}" python scripts/check_flip_axis.py /e/project1/e-dev-2026d09-262/neptuna_datasets/2D_SRBA_OOOO/256x256/train.h5
 fi
 
 for arm in $ARMS; do

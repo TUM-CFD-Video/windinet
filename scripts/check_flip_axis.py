@@ -13,7 +13,7 @@ wrong channel or reversed the wrong axis it turns negative). mean(vY) should be 
 |mean(vX)| large if the shock runs along W.
 
 SRBA only (needs velocities and density). Login node, a few seconds:
-  python scripts/check_flip_axis.py /e/project1/e-dev-2026d09-262/neptuna_datasets/2D_SRBA_OOOO/256x256/train.h5
+  PYTHONPATH=. python scripts/check_flip_axis.py /e/project1/e-dev-2026d09-262/neptuna_datasets/2D_SRBA_OOOO/256x256/train.h5
 """
 
 import sys
