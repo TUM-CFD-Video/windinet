@@ -68,7 +68,13 @@ from windinet.loss_weighting.utils import (
 )
 
 from windinet.losses.energy import energy_vrmse_from_normalized
-from windinet.training.shockwave_data import DATASETS, ShockWaveDataset, TemporalClipDataset, build_shockwave_video
+from windinet.training.shockwave_data import (
+    DATASETS,
+    RandomFlipYDataset,
+    ShockWaveDataset,
+    TemporalClipDataset,
+    build_shockwave_video,
+)
 from windinet.training.sds_loss import SdsDistillationLoss
 from windinet.training.vae_visualization import (
     denormalize_fields,
@@ -646,6 +652,14 @@ class VaeTrainer:
                 f"{cfg.data.clips_per_sim} per sim per epoch: {len(train_set)} train items"
             )
 
+        if cfg.data.flip_augment:
+            # Training only, like the clips: eval_set (and vis/test/encoding) keep the stored sims.
+            train_set = RandomFlipYDataset(train_set, dataset=cfg.data.dataset, p=0.5)
+            logger.info(
+                "Flip augmentation: training samples mirrored about the x-axis with p=0.5 "
+                f"(negated: {list(DATASETS[cfg.data.dataset].y_odd_channels)})"
+            )
+
         train_loader = DataLoader(
             train_set,
             batch_size=cfg.optimization.batch_size,
@@ -965,7 +979,7 @@ class VaeTrainer:
                     # forward pass rather than a wavelet transform -- see
                     # SdsLossConfig's docstring.
                     losses["sds"] = (
-                        self._sds_loss.compute(latents.float(), batch["meta"]["gamma"])
+                        self._sds_loss.compute(latents.float(), self._sds_scalar(batch))
                         if self._sds_loss is not None and cfg.loss_weighting.weights.get("sds", 0.0) != 0.0
                         else recon.new_zeros(())
                     )
@@ -1241,6 +1255,11 @@ class VaeTrainer:
         self._accelerator.end_training()
         return saved_path
 
+    def _sds_scalar(self, batch: dict) -> torch.Tensor:
+        """The frozen SDS critic's conditioning scalar for this batch: sds.scalar_conditioning's
+        (single) scalar name, gamma for Euler_MQ, mach for SRBA."""
+        return batch["meta"][self._config.sds.scalar_conditioning.scalar_names[0]]
+
     def _energy_loss(self, recon: torch.Tensor, target: torch.Tensor, batch: dict) -> torch.Tensor:
         """VRMSE of the total energy p/(gamma-1) + |m|^2/(2 rho) (windinet.losses.energy); zero for
         runs without the four Euler_MQ channels or without a gamma in the sample meta."""
@@ -1306,7 +1325,7 @@ class VaeTrainer:
                 compute_mlw=weights.get("mlw", 0.0) != 0.0,
             )
             losses["sds"] = (
-                self._sds_loss.compute(latents.float(), batch["meta"]["gamma"])
+                self._sds_loss.compute(latents.float(), self._sds_scalar(batch))
                 if self._sds_loss is not None and weights.get("sds", 0.0) != 0.0
                 else recon.new_zeros(())
             )

@@ -73,11 +73,14 @@ class DatasetSpec:
     parse_scalars: sample id -> scalar conditioning values (sample["meta"]).
     spread_scalar: the scalar visualization picks spread over
         (pick_spread_ids), and the default DiT conditioning scalar.
+    y_odd_channels: the channels that change sign under the mirror y -> -y
+        (the y component of velocity / momentum); see flip_y.
     """
 
     channels: dict[str, tuple[str, bool]]
     parse_scalars: Callable[[str], dict[str, float]]
     spread_scalar: str
+    y_odd_channels: tuple[str, ...] = ()
 
 
 DATASETS: dict[str, DatasetSpec] = {
@@ -85,6 +88,7 @@ DATASETS: dict[str, DatasetSpec] = {
         channels={name: (name, False) for name in ["density", "momentum_x", "momentum_y", "pressure"]},
         parse_scalars=lambda sid: {"gamma": parse_gamma(sid)},
         spread_scalar="gamma",
+        y_odd_channels=("momentum_y",),
     ),
     "srba": DatasetSpec(
         channels={
@@ -95,6 +99,7 @@ DATASETS: dict[str, DatasetSpec] = {
         },
         parse_scalars=parse_srba_scalars,
         spread_scalar="mach",
+        y_odd_channels=("velocityY",),
     ),
 }
 DEFAULT_DATASET = "euler_mq"
@@ -362,6 +367,45 @@ class TemporalClipDataset(Dataset):
         for name in self.channels:
             sample[name] = sample[name][t0:t0 + self.clip_frames]
         sample["clip_start"] = t0
+        return sample
+
+
+FLIP_Y_PREFIX = "flipy_"
+
+
+def flip_y(sample: dict, dataset: str) -> dict:
+    """Mirror a ShockWaveDataset sample about the x-axis (y -> -y).
+
+    Every [T, H, W] channel is reversed along H (the y axis; checked on SRBA with
+    scripts/check_flip_axis.py), and the y component of velocity / momentum
+    (DatasetSpec.y_odd_channels) changes sign. The flow is planar-shock along x and
+    the top/bottom boundaries are identical, so the mirrored simulation is another
+    valid solution with the same scalars (Mach / gamma); meta passes through.
+    Applied to the raw physical fields, before normalization.
+    """
+    spec = DATASETS[dataset]
+    out = dict(sample)
+    for name in spec.channels:
+        x = sample[name].flip(-2)
+        out[name] = -x if name in spec.y_odd_channels else x
+    return out
+
+
+class RandomFlipYDataset(Dataset):
+    """Training augmentation (PhD advisor, 2026-11-22): each access returns the sample
+    mirrored about the x-axis (flip_y) with probability p, else unchanged."""
+
+    def __init__(self, base: Dataset, dataset: str, p: float = 0.5):
+        self.base, self.dataset, self.p = base, dataset, p
+
+    def __len__(self) -> int:
+        return len(self.base)
+
+    def __getitem__(self, idx):
+        sample = self.base[idx]
+        # torch RNG: DataLoader seeds every worker differently each epoch
+        if torch.rand(()).item() < self.p:
+            sample = flip_y(sample, self.dataset)
         return sample
 
 

@@ -1,0 +1,97 @@
+# SRBA "1-1-2" setup (PhD advisor, 2026-11-22): 1 conditioning frame + temporal stride 2, plus
+# x-axis flip augmentation and a VRMSE / VRMSE+H1 loss sweep. For LTX-Video (joint, not
+# autoregressive generation) "1-1-2" = 1 conditioning frame (frame 0 only, 1 conditioning
+# latent) at stride 2: stored frames 0, 2, ..., 96 = 49 frames = 7 latents.
+# Loss scale (SRBA baseline, end of training): rmse 0.0092, h1 0.00025, vrms 0.053; so in
+# rmse + 50*h1 the h1 term is ~57% of the loss, and vrms 1 + ~290*h1 has the same share.
+# The h1 sweep 10/30/100/300/1000 spans h1 share ~5% .. ~80%.
+# Launch all arms: bash jobs/jupiter/submit_srba_s2.sh
+# VAE arm s2_flip_vrmse_h1_100: flip augmentation, loss VRMSE + 100*h1.
+# Base: finetune_vae_jupiter_srba_baseline_256res.yaml (see its header); changed: frame_stride 2,
+# num_sim_frames 49, flip_augment, loss weights, visualization frames, tags, output_dir.
+# Paired DiT: train_dit_jupiter_srba_s2_flip_vrmse_h1_100.yaml
+
+model:
+  model_source: "LTXV_2B_0.9.6_DEV"
+
+adapter:
+  enabled: true
+  mode: "inflate"
+  inflate_init: "zeros"
+  freeze_conv_in: false
+  checkpoint: null
+  channels: ["pressure", "velocityX", "velocityY", "log_density"]
+  activation: "gelu"
+  default_temb: 0.0
+
+resume_from: null
+resume_weights_only: false
+
+data:
+  data_root: "/e/project1/e-dev-2026d09-262/neptuna_datasets/2D_SRBA_OOOO/256x256/train.h5"
+  dataset: "srba"
+  channel_order: ["pressure", "velocityX", "velocityY", "log_density"]
+  normalization_stats_file: "configs/finetune_vae/srba_256_only_train.yaml"
+  normalization_clip: 5.0
+  frame_stride: 2
+  num_sim_frames: 49  # 8*6+1, no padding; stored frames 0..96
+  flip_augment: true  # mirror about the x-axis, p=0.5, training only
+  eval_sims: 24
+  num_dataloader_workers: 4
+
+optimization:
+  learning_rate: 5e-5
+  min_learning_rate: 1e-6
+  scheduler_type: "cosine"
+  epochs: 300
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 5.0
+  weight_decay: 0.0
+  warmup_steps: 200
+  warmup_start_factor: 0.01
+  enable_gradient_checkpointing: true
+
+loss_weighting:
+  strategy: "fixed"
+  weights:
+    rmse: 0.0
+    h1: 100.0
+    ssim: 0.0
+    mlw: 0.0
+    vrms: 1.0
+
+loss:
+  wavelet: "db2"
+  spatial_level: 2
+  temporal_level: 2
+  mlw_beta: 10.0
+  mlw_eps: 1.0e-6
+
+visualization:
+  enabled: true
+  epochs: [150, 300]  # mid-training and final; replaces interval_epochs
+  num_samples: 3      # Mach min / median / max of the val split
+  frame_numbers: [13, 25, 37, 49]  # stored frames 24, 48, 72, 96
+  dpi: 150
+  save_video: true   # + GT/Prediction/Residual MP4 over all frames per sample
+
+acceleration:
+  mixed_precision_mode: "bf16"
+  compile_with_inductor: false
+
+checkpoints:
+  interval: 1
+  save_best_only: true
+  best_metric: "val_vrmse_chmean"
+  save_last_state: true
+  keep_last_n: 1
+
+wandb:
+  enabled: false
+  project: "windinet"
+  tags: ["vae", "inflate", "zeros-init", "cosine", "20ep", "srba", "jupiter", "s2_flip_vrmse_h1_100", "s44", "256res", "eval24", "stride2", "f49"]
+
+seed: 44
+output_dir: "finetune_vae_jupiter_srba_s2_flip_vrmse_h1_100_256res"
+clean_output_dir: true

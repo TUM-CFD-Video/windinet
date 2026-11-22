@@ -69,9 +69,12 @@ from windinet.training.shockwave_data import (
     DATASETS,
     DEFAULT_DATASET,
     ShockWaveDataset,
+    FLIP_Y_PREFIX,
     build_shockwave_video,
     extract_scalars,
+    flip_y,
     load_channel_normalization,
+    load_training_config,
 )
 
 from windinet.utils import get_default_device, logger
@@ -187,6 +190,13 @@ def main(
         "0 disables the split and encodes everything into the training set. Use 675 with "
         "--split-seed 42 to reproduce the VAE run's held-out set exactly.",
     ),
+    flip_augment: bool = typer.Option(
+        None,
+        "--flip-augment/--no-flip-augment",
+        help="Also encode a copy of every TRAINING sim mirrored about the x-axis "
+        "(shockwave_data.flip_y), saved as flipy_<id>; val sims are never mirrored. "
+        "Default: the VAE run's data.flip_augment (training_config.yaml next to the checkpoint).",
+    ),
     split_seed: int = typer.Option(
         default=42,
         help="Seed for the train/val partition. Must match the VAE run's seed for the two "
@@ -220,6 +230,14 @@ def main(
         f"Dataset {dataset_name} (frame_stride {frame_stride}), channels {channel_names}, normalization from {norm_source}: "
         f"mean={norm_mean}, std={norm_std}, clip={norm_clip}"
     )
+
+    if flip_augment is None:
+        cfg_path = Path(vae_config) if vae_config else Path(inflate_checkpoint).parent.parent / "training_config.yaml"
+        flip_augment = bool(
+            cfg_path.is_file() and load_training_config(cfg_path).get("data", {}).get("flip_augment", False)
+        )
+    if flip_augment:
+        logger.info(f"Flip augmentation: training sims also encoded mirrored about the x-axis ({FLIP_Y_PREFIX}<id>)")
 
     if scalar_names is None:
         scalar_names = DATASETS[dataset_name].spread_scalar
@@ -292,6 +310,7 @@ def main(
                 "num_sim_frames": num_sim_frames,
                 "dataset": dataset_name,
                 "frame_stride": frame_stride,
+                "flip_augment": flip_augment,
             },
             indent=2,
         )
@@ -318,53 +337,58 @@ def main(
 
             is_eval = idx in eval_indices
             (val_ids if is_eval else train_ids).append(sample_id)
-            latent_path = (val_latents_dir if is_eval else latents_dir) / f"{sample_id}.pt"
-            scalar_path = (val_scalars_dir if is_eval else scalars_dir) / f"{sample_id}.pt"
+            # (sample, saved id): the stored sim, plus its x-axis mirror for training sims
+            # when flip augmentation is on (the scalars are unchanged by the mirror).
+            variants = [(sample, sample_id)]
+            if flip_augment and not is_eval:
+                variants.append((flip_y(sample, dataset_name), f"{FLIP_Y_PREFIX}{sample_id}"))
 
-            if latent_path.exists() and scalar_path.exists():
-                skipped += 1
-                progress.advance(task)
-                continue
+            for variant, variant_id in variants:
+                latent_path = (val_latents_dir if is_eval else latents_dir) / f"{variant_id}.pt"
+                scalar_path = (val_scalars_dir if is_eval else scalars_dir) / f"{variant_id}.pt"
 
-            try:
-                # Build conditioning video and encode
-                video = build_shockwave_video(
-                    sample,
-                    device=torch.device(device),
-                    channel_mean=norm_mean,
-                    channel_std=norm_std,
-                    normalization_clip=norm_clip,
-                    channel_order=channel_names,
-                )  # [1, C, F, H, W], normalized to [-1, 1]
-                video = video.permute(0, 2, 1, 3, 4)  # [1, F, C, H, W] for encode_video
+                if latent_path.exists() and scalar_path.exists():
+                    skipped += 1
+                    continue
 
-                with torch.no_grad():
-                    latent_dict = encode_video(vae, video, device=torch.device(device), dtype=torch.bfloat16)
+                try:
+                    video = build_shockwave_video(
+                        variant,
+                        device=torch.device(device),
+                        channel_mean=norm_mean,
+                        channel_std=norm_std,
+                        normalization_clip=norm_clip,
+                        channel_order=channel_names,
+                    )  # [1, C, F, H, W], normalized to [-1, 1]
+                    video = video.permute(0, 2, 1, 3, 4)  # [1, F, C, H, W] for encode_video
 
-                # Save latents (squeeze batch dim so DataLoader collation gives [B, seq, C])
-                _save_atomic({
-                    "latents": latent_dict["latents"].squeeze(0).cpu(),
-                    "num_frames": latent_dict["num_frames"],
-                    "height": latent_dict["height"],
-                    "width": latent_dict["width"],
-                }, latent_path)
+                    with torch.no_grad():
+                        latent_dict = encode_video(vae, video, device=torch.device(device), dtype=torch.bfloat16)
 
-                # Save scalars
-                scalars = extract_scalars(sample["meta"], parsed_scalar_names)
-                scalar_tensor = torch.tensor(
-                    [scalars[name] for name in parsed_scalar_names],
-                    dtype=torch.float32,
-                )
-                _save_atomic({
-                    "scalars": scalar_tensor,
-                    "scalar_names": parsed_scalar_names,
-                }, scalar_path)
+                    # Save latents (squeeze batch dim so DataLoader collation gives [B, seq, C])
+                    _save_atomic({
+                        "latents": latent_dict["latents"].squeeze(0).cpu(),
+                        "num_frames": latent_dict["num_frames"],
+                        "height": latent_dict["height"],
+                        "width": latent_dict["width"],
+                    }, latent_path)
 
-                processed += 1
+                    # Save scalars
+                    scalars = extract_scalars(variant["meta"], parsed_scalar_names)
+                    scalar_tensor = torch.tensor(
+                        [scalars[name] for name in parsed_scalar_names],
+                        dtype=torch.float32,
+                    )
+                    _save_atomic({
+                        "scalars": scalar_tensor,
+                        "scalar_names": parsed_scalar_names,
+                    }, scalar_path)
 
-            except Exception as e:
-                logger.warning(f"Failed to process {sample_id}: {e}")
-                skipped += 1
+                    processed += 1
+
+                except Exception as e:
+                    logger.warning(f"Failed to process {variant_id}: {e}")
+                    skipped += 1
 
             progress.advance(task)
 
@@ -381,6 +405,7 @@ def main(
                 "data_root": str(Path(data_root).resolve()),
                 "split_seed": split_seed,
                 "eval_sims": eval_sims,
+                "flip_augment": flip_augment,
                 "num_train": len(train_ids),
                 "num_val": len(val_ids),
                 "train_ids": sorted(train_ids),

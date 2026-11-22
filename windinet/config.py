@@ -398,6 +398,17 @@ class VaeDataConfig(ConfigBaseModel):
             "encoding; 'any' = every frame 0..T - clip."
         ),
     )
+    flip_augment: bool = Field(
+        default=False,
+        description=(
+            "Training augmentation (PhD advisor 2026-11-22): mirror each training sample about the "
+            "x-axis (y -> -y: fields reversed along H, the y velocity/momentum negated; "
+            "shockwave_data.flip_y) with probability 0.5. Training only: validation and test eval see "
+            "the stored sims. preprocess_dataset.py reads this flag from the VAE run's "
+            "training_config.yaml and then also encodes a mirrored copy of every DiT training sim "
+            "(flipy_<id>), doubling the DiT training set."
+        ),
+    )
     clips_per_sim: int = Field(
         default=1,
         ge=1,
