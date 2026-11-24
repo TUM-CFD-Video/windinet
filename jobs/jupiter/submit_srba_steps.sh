@@ -32,7 +32,7 @@ LOG=logs/jupiter/submit_srba_steps_$(date +%Y%m%d_%H%M).txt
 for s in ${STEPS}; do
     name=srba_s2_flip_vrmse_${s}steps
     job=$(NUM_INFERENCE_STEPS="${s}" TABLE_NAME="${name}" \
-        sbatch --parsable --time=01:00:00 --job-name="steps_${s}" \
+        sbatch --parsable --time=01:00:00 \
         jobs/jupiter/eval_dit_vrmse.sbatch "${ARGS[@]}")
     echo "${name}: ${job}" | tee -a "${LOG}"
 done
