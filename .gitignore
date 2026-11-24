@@ -236,6 +236,8 @@ dit_outputs/**/dit_vrmse_curve.png
 # Diagnostic-script outputs synced down under logs/ -- PNGs and VAE weights
 # are regenerable; the JSON/log next to them is the durable record.
 logs/**/*.png
+# exception: eval panels of the best SRBA 1-1-2 model (flip + VRMSE), for docs/jupiter_report
+!logs/jupiter/eval_dit_vrmse/3054445/visualizations/**/*.png
 logs/**/*.safetensors
 
 # Optional in-repo HuggingFace cache (WINDINET_HF_CACHE, windinet/paths.py)
